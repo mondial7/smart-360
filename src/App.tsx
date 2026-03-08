@@ -13,6 +13,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MemberDashboard } from './components/member/MemberDashboard';
 import { TeamManagementPage } from './pages/TeamManagementPage';
+import { FeedbackRoundsPage } from './pages/FeedbackRoundsPage';
 
 // Create Material-UI theme
 const theme = createTheme({
@@ -67,6 +68,14 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin={true}>
                   <TeamManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/rounds"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <FeedbackRoundsPage />
                 </ProtectedRoute>
               }
             />

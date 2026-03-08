@@ -3,3 +3,10 @@
  */
 
 export type { User, UserRole, UserFirestore } from './user';
+export type {
+  FeedbackRound,
+  FeedbackRoundStatus,
+  FeedbackRoundFirestore,
+  FeedbackQuestions,
+  CreateFeedbackRoundInput,
+} from './feedbackRound';

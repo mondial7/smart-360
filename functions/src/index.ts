@@ -9,8 +9,8 @@ export { onUserCreate } from './triggers/onUserCreate';
 
 // Callable Functions
 export { assignUserRole } from './callable/assignUserRole';
+export { createFeedbackRound } from './callable/createFeedbackRound';
 
 // Future Callable Functions (to be added in later phases)
-// export { createFeedbackRound } from './callable/createFeedbackRound';
 // export { consolidateFeedback } from './callable/consolidateFeedback';
 // export { shareFeedbackWithSubject } from './callable/shareFeedbackWithSubject';

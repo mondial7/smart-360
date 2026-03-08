@@ -22,15 +22,23 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUsers } from '../../hooks/useUsers';
+import { useFeedbackRounds } from '../../hooks/useFeedbackRounds';
 
 export const AdminDashboard: React.FC = () => {
   const { userProfile, signOut } = useAuth();
-  const { users, loading } = useUsers();
+  const { users, loading: usersLoading } = useUsers();
+  const { rounds, loading: roundsLoading } = useFeedbackRounds();
   const navigate = useNavigate();
 
   const totalUsers = users.length;
   const adminCount = users.filter((u) => u.role === 'admin').length;
   const memberCount = users.filter((u) => u.role === 'member').length;
+
+  const totalRounds = rounds.length;
+  const activeRounds = rounds.filter((r) => r.status === 'active').length;
+  const pendingConsolidation = rounds.filter(
+    (r) => r.status === 'closed' && !r.consolidatedAt
+  ).length;
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -67,7 +75,7 @@ export const AdminDashboard: React.FC = () => {
                 Manage your team
               </Typography>
               <Typography variant="h3" sx={{ mb: 1 }}>
-                {loading ? '-' : totalUsers}
+                {usersLoading ? '-' : totalUsers}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {adminCount} admin{adminCount !== 1 ? 's' : ''}, {memberCount} member
@@ -93,14 +101,14 @@ export const AdminDashboard: React.FC = () => {
                 Ongoing feedback rounds
               </Typography>
               <Typography variant="h3" sx={{ mb: 1 }}>
-                0
+                {roundsLoading ? '-' : totalRounds}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Coming in Phase 3
+                {activeRounds} active round{activeRounds !== 1 ? 's' : ''}
               </Typography>
             </CardContent>
             <CardActions>
-              <Button size="small" disabled>
+              <Button size="small" onClick={() => navigate('/admin/rounds')}>
                 View Rounds
               </Button>
             </CardActions>
@@ -135,7 +143,7 @@ export const AdminDashboard: React.FC = () => {
 
       <Box sx={{ mt: 4 }}>
         <Typography variant="body1" color="text.secondary">
-          ✅ Phase 2 - Team member management is now available! Click "Manage Team" to view and edit user roles.
+          ✅ Phase 3 - Feedback rounds management is now available! Click "View Rounds" to create and manage feedback rounds.
         </Typography>
       </Box>
     </Container>
