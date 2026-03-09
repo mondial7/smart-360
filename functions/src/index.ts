@@ -9,6 +9,11 @@ export { onUserCreate } from './triggers/onUserCreate';
 
 // Firestore Triggers
 export { onFeedbackSubmit } from './triggers/onFeedbackSubmit';
+export { onFeedbackRoundCreate } from './triggers/onFeedbackRoundCreate';
+export { onFeedbackShared } from './triggers/onFeedbackShared';
+
+// Scheduled Functions
+export { sendDeadlineReminders } from './scheduled/sendDeadlineReminders';
 
 // Callable Functions
 export { assignUserRole } from './callable/assignUserRole';

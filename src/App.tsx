@@ -8,6 +8,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SnackbarProvider } from './contexts/SnackbarContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -49,8 +50,9 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <Router>
+      <SnackbarProvider>
+        <AuthProvider>
+          <Router>
           <Routes>
             {/* Public Route */}
             <Route path="/" element={<LoginPage />} />
@@ -112,8 +114,9 @@ function App() {
             {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Router>
-      </AuthProvider>
+          </Router>
+        </AuthProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

@@ -65,6 +65,24 @@
       ]
     },
     {
+      "collectionGroup": "feedbackRounds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "subjectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sharedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
