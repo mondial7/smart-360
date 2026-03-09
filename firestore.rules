@@ -19,7 +19,7 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if false; // Only via Cloud Function
+      allow create: if isAuthenticated() && request.auth.uid == userId; // Allow self-creation for emulator mode
       allow update: if isAdmin() || isOwner(userId);
       allow delete: if isAdmin();
     }

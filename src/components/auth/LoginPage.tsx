@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -18,6 +18,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentUser, userProfile, loading: authLoading, signInWithGoogle } = useAuth();
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +40,10 @@ export const LoginPage: React.FC = () => {
     try {
       setError('');
       setLoading(true);
+      console.log('Starting Google sign-in...');
       await signInWithGoogle();
+      console.log('Sign-in successful, navigating to dashboard...');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Sign-in error:', error);
       setError(error.message || 'Failed to sign in with Google. Please try again.');

@@ -12,7 +12,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../config/firebase';
 import type { User, UserFirestore } from '../types';
 
@@ -98,11 +98,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   /**
+   * Create user profile in Firestore (fallback for emulator mode)
+   */
+  const createUserProfile = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+    try {
+      // Check if this is the first user (for admin assignment)
+      const configDoc = await getDoc(doc(db, 'users', '_config'));
+      const isFirstUser = !configDoc.exists();
+
+      const userData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+        photoURL: firebaseUser.photoURL || null,
+        role: isFirstUser ? 'admin' : 'member',
+        createdAt: new Date(),
+        createdBy: null,
+        lastLoginAt: new Date(),
+        isActive: true,
+      };
+
+      await setDoc(doc(db, 'users', firebaseUser.uid), userData);
+
+      // Mark that we've created at least one user
+      if (isFirstUser) {
+        await setDoc(doc(db, 'users', '_config'), { hasUsers: true });
+      }
+
+      return {
+        ...userData,
+        role: userData.role as User['role'],
+        createdAt: userData.createdAt,
+        lastLoginAt: userData.lastLoginAt,
+      };
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+      return null;
+    }
+  };
+
+  /**
    * Sign in with Google
    */
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      // Check if user profile exists, create if not (for emulator mode)
+      let profile = await fetchUserProfile(result.user.uid);
+      if (!profile) {
+        console.log('User profile not found, creating...');
+        profile = await createUserProfile(result.user);
+      }
+      if (profile) {
+        setUserProfile(profile);
+      }
       // Update last login time
       await updateLastLogin(result.user.uid);
     } catch (error) {
