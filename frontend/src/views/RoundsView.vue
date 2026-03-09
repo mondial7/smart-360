@@ -168,6 +168,12 @@ async function closeRound(id: number) {
           <span class="submitted-badge">✓ Feedback Submitted</span>
         </div>
         
+        <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-actions">
+          <router-link :to="`/rounds/${round.id}/consolidation`" class="consolidate-btn">
+            Consolidate Feedback
+          </router-link>
+        </div>
+        
         <div v-else-if="auth.isAdmin && round.status === 'active'" class="round-actions">
           <button class="close-btn" @click="closeRound(round.id)">
             Close Round
@@ -432,6 +438,23 @@ async function closeRound(id: number) {
 
 .submit-btn:hover {
   background: #5a6fd6;
+}
+
+.consolidate-btn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: #2196f3;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.consolidate-btn:hover {
+  background: #1976d2;
 }
 
 .submitted {

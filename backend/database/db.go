@@ -20,7 +20,7 @@ func InitDB() *gorm.DB {
 	}
 
 	// Auto-migrate models
-	err = db.AutoMigrate(&models.User{}, &models.FeedbackRound{}, &models.RoundReviewer{}, &models.Submission{})
+	err = db.AutoMigrate(&models.User{}, &models.FeedbackRound{}, &models.RoundReviewer{}, &models.Submission{}, &models.Consolidation{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

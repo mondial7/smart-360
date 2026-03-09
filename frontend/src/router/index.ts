@@ -46,11 +46,17 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/rounds/:roundId/consolidation',
+      name: 'consolidation',
+      component: () => import('@/views/ConsolidationView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
       path: '/my-feedback',
       name: 'my-feedback',
       component: () => import('@/views/MyFeedbackView.vue'),
       meta: { requiresAuth: true }
-    }
+    },
   ]
 })
 
