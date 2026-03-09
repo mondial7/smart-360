@@ -2,25 +2,21 @@ package models
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Consolidation struct {
-	ID                uint      `gorm:"primaryKey" json:"id"`
-	RoundID           uint      `gorm:"not null;uniqueIndex" json:"roundId"`
-	Round             FeedbackRound `gorm:"foreignKey:RoundID" json:"round,omitempty"`
-	GeneratedByID     uint      `gorm:"not null" json:"generatedById"`
-	GeneratedBy       User      `gorm:"foreignKey:GeneratedByID" json:"generatedBy,omitempty"`
-	ExecutiveSummary  string    `gorm:"type:text" json:"executiveSummary"`
-	Strengths         string    `gorm:"type:text" json:"strengths"`          // JSON array
-	AreasForImprovement string  `gorm:"type:text" json:"areasForImprovement"` // JSON array
-	ActionableInsights string   `gorm:"type:text" json:"actionableInsights"`  // JSON array
-	QuestionSummaries string   `gorm:"type:text" json:"questionSummaries"`    // JSON object
-	AdminNotes        string    `gorm:"type:text" json:"adminNotes"`
-	SharedAt          *time.Time `json:"sharedAt"`
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
-}
-
-func (Consolidation) TableName() string {
-	return "consolidations"
+	ID                  primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	RoundID             primitive.ObjectID `bson:"round_id" json:"roundId"`
+	GeneratedByID       primitive.ObjectID `bson:"generated_by_id" json:"generatedById"`
+	ExecutiveSummary    string             `bson:"executive_summary" json:"executiveSummary"`
+	Strengths           string             `bson:"strengths" json:"strengths"`                       // JSON array
+	AreasForImprovement string             `bson:"areas_for_improvement" json:"areasForImprovement"` // JSON array
+	ActionableInsights  string             `bson:"actionable_insights" json:"actionableInsights"`    // JSON array
+	QuestionSummaries   string             `bson:"question_summaries" json:"questionSummaries"`      // JSON object
+	AdminNotes          string             `bson:"admin_notes" json:"adminNotes"`
+	SharedAt            *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
+	CreatedAt           time.Time          `bson:"created_at" json:"createdAt"`
+	UpdatedAt           time.Time          `bson:"updated_at" json:"updatedAt"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"smart360/database"
@@ -12,9 +13,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"gorm.io/gorm"
 )
 
 var googleOAuthConfig *oauth2.Config
@@ -83,26 +85,44 @@ func GoogleCallback(c *gin.Context) {
 	}
 
 	db := database.GetDB()
+	ctx := context.Background()
 	var user models.User
 
-	err = db.Where("email = ?", googleUser.Email).First(&user).Error
-	if err == gorm.ErrRecordNotFound {
+	// Look for existing user
+	err = db.Collection("users").FindOne(ctx, bson.M{"email": googleUser.Email}).Decode(&user)
+	if err != nil && err == mongo.ErrNoDocuments {
 		// Check if this is the first user (auto-assign admin)
-		var count int64
-		db.Model(&models.User{}).Count(&count)
+		count, countErr := db.Collection("users").CountDocuments(ctx, bson.M{})
+		if countErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count users"})
+			return
+		}
 
 		role := models.RoleMember
 		if count == 0 {
 			role = models.RoleAdmin
 		}
 
-		user = models.User{
-			Email:    googleUser.Email,
-			Name:     googleUser.Name,
-			PhotoURL: googleUser.Picture,
-			Role:     role,
+		newUser := models.User{
+			Email:     googleUser.Email,
+			Name:      googleUser.Name,
+			PhotoURL:  googleUser.Picture,
+			Role:      role,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
-		db.Create(&user)
+
+		_, err = db.Collection("users").InsertOne(ctx, newUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
+		}
+		// Get the user back from MongoDB to get the real ObjectID
+		err = db.Collection("users").FindOne(ctx, bson.M{"email": googleUser.Email}).Decode(&user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve created user"})
+			return
+		}
 	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -111,7 +131,18 @@ func GoogleCallback(c *gin.Context) {
 	// Update last login
 	now := time.Now()
 	user.LastLogin = &now
-	db.Save(&user)
+	user.UpdatedAt = now
+
+	updateFields := bson.M{
+		"last_login": user.LastLogin,
+		"updated_at": user.UpdatedAt,
+	}
+
+	_, err = db.Collection("users").UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": updateFields})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
 
 	// Generate JWT
 	jwtToken, err := generateJWT(user)
@@ -132,7 +163,7 @@ func generateJWT(user models.User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userId": user.ID,
+		"userId": user.ID.Hex(),
 		"email":  user.Email,
 		"role":   user.Role,
 		"exp":    time.Now().Add(time.Hour * 24 * 7).Unix(),
@@ -153,7 +184,7 @@ func GetCurrentUser(c *gin.Context) {
 // DevLogin - bypass Google OAuth for development
 func DevLogin(c *gin.Context) {
 	db := database.GetDB()
-	var user models.User
+	ctx := context.Background()
 
 	// Check if specific email requested, otherwise default to admin
 	email := c.Query("email")
@@ -162,27 +193,59 @@ func DevLogin(c *gin.Context) {
 	}
 
 	// Look for existing user
-	err := db.Where("email = ?", email).First(&user).Error
-	if err != nil {
+	var user models.User
+	err := db.Collection("users").FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil && err == mongo.ErrNoDocuments {
 		// If dev admin doesn't exist, create it
 		if email == "dev@example.com" {
-			user = models.User{
-				Email:    "dev@example.com",
-				Name:     "Dev Admin",
-				PhotoURL: "",
-				Role:     models.RoleAdmin,
+			newUser := models.User{
+				Email:     "dev@example.com",
+				Name:      "Dev Admin",
+				PhotoURL:  "",
+				Role:      models.RoleAdmin,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			}
-			db.Create(&user)
+			_, err := db.Collection("users").InsertOne(ctx, newUser)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create dev user"})
+				return
+			}
+			// Get the user back from MongoDB to get the real ObjectID
+			err = db.Collection("users").FindOne(ctx, bson.M{"email": email}).Decode(&user)
+			if err != nil {
+				log.Printf("Failed to retrieve created dev user: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve created user"})
+				return
+			}
+			log.Printf("Retrieved dev user with ID: %s", user.ID.Hex())
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "User not found. Please seed data first."})
 			return
 		}
 	}
 
-	// Update last login
+	// Update last login - Dev Login
 	now := time.Now()
 	user.LastLogin = &now
-	db.Save(&user)
+	user.UpdatedAt = now
+
+	// Debug: Print user ID for dev login
+	log.Printf("Dev login - attempting to update user with ID: %s", user.ID.Hex())
+
+	updateFields := bson.M{
+		"last_login": user.LastLogin,
+		"updated_at": user.UpdatedAt,
+	}
+
+	result, err := db.Collection("users").UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": updateFields})
+	if err != nil {
+		log.Printf("Dev login update error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	log.Printf("Dev login update successful: matched %d, modified %d", result.MatchedCount, result.ModifiedCount)
 
 	// Generate JWT
 	jwtToken, err := generateJWT(user)

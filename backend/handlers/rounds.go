@@ -1,207 +1,224 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"smart360/database"
 	"smart360/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type CreateRoundRequest struct {
-	SubjectID   uint   `json:"subjectId" binding:"required"`
-	ReviewerIDs []uint `json:"reviewerIds" binding:"required,min=1"`
-	Deadline    string `json:"deadline" binding:"required"`
-}
-
-func CreateRound(c *gin.Context) {
+func CreateFeedbackRound(c *gin.Context) {
 	user, _ := c.Get("user")
 	currentUser := user.(models.User)
 
-	var req CreateRoundRequest
+	var req struct {
+		SubjectID primitive.ObjectID `json:"subjectId" binding:"required"`
+		Deadline  *time.Time         `json:"deadline"`
+	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Parse deadline
-	deadline, err := time.Parse(time.RFC3339, req.Deadline)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deadline format"})
-		return
-	}
-
-	// Ensure deadline is in the future
-	if deadline.Before(time.Now()) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Deadline must be in the future"})
-		return
-	}
-
-	db := database.GetDB()
-
-	// Verify subject exists and is not the creator
-	var subject models.User
-	if err := db.First(&subject, req.SubjectID).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Subject not found"})
-		return
-	}
-
-	if subject.ID == currentUser.ID {
+	// Check if user is trying to create a round for themselves
+	if req.SubjectID == currentUser.ID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot create feedback round for yourself"})
 		return
 	}
 
-	// Verify all reviewers exist and are not the subject
-	var reviewers []models.User
-	if err := db.Where("id IN ?", req.ReviewerIDs).Find(&reviewers).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reviewers"})
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Check if subject exists
+	var subject models.User
+	err := db.Collection("users").FindOne(ctx, bson.M{"_id": req.SubjectID}).Decode(&subject)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Subject user not found"})
 		return
 	}
 
-	if len(reviewers) != len(req.ReviewerIDs) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Some reviewers not found"})
-		return
-	}
-
-	// Filter out subject from reviewers if included
-	validReviewerIDs := make([]uint, 0)
-	for _, reviewer := range reviewers {
-		if reviewer.ID != req.SubjectID {
-			validReviewerIDs = append(validReviewerIDs, reviewer.ID)
-		}
-	}
-
-	if len(validReviewerIDs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one reviewer required (subject cannot review themselves)"})
-		return
-	}
-
-	// Create round
 	round := models.FeedbackRound{
 		SubjectID:   req.SubjectID,
 		CreatedByID: currentUser.ID,
-		Deadline:    &deadline,
-		Status:      models.RoundActive,
+		Deadline:    req.Deadline,
+		Status:      models.RoundDraft,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
-	if err := db.Create(&round).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create round"})
+	_, err = db.Collection("feedback_rounds").InsertOne(ctx, round)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create feedback round"})
 		return
 	}
-
-	// Create reviewer assignments
-	for _, reviewerID := range validReviewerIDs {
-		reviewer := models.RoundReviewer{
-			RoundID:    round.ID,
-			ReviewerID: reviewerID,
-		}
-		db.Create(&reviewer)
-	}
-
-	// Load round with relationships
-	db.Preload("Subject").Preload("CreatedBy").Preload("Reviewers.Reviewer").First(&round, round.ID)
 
 	c.JSON(http.StatusCreated, round)
 }
 
-func GetRounds(c *gin.Context) {
-	db := database.GetDB()
-
-	var rounds []models.FeedbackRound
-	if err := db.Preload("Subject").Preload("CreatedBy").Preload("Reviewers.Reviewer").
-		Order("created_at DESC").Find(&rounds).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch rounds"})
-		return
-	}
-
-	c.JSON(http.StatusOK, rounds)
-}
-
-func GetRound(c *gin.Context) {
-	id := c.Param("id")
-
-	db := database.GetDB()
-	var round models.FeedbackRound
-
-	if err := db.Preload("Subject").Preload("CreatedBy").Preload("Reviewers.Reviewer").
-		First(&round, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, round)
-}
-
-func GetRoundSubmissions(c *gin.Context) {
-	id := c.Param("id")
-	db := database.GetDB()
-
-	var submissions []models.Submission
-	if err := db.Where("round_id = ?", id).Order("submitted_at ASC").Find(&submissions).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
-		return
-	}
-
-	c.JSON(http.StatusOK, submissions)
-}
-
-func CloseRound(c *gin.Context) {
+func AddReviewersToRound(c *gin.Context) {
+	roundID := c.Param("id")
 	user, _ := c.Get("user")
 	currentUser := user.(models.User)
 
-	id := c.Param("id")
-	db := database.GetDB()
+	var req struct {
+		ReviewerIDs []primitive.ObjectID `json:"reviewerIds" binding:"required"`
+	}
 
-	var round models.FeedbackRound
-	if err := db.First(&round, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Only creator or admin can close
-	if round.CreatedByID != currentUser.ID && currentUser.Role != models.RoleAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized"})
-		return
-	}
-
-	round.Status = models.RoundClosed
-	db.Save(&round)
-
-	c.JSON(http.StatusOK, round)
-}
-
-func GetMyPendingReviews(c *gin.Context) {
-	user, _ := c.Get("user")
-	currentUser := user.(models.User)
-
 	db := database.GetDB()
+	ctx := context.Background()
 
-	// Find all rounds where user is a reviewer and hasn't submitted yet
-	var rounds []models.FeedbackRound
-	err := db.Joins("JOIN round_reviewers ON round_reviewers.round_id = feedback_rounds.id").
-		Where("round_reviewers.reviewer_id = ?", currentUser.ID).
-		Where("feedback_rounds.status = ?", models.RoundActive).
-		Where("feedback_rounds.deadline > ?", time.Now()).
-		Preload("Subject").
-		Preload("CreatedBy").
-		Preload("Reviewers.Reviewer").
-		Find(&rounds).Error
-
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch reviews"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
 		return
 	}
 
-	// Check submission status for each
-	var pending []models.FeedbackRound
-	for _, round := range rounds {
-		var count int64
-		db.Model(&models.Submission{}).Where("round_id = ? AND reviewer_id = ?", round.ID, currentUser.ID).Count(&count)
-		if count == 0 {
-			pending = append(pending, round)
+	// Verify round exists and user owns it
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	if round.CreatedByID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to modify this round"})
+		return
+	}
+
+	// Add reviewers
+	for _, reviewerID := range req.ReviewerIDs {
+		reviewer := models.RoundReviewer{
+			RoundID:    roundObjID,
+			ReviewerID: reviewerID,
+			CreatedAt:  time.Now(),
+		}
+		_, err = db.Collection("round_reviewers").InsertOne(ctx, reviewer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add reviewer"})
+			return
 		}
 	}
 
-	c.JSON(http.StatusOK, pending)
+	c.JSON(http.StatusOK, gin.H{"message": "Reviewers added successfully"})
+}
+
+func StartFeedbackRound(c *gin.Context) {
+	roundID := c.Param("id")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
+
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	// Verify round exists and user owns it
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	if round.CreatedByID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to modify this round"})
+		return
+	}
+
+	// Update round status
+	update := bson.M{"$set": bson.M{
+		"status": models.RoundActive,
+		"updated_at": time.Now(),
+	}}
+
+	_, err = db.Collection("feedback_rounds").UpdateOne(ctx, bson.M{"_id": roundObjID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start round"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Round started successfully"})
+}
+
+func GetRoundDetails(c *gin.Context) {
+	roundID := c.Param("id")
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, round)
+}
+
+func CloseFeedbackRound(c *gin.Context) {
+	roundID := c.Param("id")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
+
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	// Verify round exists and user owns it
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	if round.CreatedByID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to modify this round"})
+		return
+	}
+
+	// Update round status
+	update := bson.M{"$set": bson.M{
+		"status": models.RoundClosed,
+		"updated_at": time.Now(),
+	}}
+
+	_, err = db.Collection("feedback_rounds").UpdateOne(ctx, bson.M{"_id": roundObjID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close round"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Round closed successfully"})
 }

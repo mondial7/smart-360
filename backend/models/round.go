@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type RoundStatus string
@@ -14,43 +16,27 @@ const (
 )
 
 type FeedbackRound struct {
-	ID          uint            `gorm:"primaryKey" json:"id"`
-	SubjectID   uint            `gorm:"not null" json:"subjectId"`
-	Subject     User            `gorm:"foreignKey:SubjectID" json:"subject,omitempty"`
-	CreatedByID uint            `gorm:"not null" json:"createdById"`
-	CreatedBy   User            `gorm:"foreignKey:CreatedByID" json:"createdBy,omitempty"`
-	Deadline    *time.Time      `json:"deadline"`
-	Status      RoundStatus     `gorm:"default:draft" json:"status"`
-	CreatedAt   time.Time       `json:"createdAt"`
-	UpdatedAt   time.Time       `json:"updatedAt"`
-	Reviewers   []RoundReviewer `gorm:"foreignKey:RoundID" json:"reviewers,omitempty"`
-}
-
-func (FeedbackRound) TableName() string {
-	return "feedback_rounds"
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	SubjectID   primitive.ObjectID `bson:"subject_id" json:"subjectId"`
+	CreatedByID primitive.ObjectID `bson:"created_by_id" json:"createdById"`
+	Deadline    *time.Time         `bson:"deadline,omitempty" json:"deadline"`
+	Status      RoundStatus        `bson:"status" json:"status"`
+	CreatedAt   time.Time          `bson:"created_at" json:"createdAt"`
+	UpdatedAt   time.Time          `bson:"updated_at" json:"updatedAt"`
+	Reviewers   []RoundReviewer    `bson:"reviewers,omitempty" json:"reviewers,omitempty"`
 }
 
 type RoundReviewer struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	RoundID    uint      `gorm:"not null" json:"roundId"`
-	ReviewerID uint      `gorm:"not null" json:"reviewerId"`
-	Reviewer   User      `gorm:"foreignKey:ReviewerID" json:"reviewer,omitempty"`
-	CreatedAt  time.Time `json:"createdAt"`
-}
-
-func (RoundReviewer) TableName() string {
-	return "round_reviewers"
+	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	RoundID    primitive.ObjectID `bson:"round_id" json:"roundId"`
+	ReviewerID primitive.ObjectID `bson:"reviewer_id" json:"reviewerId"`
+	CreatedAt  time.Time          `bson:"created_at" json:"createdAt"`
 }
 
 type Submission struct {
-	ID          uint          `gorm:"primaryKey" json:"id"`
-	RoundID     uint          `gorm:"not null" json:"roundId"`
-	Round       FeedbackRound `gorm:"foreignKey:RoundID" json:"round,omitempty"`
-	ReviewerID  uint          `gorm:"not null" json:"reviewerId"`
-	Responses   string        `gorm:"type:text" json:"responses"` // JSON string
-	SubmittedAt time.Time     `json:"submittedAt"`
-}
-
-func (Submission) TableName() string {
-	return "submissions"
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	RoundID     primitive.ObjectID `bson:"round_id" json:"roundId"`
+	ReviewerID  primitive.ObjectID `bson:"reviewer_id" json:"reviewerId"`
+	Responses   string             `bson:"responses" json:"responses"` // JSON string
+	SubmittedAt time.Time          `bson:"submitted_at" json:"submittedAt"`
 }

@@ -53,12 +53,13 @@ func main() {
 		authorized.PUT("/users/:id/role", middleware.AdminOnly(), handlers.UpdateUserRole)
 
 		// Rounds - admin only for creation
-		authorized.POST("/rounds", middleware.AdminOnly(), handlers.CreateRound)
-		authorized.GET("/rounds", handlers.GetRounds)
-		authorized.GET("/rounds/:id", handlers.GetRound)
-		authorized.GET("/rounds/:id/submissions", middleware.AdminOnly(), handlers.GetRoundSubmissions)
-		authorized.POST("/rounds/:id/close", handlers.CloseRound)
-		authorized.GET("/my-pending-reviews", handlers.GetMyPendingReviews)
+		authorized.POST("/rounds", middleware.AdminOnly(), handlers.CreateFeedbackRound)
+		authorized.GET("/rounds", handlers.GetMyRounds)
+		authorized.GET("/rounds/:id", handlers.GetRoundDetails)
+		authorized.POST("/rounds/:id/reviewers", handlers.AddReviewersToRound)
+		authorized.POST("/rounds/:id/start", handlers.StartFeedbackRound)
+		authorized.POST("/rounds/:id/close", handlers.CloseFeedbackRound)
+		authorized.GET("/rounds-for-me", handlers.GetRoundsForMe)
 
 		// Submissions
 		authorized.POST("/submissions", handlers.SubmitFeedback)
@@ -70,7 +71,13 @@ func main() {
 		authorized.GET("/consolidations/:roundId", handlers.GetConsolidation)
 		authorized.PUT("/consolidations/:id/notes", middleware.AdminOnly(), handlers.UpdateConsolidationNotes)
 		authorized.POST("/consolidations/:id/share", middleware.AdminOnly(), handlers.ShareConsolidation)
-		authorized.GET("/my-feedback/consolidated", handlers.GetMyConsolidatedFeedback)
+
+		// Dashboard
+		authorized.GET("/dashboard/stats", handlers.GetDashboardStats)
+		authorized.GET("/dashboard/my-rounds", handlers.GetMyRounds)
+		authorized.GET("/dashboard/rounds-for-me", handlers.GetRoundsForMe)
+		authorized.GET("/dashboard/my-submissions", handlers.GetMySubmissions)
+		authorized.GET("/dashboard/my-consolidations", handlers.GetMyConsolidations)
 	}
 
 	// Start server
