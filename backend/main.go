@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
 	"smart360/database"
 	"smart360/handlers"
 	"smart360/middleware"
+	"smart360/models"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func main() {
@@ -54,12 +58,15 @@ func main() {
 
 		// Rounds - admin only for creation
 		authorized.POST("/rounds", middleware.AdminOnly(), handlers.CreateFeedbackRound)
-		authorized.GET("/rounds", handlers.GetMyRounds)
+		authorized.GET("/rounds", middleware.AdminOnly(), handlers.GetAllRounds)
 		authorized.GET("/rounds/:id", handlers.GetRoundDetails)
+		authorized.PUT("/rounds/:id", handlers.UpdateFeedbackRound)
 		authorized.POST("/rounds/:id/reviewers", handlers.AddReviewersToRound)
+		authorized.DELETE("/rounds/:id/reviewers/:reviewerId", handlers.RemoveReviewerFromRound)
 		authorized.POST("/rounds/:id/start", handlers.StartFeedbackRound)
 		authorized.POST("/rounds/:id/close", handlers.CloseFeedbackRound)
 		authorized.GET("/rounds-for-me", handlers.GetRoundsForMe)
+		authorized.GET("/my-rounds", handlers.GetMyRounds)
 
 		// Submissions
 		authorized.POST("/submissions", handlers.SubmitFeedback)
@@ -78,6 +85,31 @@ func main() {
 		authorized.GET("/dashboard/rounds-for-me", handlers.GetRoundsForMe)
 		authorized.GET("/dashboard/my-submissions", handlers.GetMySubmissions)
 		authorized.GET("/dashboard/my-consolidations", handlers.GetMyConsolidations)
+
+		// Admin debug endpoint
+		authorized.GET("/debug/reviewers", middleware.AdminOnly(), func(c *gin.Context) {
+			db := database.GetDB()
+			ctx := context.Background()
+
+			// Get all reviewers
+			cursor, err := db.Collection("round_reviewers").Find(ctx, bson.M{})
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch reviewers"})
+				return
+			}
+			defer cursor.Close(ctx)
+
+			var reviewers []models.RoundReviewer
+			if err = cursor.All(ctx, &reviewers); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode reviewers"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"total_reviewers": len(reviewers),
+				"reviewers":       reviewers,
+			})
+		})
 	}
 
 	// Start server

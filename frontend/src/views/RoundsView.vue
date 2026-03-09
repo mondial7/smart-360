@@ -8,7 +8,7 @@ const auth = useAuthStore()
 const rounds = ref<FeedbackRound[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const submissionStatus = ref<Record<number, boolean>>({})
+const submissionStatus = ref<Record<string, boolean>>({})  // Changed from Record<number, boolean>
 
 onMounted(async () => {
   console.log('RoundsView mounted')
@@ -19,10 +19,11 @@ async function loadRounds() {
   loading.value = true
   error.value = null
   try {
-    // Admins see all rounds, members see only pending reviews
-    const endpoint = auth.isAdmin ? '/rounds' : '/my-pending-reviews'
+    // Admins see all rounds, members see only their created rounds
+    const endpoint = auth.isAdmin ? '/rounds' : '/my-rounds'
     const response = await apiClient.get(endpoint)
     rounds.value = response.data || []
+    console.log('Loaded rounds:', rounds.value)
     // Check submission status for each round
     for (const round of rounds.value) {
       try {
@@ -66,11 +67,11 @@ function isAssignedReviewer(round: FeedbackRound): boolean {
   return round.reviewers?.some(r => r.reviewerId === auth.user?.id) ?? false
 }
 
-function hasSubmitted(roundId: number): boolean {
+function hasSubmitted(roundId: string): boolean {  // Changed from number to string
   return submissionStatus.value[roundId] ?? false
 }
 
-async function closeRound(id: number) {
+async function closeRound(id: string) {  // Changed from number to string
   if (!confirm('Close this round? No more submissions will be accepted.')) return
   
   try {
@@ -165,26 +166,35 @@ async function closeRound(id: number) {
           </div>
         </div>
         
-        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id)" class="round-actions">
+        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id)" class="round-actions single">
           <router-link :to="`/rounds/${round.id}/submit`" class="submit-btn">
             Submit Feedback
           </router-link>
         </div>
         
-        <div v-else-if="hasSubmitted(round.id)" class="round-actions submitted">
+        <div v-else-if="hasSubmitted(round.id)" class="round-actions single submitted">
           <span class="submitted-badge">✓ Feedback Submitted</span>
         </div>
         
-        <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-actions">
+        <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-actions single">
           <router-link :to="`/rounds/${round.id}/consolidation`" class="consolidate-btn">
             Consolidate Feedback
           </router-link>
         </div>
         
         <div v-else-if="auth.isAdmin && round.status === 'active'" class="round-actions">
+          <router-link :to="`/rounds/${round.id}`" class="edit-btn">
+            ✏️ Edit
+          </router-link>
           <button class="close-btn" @click="closeRound(round.id)">
             Close Round
           </button>
+        </div>
+        
+        <div v-else-if="auth.isAdmin" class="round-actions single">
+          <router-link :to="`/rounds/${round.id}`" class="edit-btn">
+            ✏️ Edit
+          </router-link>
         </div>
       </div>
     </div>
@@ -422,10 +432,16 @@ async function closeRound(id: number) {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid #eee;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.round-actions.single {
+  display: block;
 }
 
 .close-btn {
-  width: 100%;
+  flex: 1;
   padding: 0.5rem;
   border: 1px solid #f44336;
   background: transparent;
@@ -440,12 +456,10 @@ async function closeRound(id: number) {
   background: #ffebee;
 }
 
-.submit-btn {
+.submit-btn, .edit-btn, .consolidate-btn {
+  flex: 1;
   display: block;
-  width: 100%;
   padding: 0.5rem;
-  background: #667eea;
-  color: white;
   text-decoration: none;
   border-radius: 6px;
   text-align: center;
@@ -453,21 +467,18 @@ async function closeRound(id: number) {
   transition: background 0.2s;
 }
 
-.submit-btn:hover {
+.submit-btn, .edit-btn {
+  background: #667eea;
+  color: white;
+}
+
+.submit-btn:hover, .edit-btn:hover {
   background: #5a6fd6;
 }
 
 .consolidate-btn {
-  display: block;
-  width: 100%;
-  padding: 0.5rem;
   background: #2196f3;
   color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 0.85rem;
-  transition: background 0.2s;
 }
 
 .consolidate-btn:hover {
@@ -482,5 +493,22 @@ async function closeRound(id: number) {
   color: #4caf50;
   font-size: 0.85rem;
   font-weight: 500;
+}
+
+.edit-btn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: #667eea;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.edit-btn:hover {
+  background: #5a6fd6;
 }
 </style>

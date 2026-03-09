@@ -9,7 +9,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const roundId = parseInt(route.params.roundId as string)
+const roundId = route.params.roundId as string  // Changed from parseInt to string
 const round = ref<FeedbackRound | null>(null)
 const consolidation = ref<any>(null)
 const loading = ref(true)

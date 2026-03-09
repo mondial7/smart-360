@@ -1,5 +1,5 @@
 export interface User {
-  id: number
+  id: string  // Changed from number to string for ObjectID
   email: string
   name: string
   photoUrl: string

@@ -3,10 +3,10 @@ import type { User } from './user'
 export type RoundStatus = 'draft' | 'active' | 'closed' | 'shared'
 
 export interface FeedbackRound {
-  id: number
-  subjectId: number
+  id: string  // Changed from number to string for ObjectID
+  subjectId: string  // Changed from number to string for ObjectID
   subject?: User
-  createdById: number
+  createdById: string  // Changed from number to string for ObjectID
   createdBy?: User
   deadline: string | null
   status: RoundStatus
@@ -16,15 +16,15 @@ export interface FeedbackRound {
 }
 
 export interface RoundReviewer {
-  id: number
-  roundId: number
-  reviewerId: number
+  id: string  // Changed from number to string for ObjectID
+  roundId: string  // Changed from number to string for ObjectID
+  reviewerId: string  // Changed from number to string for ObjectID
   reviewer?: User
   createdAt: string
 }
 
 export interface CreateRoundRequest {
-  subjectId: number
-  reviewerIds: number[]
+  subjectId: string  // Changed from number to string for ObjectID
+  reviewerIds: string[]  // Changed from number[] to string[] for ObjectID
   deadline: string
 }

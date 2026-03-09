@@ -46,6 +46,46 @@ func GetDashboardStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
+func GetAllRounds(c *gin.Context) {
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
+
+	// Only admins can get all rounds
+	if currentUser.Role != models.RoleAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+		return
+	}
+
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Get all rounds
+	cursor, err := db.Collection("feedback_rounds").Find(ctx, bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch rounds"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var rounds []models.FeedbackRound
+	if err = cursor.All(ctx, &rounds); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode rounds"})
+		return
+	}
+
+	// Populate each round
+	var populatedRounds []PopulatedRound
+	for _, round := range rounds {
+		populatedRound, err := getPopulatedRound(ctx, db, round.ID)
+		if err != nil {
+			continue // Skip rounds that can't be populated
+		}
+		populatedRounds = append(populatedRounds, *populatedRound)
+	}
+
+	c.JSON(http.StatusOK, populatedRounds)
+}
+
 func GetMyRounds(c *gin.Context) {
 	user, _ := c.Get("user")
 	currentUser := user.(models.User)
@@ -66,7 +106,17 @@ func GetMyRounds(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, rounds)
+	// Populate each round
+	var populatedRounds []PopulatedRound
+	for _, round := range rounds {
+		populatedRound, err := getPopulatedRound(ctx, db, round.ID)
+		if err != nil {
+			continue // Skip rounds that can't be populated
+		}
+		populatedRounds = append(populatedRounds, *populatedRound)
+	}
+
+	c.JSON(http.StatusOK, populatedRounds)
 }
 
 func GetRoundsForMe(c *gin.Context) {
@@ -89,7 +139,17 @@ func GetRoundsForMe(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, rounds)
+	// Populate each round
+	var populatedRounds []PopulatedRound
+	for _, round := range rounds {
+		populatedRound, err := getPopulatedRound(ctx, db, round.ID)
+		if err != nil {
+			continue // Skip rounds that can't be populated
+		}
+		populatedRounds = append(populatedRounds, *populatedRound)
+	}
+
+	c.JSON(http.StatusOK, populatedRounds)
 }
 
 func GetMySubmissions(c *gin.Context) {
