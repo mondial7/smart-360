@@ -29,6 +29,7 @@ firebase-debug.log
 firebase-debug.*.log
 .firebaserc*
 !.firebaserc
+firebase-export
 
 # Cloud Functions
 functions/lib
