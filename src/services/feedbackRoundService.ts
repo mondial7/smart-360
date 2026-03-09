@@ -147,3 +147,29 @@ export const getMyFeedbackRounds = async (
     throw error;
   }
 };
+
+/**
+ * Get shared feedback rounds for current user (as subject)
+ */
+export const getSharedFeedbackForSubject = async (
+  userId: string
+): Promise<FeedbackRound[]> => {
+  try {
+    const roundsRef = collection(db, 'feedbackRounds');
+    const q = query(
+      roundsRef,
+      where('subjectId', '==', userId),
+      where('status', '==', 'shared'),
+      orderBy('sharedAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data() as FeedbackRoundFirestore;
+      return convertFirestoreRound(data);
+    });
+  } catch (error) {
+    console.error('Error fetching shared feedback:', error);
+    throw error;
+  }
+};

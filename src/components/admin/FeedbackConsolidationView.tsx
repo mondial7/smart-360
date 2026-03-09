@@ -19,11 +19,17 @@ import {
   Card,
   CardContent,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ShareIcon from '@mui/icons-material/Share';
 import type { FeedbackRound, ConsolidatedFeedback } from '../../types';
-import { consolidateFeedback, getConsolidatedFeedbackByRoundId } from '../../services/feedbackService';
+import { consolidateFeedback, getConsolidatedFeedbackByRoundId, shareFeedbackWithSubject } from '../../services/feedbackService';
 
 interface FeedbackConsolidationViewProps {
   round: FeedbackRound;
@@ -49,6 +55,9 @@ export const FeedbackConsolidationView: React.FC<FeedbackConsolidationViewProps>
   const [error, setError] = useState<string>('');
   const [consolidation, setConsolidation] = useState<ConsolidatedFeedback | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   // Check if feedback is already consolidated
   useEffect(() => {
@@ -86,8 +95,31 @@ export const FeedbackConsolidationView: React.FC<FeedbackConsolidationViewProps>
     }
   };
 
+  const handleShare = async () => {
+    setSharing(true);
+    setError('');
+
+    try {
+      await shareFeedbackWithSubject(round.id, adminNotes || undefined);
+      setShareDialogOpen(false);
+
+      // Refresh the consolidation data
+      const fullConsolidation = await getConsolidatedFeedbackByRoundId(round.id);
+      setConsolidation(fullConsolidation);
+
+      // Reload the page to refresh round status
+      window.location.reload();
+    } catch (err: any) {
+      console.error('Error sharing feedback:', err);
+      setError(err.message || 'Failed to share feedback');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const isComplete = round.submissionCount === round.reviewerIds.length;
   const progress = (round.submissionCount / round.reviewerIds.length) * 100;
+  const isShared = round.status === 'shared';
 
   if (loading) {
     return (
@@ -186,11 +218,39 @@ export const FeedbackConsolidationView: React.FC<FeedbackConsolidationViewProps>
 
       {/* Consolidated Feedback View */}
       {consolidation && (
-        <Paper sx={{ p: 0 }}>
-          <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-            <Tab label="AI Summary" />
-            <Tab label="Raw Feedback" />
-          </Tabs>
+        <>
+          {/* Share Status / Action */}
+          {isShared ? (
+            <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: 3 }}>
+              This feedback has been shared with {round.subjectName} on{' '}
+              {round.sharedAt?.toLocaleDateString()}.
+            </Alert>
+          ) : (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Ready to Share
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Review the consolidated feedback above. When ready, share it with {round.subjectName}.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<ShareIcon />}
+                onClick={() => setShareDialogOpen(true)}
+                color="success"
+                fullWidth
+              >
+                Share Feedback with Subject
+              </Button>
+            </Paper>
+          )}
+
+          <Paper sx={{ p: 0 }}>
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+              <Tab label="AI Summary" />
+              <Tab label="Raw Feedback" />
+            </Tabs>
 
           <TabPanel value={tabValue} index={0}>
             {/* AI Summary Tab */}
@@ -365,8 +425,44 @@ export const FeedbackConsolidationView: React.FC<FeedbackConsolidationViewProps>
               ))}
             </Box>
           </TabPanel>
-        </Paper>
+          </Paper>
+        </>
       )}
+
+      {/* Share Feedback Dialog */}
+      <Dialog open={shareDialogOpen} onClose={() => !sharing && setShareDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Share Feedback with {round.subjectName}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            You are about to share this consolidated feedback with the subject. They will be able to view
+            the AI summary and insights.
+          </Typography>
+          <TextField
+            label="Admin Notes (Optional)"
+            multiline
+            rows={4}
+            fullWidth
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            placeholder="Add any additional context or notes for the subject..."
+            helperText="These notes will be visible to the subject along with the feedback"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareDialogOpen(false)} disabled={sharing}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleShare}
+            variant="contained"
+            color="success"
+            disabled={sharing}
+            startIcon={sharing ? <CircularProgress size={20} /> : <ShareIcon />}
+          >
+            {sharing ? 'Sharing...' : 'Share Feedback'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

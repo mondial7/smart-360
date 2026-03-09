@@ -16,6 +16,7 @@ import { TeamManagementPage } from './pages/TeamManagementPage';
 import { FeedbackRoundsPage } from './pages/FeedbackRoundsPage';
 import { FeedbackSubmissionPage } from './pages/FeedbackSubmissionPage';
 import { FeedbackConsolidationPage } from './pages/FeedbackConsolidationPage';
+import { MyFeedbackPage } from './pages/MyFeedbackPage';
 
 // Create Material-UI theme
 const theme = createTheme({
@@ -96,6 +97,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <FeedbackSubmissionPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-feedback"
+              element={
+                <ProtectedRoute>
+                  <MyFeedbackPage />
                 </ProtectedRoute>
               }
             />

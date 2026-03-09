@@ -220,3 +220,20 @@ export const getConsolidatedFeedbackById = async (
     throw error;
   }
 };
+
+/**
+ * Share consolidated feedback with subject (calls Cloud Function)
+ */
+export const shareFeedbackWithSubject = async (
+  roundId: string,
+  adminNotes?: string
+): Promise<{ success: boolean; consolidationId: string }> => {
+  try {
+    const shareFunction = httpsCallable(functions, 'shareFeedbackWithSubject');
+    const result = await shareFunction({ roundId, adminNotes });
+    return result.data as { success: boolean; consolidationId: string };
+  } catch (error) {
+    console.error('Error sharing feedback with subject:', error);
+    throw error;
+  }
+};
