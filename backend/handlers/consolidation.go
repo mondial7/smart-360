@@ -186,9 +186,6 @@ func GetConsolidation(c *gin.Context) {
 }
 
 func UpdateConsolidationNotes(c *gin.Context) {
-	user, _ := c.Get("user")
-	currentUser := user.(models.User)
-
 	id := c.Param("id")
 	db := database.GetDB()
 
