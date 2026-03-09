@@ -28,6 +28,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/rounds',
+      name: 'rounds',
+      component: () => import('@/views/RoundsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/rounds/new',
+      name: 'create-round',
+      component: () => import('@/views/CreateRoundView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
       path: '/my-feedback',
       name: 'my-feedback',
       component: () => import('@/views/MyFeedbackView.vue'),
@@ -42,6 +54,8 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     next('/login')
   } else if (to.meta.guestOnly && auth.isAuthenticated) {
+    next('/')
+  } else if (to.meta.adminOnly && !auth.isAdmin) {
     next('/')
   } else {
     next()

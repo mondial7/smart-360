@@ -20,6 +20,9 @@ func main() {
 	// Initialize database
 	database.InitDB()
 
+	// Seed development data
+	database.SeedData()
+
 	// Initialize OAuth
 	handlers.InitOAuthConfig()
 
@@ -48,6 +51,13 @@ func main() {
 		authorized.GET("/users", handlers.GetUsers)
 		authorized.GET("/users/:id", handlers.GetUserByID)
 		authorized.PUT("/users/:id/role", middleware.AdminOnly(), handlers.UpdateUserRole)
+
+		// Rounds - admin only for creation
+		authorized.POST("/rounds", middleware.AdminOnly(), handlers.CreateRound)
+		authorized.GET("/rounds", handlers.GetRounds)
+		authorized.GET("/rounds/:id", handlers.GetRound)
+		authorized.POST("/rounds/:id/close", handlers.CloseRound)
+		authorized.GET("/my-pending-reviews", handlers.GetMyPendingReviews)
 	}
 
 	// Start server

@@ -13,6 +13,7 @@ const auth = useAuthStore()
     <div class="nav-links">
       <router-link to="/" class="nav-link">Dashboard</router-link>
       <router-link to="/team" class="nav-link">Team</router-link>
+      <router-link to="/rounds" class="nav-link">Rounds</router-link>
       <router-link to="/my-feedback" class="nav-link">My Feedback</router-link>
     </div>
     
