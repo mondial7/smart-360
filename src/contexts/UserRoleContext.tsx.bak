@@ -4,10 +4,9 @@
  * Provides user role information and helper methods
  */
 
-import React, { createContext, useContext } from 'react';
-import type { ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import type { UserRole } from '../types';
+import { UserRole } from '../types';
 
 interface UserRoleContextType {
   role: UserRole | null;

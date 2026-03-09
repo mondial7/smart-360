@@ -1,7 +1,7 @@
 /**
- * Feedback Submission Page
+ * Feedback Consolidation Page
  *
- * Page for submitting feedback for a specific round
+ * Page for consolidating and viewing feedback for a specific round
  */
 
 import React, { useState, useEffect } from 'react';
@@ -15,26 +15,22 @@ import {
   Alert,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useAuth } from '../contexts/AuthContext';
 import { getFeedbackRoundById } from '../services/feedbackRoundService';
-import { getSubmissionForRound } from '../services/feedbackService';
 import type { FeedbackRound } from '../types';
-import { FeedbackForm } from '../components/feedback/FeedbackForm';
+import { FeedbackConsolidationView } from '../components/admin/FeedbackConsolidationView';
 
-export const FeedbackSubmissionPage: React.FC = () => {
+export const FeedbackConsolidationPage: React.FC = () => {
   const { roundId } = useParams<{ roundId: string }>();
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   const [round, setRound] = useState<FeedbackRound | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
   useEffect(() => {
     const loadRound = async () => {
-      if (!roundId || !currentUser) {
-        setError('Invalid request');
+      if (!roundId) {
+        setError('Invalid round ID');
         setLoading(false);
         return;
       }
@@ -48,19 +44,6 @@ export const FeedbackSubmissionPage: React.FC = () => {
           return;
         }
 
-        // Check if user is a reviewer for this round
-        if (!roundData.reviewerIds.includes(currentUser.uid)) {
-          setError('You are not authorized to provide feedback for this round');
-          setLoading(false);
-          return;
-        }
-
-        // Check if already submitted
-        const submission = await getSubmissionForRound(roundId, currentUser.uid);
-        if (submission) {
-          setAlreadySubmitted(true);
-        }
-
         setRound(roundData);
         setLoading(false);
       } catch (err: any) {
@@ -71,7 +54,7 @@ export const FeedbackSubmissionPage: React.FC = () => {
     };
 
     loadRound();
-  }, [roundId, currentUser]);
+  }, [roundId]);
 
   if (loading) {
     return (
@@ -83,63 +66,40 @@ export const FeedbackSubmissionPage: React.FC = () => {
     );
   }
 
-  if (error || !round || !currentUser) {
+  if (error || !round) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/admin/rounds')}
           sx={{ mb: 2 }}
         >
-          Back to Dashboard
+          Back to Rounds
         </Button>
         <Alert severity="error">{error || 'Failed to load feedback round'}</Alert>
       </Container>
     );
   }
 
-  if (alreadySubmitted) {
-    return (
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/dashboard')}
-          sx={{ mb: 2 }}>
-          Back to Dashboard
-        </Button>
-        <Alert severity="info">
-          You have already submitted feedback for this round. Thank you!
-        </Alert>
-      </Container>
-    );
-  }
-
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 3 }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/admin/rounds')}
           sx={{ mb: 2 }}
         >
-          Back to Dashboard
+          Back to Rounds
         </Button>
         <Typography variant="h4" component="h1" gutterBottom>
-          Submit Feedback
+          Consolidate Feedback
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Provide anonymous feedback for your colleague. Be honest and constructive.
+          Review and consolidate anonymous feedback using AI
         </Typography>
       </Box>
 
-      <FeedbackForm
-        roundId={round.id}
-        subjectId={round.subjectId}
-        subjectName={round.subjectName}
-        reviewerId={currentUser.uid}
-        questions={round.questions}
-        deadline={round.deadline}
-      />
+      <FeedbackConsolidationView round={round} />
     </Container>
   );
 };

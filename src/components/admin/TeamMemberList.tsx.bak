@@ -24,7 +24,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import { useUsers } from '../../hooks/useUsers';
 import { useAuth } from '../../contexts/AuthContext';
-import type { User } from '../../types';
+import { User } from '../../types';
 import { TeamMemberForm } from './TeamMemberForm';
 
 export const TeamMemberList: React.FC = () => {

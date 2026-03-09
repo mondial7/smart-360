@@ -13,7 +13,7 @@ export { onFeedbackSubmit } from './triggers/onFeedbackSubmit';
 // Callable Functions
 export { assignUserRole } from './callable/assignUserRole';
 export { createFeedbackRound } from './callable/createFeedbackRound';
+export { consolidateFeedback } from './callable/consolidateFeedback';
 
 // Future Callable Functions (to be added in later phases)
-// export { consolidateFeedback } from './callable/consolidateFeedback';
 // export { shareFeedbackWithSubject } from './callable/shareFeedbackWithSubject';

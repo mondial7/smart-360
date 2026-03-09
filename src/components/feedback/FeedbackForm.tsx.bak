@@ -16,7 +16,7 @@ import {
   Paper,
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
-import type { FeedbackAnswers, FeedbackQuestions } from '../../types';
+import { FeedbackAnswers, FeedbackQuestions } from '../../types';
 import { submitFeedback } from '../../services/feedbackService';
 
 interface FeedbackFormProps {

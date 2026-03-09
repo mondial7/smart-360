@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { User, UserFirestore } from '../types';
+import { User, UserFirestore } from '../types';
 
 /**
  * Convert Firestore timestamp to Date

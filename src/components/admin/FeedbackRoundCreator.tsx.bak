@@ -20,6 +20,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  TextField,
   Typography,
   Checkbox,
   FormGroup,
@@ -110,7 +111,7 @@ export const FeedbackRoundCreator: React.FC<FeedbackRoundCreatorProps> = ({
       setLoading(true);
       setError('');
 
-      await createFeedbackRound({
+      const result = await createFeedbackRound({
         subjectId,
         reviewerIds,
         deadline,

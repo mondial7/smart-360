@@ -21,7 +21,7 @@ import {
   Avatar,
   CircularProgress,
 } from '@mui/material';
-import type { User, UserRole } from '../../types';
+import { User, UserRole } from '../../types';
 import { updateUserRole } from '../../services/userService';
 
 interface TeamMemberFormProps {

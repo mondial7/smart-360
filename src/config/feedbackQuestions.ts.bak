@@ -4,7 +4,7 @@
  * Four standard questions used for all feedback rounds
  */
 
-import type { FeedbackQuestions } from '../types';
+import { FeedbackQuestions } from '../types';
 
 export const DEFAULT_QUESTIONS: FeedbackQuestions = {
   q1: "What are this person's key strengths?",

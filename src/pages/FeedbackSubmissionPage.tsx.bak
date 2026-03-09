@@ -18,7 +18,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth } from '../contexts/AuthContext';
 import { getFeedbackRoundById } from '../services/feedbackRoundService';
 import { getSubmissionForRound } from '../services/feedbackService';
-import type { FeedbackRound } from '../types';
+import { FeedbackRound } from '../types';
 import { FeedbackForm } from '../components/feedback/FeedbackForm';
 
 export const FeedbackSubmissionPage: React.FC = () => {

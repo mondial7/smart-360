@@ -11,6 +11,7 @@ import {
   Typography,
   Box,
   Paper,
+  Grid,
   Card,
   CardContent,
   Button,
@@ -35,6 +36,9 @@ export const AdminDashboard: React.FC = () => {
 
   const totalRounds = rounds.length;
   const activeRounds = rounds.filter((r) => r.status === 'active').length;
+  const pendingConsolidation = rounds.filter(
+    (r) => r.status === 'closed' && !r.consolidatedAt
+  ).length;
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -59,8 +63,8 @@ export const AdminDashboard: React.FC = () => {
         </Typography>
       </Paper>
 
-      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-        <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -84,9 +88,9 @@ export const AdminDashboard: React.FC = () => {
               </Button>
             </CardActions>
           </Card>
-        </Box>
+        </Grid>
 
-        <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -109,9 +113,9 @@ export const AdminDashboard: React.FC = () => {
               </Button>
             </CardActions>
           </Card>
-        </Box>
+        </Grid>
 
-        <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -134,8 +138,8 @@ export const AdminDashboard: React.FC = () => {
               </Button>
             </CardActions>
           </Card>
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
 
       <Box sx={{ mt: 4 }}>
         <Typography variant="body1" color="text.secondary">

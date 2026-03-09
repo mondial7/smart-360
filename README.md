@@ -82,16 +82,18 @@ To deploy Cloud Functions, you need to upgrade to the Blaze (pay-as-you-go) plan
 
 ### 4. Environment Variables
 
-The `.env.local` file has been created with your Firebase configuration:
+Create a `.env.local` file in the root directory with your Firebase configuration:
 
 ```
-VITE_FIREBASE_API_KEY=AIzaSyBLQaHyPD64mqdHf5teOE_0SRw-j0R--Pg
-VITE_FIREBASE_AUTH_DOMAIN=smart-360-feedback.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=smart-360-feedback
-VITE_FIREBASE_STORAGE_BUCKET=smart-360-feedback.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=710920208749
-VITE_FIREBASE_APP_ID=1:710920208749:web:216eef44db4c8b02321a64
+VITE_FIREBASE_API_KEY=your_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project_id.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 ```
+
+You can find these values in your [Firebase Console](https://console.firebase.google.com/project/smart-360-feedback/settings/general) under Project Settings > General > Your apps > Web app.
 
 ⚠️ **Important**: Never commit `.env.local` to version control (it's already in `.gitignore`)
 

@@ -4,17 +4,16 @@
  * Provides authentication state and Google Sign-In functionality
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import type { User as FirebaseUser } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
+  User as FirebaseUser,
   signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../config/firebase';
-import type { User, UserFirestore } from '../types';
+import { User, UserFirestore } from '../types';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
