@@ -7,6 +7,9 @@
 // Auth Triggers
 export { onUserCreate } from './triggers/onUserCreate';
 
+// Firestore Triggers
+export { onFeedbackSubmit } from './triggers/onFeedbackSubmit';
+
 // Callable Functions
 export { assignUserRole } from './callable/assignUserRole';
 export { createFeedbackRound } from './callable/createFeedbackRound';

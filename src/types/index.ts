@@ -10,3 +10,10 @@ export type {
   FeedbackQuestions,
   CreateFeedbackRoundInput,
 } from './feedbackRound';
+export type {
+  FeedbackAnswers,
+  FeedbackSubmission,
+  FeedbackSubmissionFirestore,
+  AISummary,
+  ConsolidatedFeedback,
+} from './feedback';

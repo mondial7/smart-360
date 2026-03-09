@@ -14,6 +14,7 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MemberDashboard } from './components/member/MemberDashboard';
 import { TeamManagementPage } from './pages/TeamManagementPage';
 import { FeedbackRoundsPage } from './pages/FeedbackRoundsPage';
+import { FeedbackSubmissionPage } from './pages/FeedbackSubmissionPage';
 
 // Create Material-UI theme
 const theme = createTheme({
@@ -76,6 +77,16 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin={true}>
                   <FeedbackRoundsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Member Routes */}
+            <Route
+              path="/feedback/submit/:roundId"
+              element={
+                <ProtectedRoute>
+                  <FeedbackSubmissionPage />
                 </ProtectedRoute>
               }
             />

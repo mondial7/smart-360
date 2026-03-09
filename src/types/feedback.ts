@@ -1,0 +1,75 @@
+/**
+ * Feedback Types
+ */
+
+/**
+ * Feedback answers structure
+ */
+export interface FeedbackAnswers {
+  q1: string;
+  q2: string;
+  q3: string;
+  q4: string;
+}
+
+/**
+ * Feedback submission interface
+ */
+export interface FeedbackSubmission {
+  id: string;
+  roundId: string;
+  reviewerId: string;
+  subjectId: string;
+  answers: FeedbackAnswers;
+  submittedAt: Date;
+  updatedAt: Date | null;
+  isAnonymous: boolean;
+}
+
+/**
+ * Firestore feedback submission (before conversion)
+ */
+export interface FeedbackSubmissionFirestore {
+  id: string;
+  roundId: string;
+  reviewerId: string;
+  subjectId: string;
+  answers: FeedbackAnswers;
+  submittedAt: { seconds: number; nanoseconds: number } | Date;
+  updatedAt: { seconds: number; nanoseconds: number } | Date | null;
+  isAnonymous: boolean;
+}
+
+/**
+ * AI summary structure (for Phase 5)
+ */
+export interface AISummary {
+  overview: string;
+  keyStrengths: string[];
+  areasForImprovement: string[];
+  actionableInsights: string[];
+  q1Summary: string;
+  q2Summary: string;
+  q3Summary: string;
+  q4Summary: string;
+}
+
+/**
+ * Consolidated feedback interface (for Phase 5)
+ */
+export interface ConsolidatedFeedback {
+  id: string;
+  roundId: string;
+  subjectId: string;
+  rawFeedback: Array<{
+    submissionId: string;
+    answers: FeedbackAnswers;
+  }>;
+  aiSummary: AISummary;
+  adminNotes: string | null;
+  adminApproved: boolean;
+  consolidatedBy: string;
+  consolidatedAt: Date;
+  sharedWithSubject: boolean;
+  sharedAt: Date | null;
+}

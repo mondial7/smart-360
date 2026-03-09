@@ -10,12 +10,10 @@ import {
   Typography,
   Box,
   Paper,
-  Grid,
-  Card,
-  CardContent,
   Button,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { PendingFeedbackList } from './PendingFeedbackList';
 
 export const MemberDashboard: React.FC = () => {
   const { userProfile, signOut } = useAuth();
@@ -40,39 +38,16 @@ export const MemberDashboard: React.FC = () => {
         </Typography>
       </Paper>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Pending Feedback Requests</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Feedback you need to provide
-              </Typography>
-              <Typography variant="h4" sx={{ mt: 2 }}>
-                -
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Received Feedback</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Your consolidated feedback
-              </Typography>
-              <Typography variant="h4" sx={{ mt: 2 }}>
-                -
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Feedback Requests
+        </Typography>
+        <PendingFeedbackList />
+      </Box>
 
       <Box sx={{ mt: 4 }}>
         <Typography variant="body1" color="text.secondary">
-          Phase 1 Complete - Authentication working! Next phases will add feedback submission and viewing.
+          ✅ Phase 4 - You can now submit feedback! Click on any pending request to provide feedback.
         </Typography>
       </Box>
     </Container>
