@@ -82,9 +82,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const updateLastLogin = async (uid: string) => {
     try {
-      await updateDoc(doc(db, 'users', uid), {
-        lastLoginAt: new Date(),
-      });
+      const userRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userRef);
+
+      // Only update if document exists (Cloud Function creates it for new users)
+      if (userDoc.exists()) {
+        await updateDoc(userRef, {
+          lastLoginAt: new Date(),
+        });
+      }
+      // If document doesn't exist, the Cloud Function will set lastLoginAt
     } catch (error) {
       console.error('Error updating last login:', error);
     }
@@ -126,7 +133,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (user) {
         // Fetch user profile from Firestore
-        const profile = await fetchUserProfile(user.uid);
+        // Retry a few times if profile doesn't exist yet (Cloud Function might be creating it)
+        let profile = await fetchUserProfile(user.uid);
+
+        if (!profile) {
+          // Wait and retry up to 3 times (total ~6 seconds)
+          for (let i = 0; i < 3 && !profile; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            profile = await fetchUserProfile(user.uid);
+          }
+        }
+
         setUserProfile(profile);
       } else {
         setUserProfile(null);

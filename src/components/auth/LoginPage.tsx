@@ -4,7 +4,7 @@
  * Displays Google Sign-In button and handles authentication
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   Box,
@@ -18,12 +18,20 @@ import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const LoginPage: React.FC = () => {
-  const { currentUser, signInWithGoogle } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, signInWithGoogle } = useAuth();
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
+  // Show message if authenticated but profile is still loading
+  useEffect(() => {
+    if (!authLoading && currentUser && !userProfile) {
+      setError('Setting up your profile... If this takes too long, please contact support.');
+    }
+  }, [authLoading, currentUser, userProfile]);
+
   // Redirect to dashboard if already logged in
-  if (currentUser) {
+  // Check for both currentUser AND userProfile to prevent redirect loop
+  if (!authLoading && currentUser && userProfile) {
     return <Navigate to="/dashboard" replace />;
   }
 

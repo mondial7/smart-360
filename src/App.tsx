@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { CssBaseline, ThemeProvider, createTheme, Box, CircularProgress } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import { LoginPage } from './components/auth/LoginPage';
@@ -37,7 +37,24 @@ const theme = createTheme({
  * Routes to appropriate dashboard based on user role
  */
 const DashboardRouter: React.FC = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, loading } = useAuth();
+
+  // Show loading while profile is being fetched
+  // This prevents redirect loop when currentUser exists but userProfile is still loading
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!userProfile) {
     return <Navigate to="/" replace />;
