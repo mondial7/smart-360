@@ -56,6 +56,7 @@ func main() {
 		authorized.POST("/rounds", middleware.AdminOnly(), handlers.CreateRound)
 		authorized.GET("/rounds", handlers.GetRounds)
 		authorized.GET("/rounds/:id", handlers.GetRound)
+		authorized.GET("/rounds/:id/submissions", middleware.AdminOnly(), handlers.GetRoundSubmissions)
 		authorized.POST("/rounds/:id/close", handlers.CloseRound)
 		authorized.GET("/my-pending-reviews", handlers.GetMyPendingReviews)
 

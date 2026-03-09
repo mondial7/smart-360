@@ -34,6 +34,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/rounds/:id',
+      name: 'round-details',
+      component: () => import('@/views/RoundDetailsView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
       path: '/rounds/new',
       name: 'create-round',
       component: () => import('@/views/CreateRoundView.vue'),

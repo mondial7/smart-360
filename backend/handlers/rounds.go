@@ -133,6 +133,19 @@ func GetRound(c *gin.Context) {
 	c.JSON(http.StatusOK, round)
 }
 
+func GetRoundSubmissions(c *gin.Context) {
+	id := c.Param("id")
+	db := database.GetDB()
+
+	var submissions []models.Submission
+	if err := db.Where("round_id = ?", id).Order("submitted_at ASC").Find(&submissions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, submissions)
+}
+
 func CloseRound(c *gin.Context) {
 	user, _ := c.Get("user")
 	currentUser := user.(models.User)

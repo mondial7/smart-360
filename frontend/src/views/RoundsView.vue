@@ -122,9 +122,16 @@ async function closeRound(id: number) {
           <div class="subject-section">
             <span class="label">Feedback for</span>
             <div class="subject">
-              <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="avatar">
-              <div v-else class="avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
-              <span class="name">{{ round.subject?.name }}</span>
+              <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="mini-avatar">
+              <div v-else class="mini-avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
+              <router-link 
+                v-if="auth.isAdmin" 
+                :to="`/rounds/${round.id}`" 
+                class="name-link"
+              >
+                {{ round.subject?.name }}
+              </router-link>
+              <span v-else class="name">{{ round.subject?.name }}</span>
             </div>
           </div>
           
@@ -351,6 +358,16 @@ async function closeRound(id: number) {
 
 .name {
   font-weight: 500;
+}
+
+.name-link {
+  font-weight: 500;
+  color: #667eea;
+  text-decoration: none;
+}
+
+.name-link:hover {
+  text-decoration: underline;
 }
 
 .reviewer-list {
