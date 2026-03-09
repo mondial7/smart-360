@@ -48,9 +48,10 @@ export const useAuthStore = defineStore('auth', () => {
     window.location.href = response.data.url
   }
 
-  async function devLogin() {
+  async function devLogin(email?: string) {
     // Redirect to dev login endpoint which will redirect back with token
-    window.location.href = '/api/auth/dev-login'
+    const url = email ? `/api/auth/dev-login?email=${encodeURIComponent(email)}` : '/api/auth/dev-login'
+    window.location.href = url
   }
 
   return {

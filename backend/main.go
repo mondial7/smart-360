@@ -58,6 +58,11 @@ func main() {
 		authorized.GET("/rounds/:id", handlers.GetRound)
 		authorized.POST("/rounds/:id/close", handlers.CloseRound)
 		authorized.GET("/my-pending-reviews", handlers.GetMyPendingReviews)
+
+		// Submissions
+		authorized.POST("/submissions", handlers.SubmitFeedback)
+		authorized.GET("/submissions/check/:roundId", handlers.CheckSubmissionStatus)
+		authorized.GET("/submissions/:roundId", handlers.GetSubmissionDetails)
 	}
 
 	// Start server

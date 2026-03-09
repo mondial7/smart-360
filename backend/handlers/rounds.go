@@ -172,6 +172,7 @@ func GetMyPendingReviews(c *gin.Context) {
 		Where("feedback_rounds.deadline > ?", time.Now()).
 		Preload("Subject").
 		Preload("CreatedBy").
+		Preload("Reviewers.Reviewer").
 		Find(&rounds).Error
 
 	if err != nil {

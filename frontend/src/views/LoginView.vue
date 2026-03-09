@@ -2,6 +2,15 @@
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+
+const devUsers = [
+  { email: 'dev@example.com', name: 'Dev Admin', role: 'Admin' },
+  { email: 'alice@example.com', name: 'Alice Johnson', role: 'Member' },
+  { email: 'bob@example.com', name: 'Bob Smith', role: 'Member' },
+  { email: 'carol@example.com', name: 'Carol Williams', role: 'Member' },
+  { email: 'david@example.com', name: 'David Brown', role: 'Member' },
+  { email: 'emma@example.com', name: 'Emma Davis', role: 'Admin' },
+]
 </script>
 
 <template>
@@ -22,9 +31,19 @@ const auth = useAuthStore()
 
       <div class="divider">or</div>
 
-      <button class="dev-btn" @click="auth.devLogin">
-        Dev Login (No Google)
-      </button>
+      <p class="dev-title">Dev Login (No Google)</p>
+      <div class="dev-users">
+        <button 
+          v-for="user in devUsers" 
+          :key="user.email"
+          class="dev-user-btn"
+          :class="{ admin: user.role === 'Admin' }"
+          @click="auth.devLogin(user.email)"
+        >
+          <span class="dev-user-name">{{ user.name }}</span>
+          <span class="dev-user-role">{{ user.role }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -126,5 +145,52 @@ h1 {
 .dev-btn:hover {
   background: #667eea;
   color: white;
+}
+
+.dev-title {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+.dev-users {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.dev-user-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dev-user-btn:hover {
+  border-color: #667eea;
+  background: #f5f7ff;
+}
+
+.dev-user-btn.admin {
+  border-color: #667eea;
+  background: #f5f7ff;
+}
+
+.dev-user-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.dev-user-role {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+  margin-top: 0.25rem;
 }
 </style>

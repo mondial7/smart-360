@@ -8,6 +8,7 @@ const auth = useAuthStore()
 const rounds = ref<FeedbackRound[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const submissionStatus = ref<Record<number, boolean>>({})
 
 onMounted(async () => {
   console.log('RoundsView mounted')
@@ -15,19 +16,27 @@ onMounted(async () => {
 })
 
 async function loadRounds() {
-  console.log('loadRounds starting')
   loading.value = true
   error.value = null
   try {
-    console.log('Fetching rounds...')
-    const response = await apiClient.get('/rounds')
-    console.log('Rounds response:', response.data)
-    rounds.value = response.data
+    // Admins see all rounds, members see only pending reviews
+    const endpoint = auth.isAdmin ? '/rounds' : '/my-pending-reviews'
+    const response = await apiClient.get(endpoint)
+    rounds.value = response.data || []
+    // Check submission status for each round
+    for (const round of rounds.value) {
+      try {
+        const checkRes = await apiClient.get(`/submissions/check/${round.id}`)
+        submissionStatus.value[round.id] = checkRes.data.submitted
+      } catch {
+        submissionStatus.value[round.id] = false
+      }
+    }
   } catch (err: any) {
     console.error('Failed to load rounds:', err)
     error.value = err.response?.data?.error || err.message || 'Failed to load rounds'
+    rounds.value = []
   } finally {
-    console.log('loadRounds finished, loading = false')
     loading.value = false
   }
 }
@@ -51,6 +60,14 @@ function getStatusColor(status: string): string {
     shared: '#2196f3'
   }
   return colors[status] || '#666'
+}
+
+function isAssignedReviewer(round: FeedbackRound): boolean {
+  return round.reviewers?.some(r => r.reviewerId === auth.user?.id) ?? false
+}
+
+function hasSubmitted(roundId: number): boolean {
+  return submissionStatus.value[roundId] ?? false
 }
 
 async function closeRound(id: number) {
@@ -141,7 +158,17 @@ async function closeRound(id: number) {
           </div>
         </div>
         
-        <div v-if="auth.isAdmin && round.status === 'active'" class="round-actions">
+        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id)" class="round-actions">
+          <router-link :to="`/rounds/${round.id}/submit`" class="submit-btn">
+            Submit Feedback
+          </router-link>
+        </div>
+        
+        <div v-else-if="hasSubmitted(round.id)" class="round-actions submitted">
+          <span class="submitted-badge">✓ Feedback Submitted</span>
+        </div>
+        
+        <div v-else-if="auth.isAdmin && round.status === 'active'" class="round-actions">
           <button class="close-btn" @click="closeRound(round.id)">
             Close Round
           </button>
@@ -388,5 +415,32 @@ async function closeRound(id: number) {
 
 .close-btn:hover {
   background: #ffebee;
+}
+
+.submit-btn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: #667eea;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.submit-btn:hover {
+  background: #5a6fd6;
+}
+
+.submitted {
+  text-align: center;
+}
+
+.submitted-badge {
+  color: #4caf50;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 </style>

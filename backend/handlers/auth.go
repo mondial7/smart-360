@@ -150,22 +150,33 @@ func GetCurrentUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// DevLogin - bypass Google OAuth for development (creates/finds test admin user)
+// DevLogin - bypass Google OAuth for development
 func DevLogin(c *gin.Context) {
 	db := database.GetDB()
 	var user models.User
 
-	// Look for existing dev user
-	err := db.Where("email = ?", "dev@example.com").First(&user).Error
+	// Check if specific email requested, otherwise default to admin
+	email := c.Query("email")
+	if email == "" {
+		email = "dev@example.com"
+	}
+
+	// Look for existing user
+	err := db.Where("email = ?", email).First(&user).Error
 	if err != nil {
-		// Create dev admin user
-		user = models.User{
-			Email:    "dev@example.com",
-			Name:     "Dev Admin",
-			PhotoURL: "",
-			Role:     models.RoleAdmin,
+		// If dev admin doesn't exist, create it
+		if email == "dev@example.com" {
+			user = models.User{
+				Email:    "dev@example.com",
+				Name:     "Dev Admin",
+				PhotoURL: "",
+				Role:     models.RoleAdmin,
+			}
+			db.Create(&user)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "User not found. Please seed data first."})
+			return
 		}
-		db.Create(&user)
 	}
 
 	// Update last login

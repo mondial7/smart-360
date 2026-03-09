@@ -40,6 +40,12 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true }
     },
     {
+      path: '/rounds/:id/submit',
+      name: 'submit-feedback',
+      component: () => import('@/views/SubmitFeedbackView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/my-feedback',
       name: 'my-feedback',
       component: () => import('@/views/MyFeedbackView.vue'),
