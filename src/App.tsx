@@ -4,11 +4,12 @@
  * Sets up routing and provides authentication context
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme, Box, CircularProgress } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
+import { ThemeModeProvider, useThemeMode } from './contexts/ThemeContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -19,18 +20,22 @@ import { FeedbackSubmissionPage } from './pages/FeedbackSubmissionPage';
 import { FeedbackConsolidationPage } from './pages/FeedbackConsolidationPage';
 import { MyFeedbackPage } from './pages/MyFeedbackPage';
 
-// Create Material-UI theme
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
+// Create theme based on mode
+const useAppTheme = () => {
+  const { mode } = useThemeMode();
+  
+  return useMemo(() => createTheme({
+    palette: {
+      mode,
+      primary: {
+        main: '#1976d2',
+      },
+      secondary: {
+        main: '#dc004e',
+      },
     },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+  }), [mode]);
+};
 
 /**
  * Dashboard Router Component
@@ -63,7 +68,9 @@ const DashboardRouter: React.FC = () => {
   return userProfile.role === 'admin' ? <AdminDashboard /> : <MemberDashboard />;
 };
 
-function App() {
+function AppContent() {
+  const theme = useAppTheme();
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -135,6 +142,14 @@ function App() {
         </AuthProvider>
       </SnackbarProvider>
     </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <ThemeModeProvider>
+      <AppContent />
+    </ThemeModeProvider>
   );
 }
 

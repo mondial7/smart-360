@@ -19,6 +19,7 @@ import FeedbackIcon from '@mui/icons-material/Feedback';
 import { useAuth } from '../../contexts/AuthContext';
 import { PendingFeedbackList } from './PendingFeedbackList';
 import { getSharedFeedbackForSubject } from '../../services/feedbackRoundService';
+import { ThemeToggle } from '../common/ThemeToggle';
 import type { FeedbackRound } from '../../types';
 
 export const MemberDashboard: React.FC = () => {
@@ -50,9 +51,12 @@ export const MemberDashboard: React.FC = () => {
         <Typography variant="h4" component="h1">
           My Dashboard
         </Typography>
-        <Button variant="outlined" onClick={signOut}>
-          Sign Out
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <ThemeToggle />
+          <Button variant="outlined" onClick={signOut}>
+            Sign Out
+          </Button>
+        </Box>
       </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>

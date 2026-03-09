@@ -22,6 +22,7 @@ import FeedbackIcon from '@mui/icons-material/Feedback';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUsers } from '../../hooks/useUsers';
 import { useFeedbackRounds } from '../../hooks/useFeedbackRounds';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 export const AdminDashboard: React.FC = () => {
   const { userProfile, signOut } = useAuth();
@@ -42,9 +43,12 @@ export const AdminDashboard: React.FC = () => {
         <Typography variant="h4" component="h1">
           Admin Dashboard
         </Typography>
-        <Button variant="outlined" onClick={signOut}>
-          Sign Out
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <ThemeToggle />
+          <Button variant="outlined" onClick={signOut}>
+            Sign Out
+          </Button>
+        </Box>
       </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
