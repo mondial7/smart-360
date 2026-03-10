@@ -8,6 +8,8 @@ import type { FeedbackRound } from '@/types/round'
 const auth = useAuthStore()
 const stats = ref<DashboardStats | null>(null)
 const activeRounds = ref<FeedbackRound[]>([])
+const myRounds = ref<FeedbackRound[]>([])
+const submissionStatus = ref<Record<string, boolean>>({})
 const loading = ref(true)
 
 onMounted(async () => {
@@ -16,12 +18,32 @@ onMounted(async () => {
 
 async function loadDashboard() {
   try {
-    const [statsRes, roundsRes] = await Promise.all([
-      apiClient.get('/dashboard/stats'),
-      apiClient.get('/dashboard/active-rounds')
-    ])
-    stats.value = statsRes.data
-    activeRounds.value = roundsRes.data
+    if (auth.isAdmin) {
+      const [statsRes, roundsRes] = await Promise.all([
+        apiClient.get('/dashboard/stats'),
+        apiClient.get('/dashboard/active-rounds')
+      ])
+      stats.value = statsRes.data
+      activeRounds.value = roundsRes.data
+    } else {
+      // Member dashboard - load rounds where they're reviewers
+      const [statsRes, roundsRes] = await Promise.all([
+        apiClient.get('/dashboard/stats'),
+        apiClient.get('/rounds-for-me')
+      ])
+      stats.value = statsRes.data
+      myRounds.value = roundsRes.data
+      
+      // Check submission status for each round
+      for (const round of myRounds.value) {
+        try {
+          const checkRes = await apiClient.get(`/submissions/check/${round.id}`)
+          submissionStatus.value[round.id] = checkRes.data.submitted
+        } catch {
+          submissionStatus.value[round.id] = false
+        }
+      }
+    }
   } catch (error) {
     console.error('Failed to load dashboard:', error)
   } finally {
@@ -35,6 +57,25 @@ function formatDate(dateStr: string | null): string {
     month: 'short',
     day: 'numeric'
   })
+}
+
+function getDeadlineStatus(deadline: string | null): string {
+  if (!deadline) return 'no-deadline'
+  const deadlineDate = new Date(deadline)
+  const today = new Date()
+  const daysLeft = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  
+  if (daysLeft < 0) return 'overdue'
+  if (daysLeft === 0) return 'due-today'
+  if (daysLeft <= 3) return 'due-soon'
+  return 'on-time'
+}
+
+function getRoundStatusText(round: FeedbackRound): string {
+  if (submissionStatus.value[round.id]) return 'Submitted'
+  if (round.status !== 'active') return 'Closed'
+  if (getDeadlineStatus(round.deadline) === 'overdue') return 'Overdue'
+  return 'Pending'
 }
 </script>
 
@@ -112,16 +153,16 @@ function formatDate(dateStr: string | null): string {
 
       <!-- Team Member Dashboard -->
       <template v-else>
-        <div class="welcome-card">
-          <h2>Welcome to Smart 360 Feedback</h2>
-          <p>This platform helps you receive anonymous feedback from your peers to support your professional growth.</p>
-        </div>
-
+        <!-- Stats Overview -->
         <div class="stats-grid member">
-          <div class="stat-card accent" v-if="stats?.pendingReviews">
-            <span class="stat-value">{{ stats.pendingReviews }}</span>
+          <div class="stat-card accent" v-if="myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length > 0">
+            <span class="stat-value">{{ myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length }}</span>
             <span class="stat-label">Pending Reviews</span>
-            <router-link v-if="stats.pendingReviews > 0" to="/rounds" class="action-link">Review now →</router-link>
+            <router-link to="/rounds" class="action-link">Review now →</router-link>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">{{ myRounds.filter(r => submissionStatus[r.id]).length }}</span>
+            <span class="stat-label">Completed Reviews</span>
           </div>
           <div class="stat-card">
             <span class="stat-value">{{ stats?.myFeedbackCount || 0 }}</span>
@@ -130,22 +171,55 @@ function formatDate(dateStr: string | null): string {
           </div>
         </div>
 
-        <div class="quick-actions">
-          <h2>Quick Links</h2>
-          <div class="action-grid">
-            <router-link to="/team" class="action-card">
-              <span class="action-icon">👥</span>
-              <span class="action-text">View Team</span>
-            </router-link>
-            <router-link to="/my-feedback" class="action-card">
-              <span class="action-icon">📊</span>
-              <span class="action-text">My Feedback</span>
-            </router-link>
-            <router-link to="/rounds" class="action-card" v-if="stats?.pendingReviews && stats.pendingReviews > 0">
-              <span class="action-icon">✏️</span>
-              <span class="action-text">Pending Reviews</span>
-            </router-link>
+        <!-- Feedback Requests -->
+        <div class="feedback-section" v-if="myRounds.length > 0">
+          <h2>Feedback Requests</h2>
+          <div class="feedback-list">
+            <div v-for="round in myRounds" :key="round.id" class="feedback-item">
+              <div class="feedback-header">
+                <div class="person-info">
+                  <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="avatar">
+                  <div v-else class="avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
+                  <div>
+                    <h3>{{ round.subject?.name }}</h3>
+                    <span :class="['status', getRoundStatusText(round).toLowerCase()]">
+                      {{ getRoundStatusText(round) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="deadline">
+                  <span class="label">Due</span>
+                  <span :class="getDeadlineStatus(round.deadline)">
+                    {{ formatDate(round.deadline) }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="feedback-actions">
+                <template v-if="!submissionStatus[round.id] && round.status === 'active'">
+                  <router-link :to="`/rounds/${round.id}/submit`" class="btn-primary">
+                    Submit Feedback
+                  </router-link>
+                </template>
+                <template v-else-if="submissionStatus[round.id]">
+                  <router-link :to="`/rounds/${round.id}/submission`" class="btn-secondary">
+                    View Submission
+                  </router-link>
+                </template>
+                <template v-else>
+                  <span class="closed-text">Round Closed</span>
+                </template>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <!-- No Feedback Requests -->
+        <div class="empty-state" v-else>
+          <div class="empty-icon">📋</div>
+          <h2>No Feedback Requests</h2>
+          <p>You don't have any pending feedback requests at the moment.</p>
+          <router-link to="/team" class="btn-primary">View Team</router-link>
         </div>
       </template>
     </template>
@@ -309,6 +383,11 @@ function formatDate(dateStr: string | null): string {
   font-weight: 500;
 }
 
+.view-all:hover {
+  color: #667eea;
+  text-decoration: underline;
+}
+
 .welcome-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -370,8 +449,176 @@ function formatDate(dateStr: string | null): string {
 }
 
 .action-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Member Dashboard Styles */
+.feedback-section {
+  margin-top: 2rem;
+}
+
+.feedback-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.feedback-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feedback-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: border-color 0.2s;
+}
+
+.feedback-item:hover {
+  border-color: #667eea;
+}
+
+.feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.person-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #667eea;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.person-info h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.status {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status.pending {
+  color: #ff6b35;
+}
+
+.status.submitted {
+  color: #51cf66;
+}
+
+.status.overdue {
+  color: #ff6348;
+}
+
+.status.closed {
+  color: #868e96;
+}
+
+.deadline {
+  text-align: right;
+}
+
+.deadline .label {
+  font-size: 0.75rem;
+  color: #868e96;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.deadline span:last-child {
   font-size: 0.9rem;
   font-weight: 500;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.deadline .overdue {
+  color: #ff6348;
+}
+
+.deadline .due-today {
+  color: #ff6b35;
+}
+
+.deadline .due-soon {
+  color: #ff9800;
+}
+
+.deadline .on-time {
+  color: #51cf66;
+}
+
+.feedback-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-primary {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #667eea;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: #5a6fd6;
+}
+
+.btn-secondary {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #666;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #f8f9fa;
+}
+
+.closed-text {
+  color: #868e96;
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
 .action-link {
