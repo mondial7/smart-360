@@ -39,4 +39,5 @@ type Submission struct {
 	ReviewerID  primitive.ObjectID `bson:"reviewer_id" json:"reviewerId"`
 	Responses   string             `bson:"responses" json:"responses"` // JSON string
 	SubmittedAt time.Time          `bson:"submitted_at" json:"submittedAt"`
+	UpdatedAt   time.Time          `bson:"updated_at" json:"updatedAt"`
 }

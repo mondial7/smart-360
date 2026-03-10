@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"smart360/database"
 	"smart360/models"
@@ -18,9 +19,12 @@ func GetRoundSubmissions(c *gin.Context) {
 	db := database.GetDB()
 	ctx := context.Background()
 
+	fmt.Printf("GetRoundSubmissions called for roundID: %s\n", roundID)
+
 	// Convert roundID string to ObjectID
 	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
+		fmt.Printf("Error converting roundID to ObjectID: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
 		return
 	}
@@ -28,6 +32,7 @@ func GetRoundSubmissions(c *gin.Context) {
 	// Get all submissions for this round
 	cursor, err := db.Collection("submissions").Find(ctx, bson.M{"round_id": roundObjID})
 	if err != nil {
+		fmt.Printf("Error finding submissions: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
 		return
 	}
@@ -35,10 +40,12 @@ func GetRoundSubmissions(c *gin.Context) {
 
 	var submissions []models.Submission
 	if err = cursor.All(ctx, &submissions); err != nil {
+		fmt.Printf("Error decoding submissions: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode submissions"})
 		return
 	}
 
+	fmt.Printf("Found %d submissions for round %s\n", len(submissions), roundID)
 	c.JSON(http.StatusOK, submissions)
 }
 
@@ -133,6 +140,7 @@ func SubmitFeedback(c *gin.Context) {
 		ReviewerID:  currentUser.ID,
 		Responses:   req.Responses,
 		SubmittedAt: time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	_, err = db.Collection("submissions").InsertOne(ctx, submission)
@@ -207,4 +215,40 @@ func UpdateSubmission(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Feedback updated successfully"})
+}
+
+func DebugSubmissions(c *gin.Context) {
+	db := database.GetDB()
+	ctx := context.Background()
+
+	fmt.Printf("DebugSubmissions called\n")
+
+	// Get all submissions
+	cursor, err := db.Collection("submissions").Find(ctx, bson.M{})
+	if err != nil {
+		fmt.Printf("Error finding all submissions: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var submissions []models.Submission
+	if err = cursor.All(ctx, &submissions); err != nil {
+		fmt.Printf("Error decoding all submissions: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode submissions"})
+		return
+	}
+
+	fmt.Printf("Total submissions in database: %d\n", len(submissions))
+
+	// Log each submission details
+	for i, sub := range submissions {
+		fmt.Printf("Submission %d: ID=%s, RoundID=%s, ReviewerID=%s, SubmittedAt=%v\n",
+			i+1, sub.ID.Hex(), sub.RoundID.Hex(), sub.ReviewerID.Hex(), sub.SubmittedAt)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":       len(submissions),
+		"submissions": submissions,
+	})
 }

@@ -89,7 +89,8 @@ func main() {
 		authorized.GET("/dashboard/my-submissions", handlers.GetMySubmissions)
 		authorized.GET("/dashboard/my-consolidations", handlers.GetMyConsolidations)
 
-		// Admin debug endpoint
+		// Admin debug endpoints
+		authorized.GET("/debug/submissions", handlers.DebugSubmissions)
 		authorized.GET("/debug/reviewers", middleware.AdminOnly(), func(c *gin.Context) {
 			db := database.GetDB()
 			ctx := context.Background()

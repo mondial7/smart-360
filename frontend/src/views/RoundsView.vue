@@ -7,8 +7,9 @@ import type { FeedbackRound } from '@/types/round'
 const auth = useAuthStore()
 const rounds = ref<FeedbackRound[]>([])
 const loading = ref(true)
-const error = ref<string | null>(null)
-const submissionStatus = ref<Record<string, boolean>>({})  // Changed from Record<number, boolean>
+const error = ref(null)
+const submissionStatus = ref<Record<string, boolean>>({})
+const consolidationStatus = ref<Record<string, boolean>>({})
 
 onMounted(async () => {
   console.log('RoundsView mounted')
@@ -24,13 +25,22 @@ async function loadRounds() {
     const response = await apiClient.get(endpoint)
     rounds.value = response.data || []
     console.log('Loaded rounds:', rounds.value)
-    // Check submission status for each round
+    
+    // Check submission status and consolidation status for each round
     for (const round of rounds.value) {
       try {
         const checkRes = await apiClient.get(`/submissions/check/${round.id}`)
         submissionStatus.value[round.id] = checkRes.data.submitted
       } catch {
         submissionStatus.value[round.id] = false
+      }
+      
+      // Check if consolidation exists
+      try {
+        const consRes = await apiClient.get(`/consolidations/${round.id}`)
+        consolidationStatus.value[round.id] = true
+      } catch {
+        consolidationStatus.value[round.id] = false
       }
     }
   } catch (err: any) {
@@ -180,8 +190,11 @@ async function closeRound(id: string) {  // Changed from number to string
         </div>
         
         <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-actions single">
-          <router-link :to="`/rounds/${round.id}/consolidation`" class="consolidate-btn">
+          <router-link v-if="!consolidationStatus[round.id]" :to="`/rounds/${round.id}/consolidation`" class="consolidate-btn">
             Consolidate Feedback
+          </router-link>
+          <router-link v-else :to="`/rounds/${round.id}#consolidation`" class="view-feedback-btn">
+            👁️ View Feedback
           </router-link>
         </div>
         
@@ -513,6 +526,35 @@ async function closeRound(id: string) {  // Changed from number to string
 
 .view-submission-btn:hover {
   background: #1976d2;
+}
+
+.view-feedback-btn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: #4caf50;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.view-feedback-btn:hover {
+  background: #45a049;
+}
+
+.submitted {
+  text-align: center;
+}
+
+.submitted-badge {
+  color: #4caf50;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .edit-btn {

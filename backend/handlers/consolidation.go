@@ -25,9 +25,12 @@ func ConsolidateFeedback(c *gin.Context) {
 	db := database.GetDB()
 	ctx := context.Background()
 
+	fmt.Printf("ConsolidateFeedback called for roundID: %s\n", roundID)
+
 	// Convert roundID string to ObjectID
 	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
+		fmt.Printf("Error converting roundID to ObjectID: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
 		return
 	}
@@ -35,10 +38,12 @@ func ConsolidateFeedback(c *gin.Context) {
 	// Check if OpenAI key is available
 	openAIKey := os.Getenv("OPENAI_API_KEY")
 	hasOpenAI := openAIKey != ""
+	fmt.Printf("OpenAI key available: %v\n", hasOpenAI)
 
 	// Get all submissions for this round
 	cursor, err := db.Collection("submissions").Find(ctx, bson.M{"round_id": roundObjID})
 	if err != nil {
+		fmt.Printf("Error finding submissions: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
 		return
 	}
@@ -46,11 +51,15 @@ func ConsolidateFeedback(c *gin.Context) {
 
 	var submissions []models.Submission
 	if err = cursor.All(ctx, &submissions); err != nil {
+		fmt.Printf("Error decoding submissions: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode submissions"})
 		return
 	}
 
+	fmt.Printf("Found %d submissions for consolidation\n", len(submissions))
+
 	if len(submissions) == 0 {
+		fmt.Printf("No submissions found, returning error\n")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No feedback submissions found to consolidate"})
 		return
 	}
@@ -63,24 +72,29 @@ func ConsolidateFeedback(c *gin.Context) {
 			RoundID:             roundObjID,
 			GeneratedByID:       currentUser.ID,
 			ExecutiveSummary:    "This is a mock executive summary for development purposes.",
-			Strengths:           []string{"Good communication", "Team collaboration", "Technical skills"},
-			AreasForImprovement: []string{"Time management", "Documentation", "Code reviews"},
-			ActionableInsights:  []string{"Focus on prioritization", "Improve documentation practices", "Implement regular code reviews"},
-			QuestionSummaries:   map[string]string{"a": "Summary of responses for question 1", "b": "Summary of responses for question 2", "c": "Summary of responses for question 3", "d": "Summary of responses for question 4"},
+			Strengths:           `["Good communication", "Team collaboration", "Technical skills"]`,
+			AreasForImprovement: `["Time management", "Documentation", "Code reviews"]`,
+			ActionableInsights:  `["Focus on prioritization", "Improve documentation practices", "Implement regular code reviews"]`,
+			QuestionSummaries:   `{"a": "Summary of responses for question 1", "b": "Summary of responses for question 2", "c": "Summary of responses for question 3", "d": "Summary of responses for question 4"}`,
 			CreatedAt:           time.Now(),
 			UpdatedAt:           time.Now(),
 		}
 	} else {
 		// Combine actual feedback submissions
+		fmt.Printf("Using real feedback combination\n")
 		consolidation = combineFeedbackSubmissions(submissions, roundObjID, currentUser.ID)
 	}
 
+	fmt.Printf("Created consolidation: %+v\n", consolidation)
+
 	_, err = db.Collection("consolidations").InsertOne(ctx, consolidation)
 	if err != nil {
+		fmt.Printf("Error inserting consolidation: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create consolidation"})
 		return
 	}
 
+	fmt.Printf("Successfully created consolidation with ID: %s\n", consolidation.ID.Hex())
 	c.JSON(http.StatusCreated, consolidation)
 }
 
@@ -172,9 +186,12 @@ func UpdateConsolidation(c *gin.Context) {
 	db := database.GetDB()
 	ctx := context.Background()
 
+	fmt.Printf("UpdateConsolidation called for ID: %s\n", id)
+
 	// Convert id string to ObjectID
 	consolidationObjID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
+		fmt.Printf("Error converting consolidation ID: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid consolidation ID"})
 		return
 	}
@@ -188,9 +205,12 @@ func UpdateConsolidation(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("Error binding JSON: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	fmt.Printf("Update request data: %+v\n", req)
 
 	// Build update document with only provided fields
 	update := bson.M{"$set": bson.M{
@@ -201,24 +221,36 @@ func UpdateConsolidation(c *gin.Context) {
 		update["$set"].(bson.M)["executive_summary"] = req.ExecutiveSummary
 	}
 	if req.Strengths != nil {
-		update["$set"].(bson.M)["strengths"] = req.Strengths
+		// Convert array to JSON string for database
+		strengthsJSON, _ := json.Marshal(req.Strengths)
+		update["$set"].(bson.M)["strengths"] = string(strengthsJSON)
 	}
 	if req.AreasForImprovement != nil {
-		update["$set"].(bson.M)["areas_for_improvement"] = req.AreasForImprovement
+		// Convert array to JSON string for database
+		improvementsJSON, _ := json.Marshal(req.AreasForImprovement)
+		update["$set"].(bson.M)["areas_for_improvement"] = string(improvementsJSON)
 	}
 	if req.ActionableInsights != nil {
-		update["$set"].(bson.M)["actionable_insights"] = req.ActionableInsights
+		// Convert array to JSON string for database
+		insightsJSON, _ := json.Marshal(req.ActionableInsights)
+		update["$set"].(bson.M)["actionable_insights"] = string(insightsJSON)
 	}
 	if req.QuestionSummaries != nil {
-		update["$set"].(bson.M)["question_summaries"] = req.QuestionSummaries
+		// Convert object to JSON string for database
+		questionsJSON, _ := json.Marshal(req.QuestionSummaries)
+		update["$set"].(bson.M)["question_summaries"] = string(questionsJSON)
 	}
+
+	fmt.Printf("MongoDB update: %+v\n", update)
 
 	_, err = db.Collection("consolidations").UpdateOne(ctx, bson.M{"_id": consolidationObjID}, update)
 	if err != nil {
+		fmt.Printf("Error updating consolidation: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update consolidation"})
 		return
 	}
 
+	fmt.Printf("Successfully updated consolidation\n")
 	c.JSON(http.StatusOK, gin.H{"message": "Consolidation updated successfully"})
 }
 
@@ -307,14 +339,20 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 		}
 	}
 
+	// Convert arrays and objects back to JSON strings for database compatibility
+	strengthsJSON, _ := json.Marshal(allStrengths)
+	improvementsJSON, _ := json.Marshal(allImprovements)
+	insightsJSON, _ := json.Marshal(actionableInsights)
+	questionsJSON, _ := json.Marshal(questionSummaries)
+
 	return models.Consolidation{
 		RoundID:             roundID,
 		GeneratedByID:       generatedByID,
 		ExecutiveSummary:    executiveSummary,
-		Strengths:           allStrengths,
-		AreasForImprovement: allImprovements,
-		ActionableInsights:  actionableInsights,
-		QuestionSummaries:   questionSummaries,
+		Strengths:           string(strengthsJSON),
+		AreasForImprovement: string(improvementsJSON),
+		ActionableInsights:  string(insightsJSON),
+		QuestionSummaries:   string(questionsJSON),
 		CreatedAt:           time.Now(),
 		UpdatedAt:           time.Now(),
 	}

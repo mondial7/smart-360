@@ -25,6 +25,7 @@ const editForm = ref({
   actionableInsights: [] as string[],
   questionSummaries: {} as Record<string, string>
 })
+const showConsolidationContent = ref(true)
 
 onMounted(async () => {
   await loadData()
@@ -38,9 +39,12 @@ async function loadData() {
     
     // Load submissions to check if any exist
     try {
-      const subRes = await apiClient.get(`/submissions/${roundId}`)
+      const subRes = await apiClient.get(`/submissions/round/${roundId}`)
+      console.log('Submissions API response:', subRes.data)
       submissions.value = subRes.data || []
+      console.log('Submissions count:', submissions.value.length)
     } catch (error) {
+      console.error('Error loading submissions:', error)
       submissions.value = []
     }
     
@@ -50,9 +54,11 @@ async function loadData() {
       consolidation.value = consRes.data
       parseConsolidationFields(consolidation.value)
       adminNotes.value = consRes.data.adminNotes || ''
+      showConsolidationContent.value = false // Hide content by default when consolidation exists
     } catch (error) {
       console.error('Error loading consolidation:', error)
       // No consolidation yet
+      showConsolidationContent.value = true
     }
   } catch (error) {
     console.error('Failed to load data:', error)
@@ -68,6 +74,7 @@ async function generateConsolidation() {
     consolidation.value = res.data
     parseConsolidationFields(consolidation.value)
     adminNotes.value = res.data.adminNotes || ''
+    showConsolidationContent.value = true // Show content after generation
   } catch (error: any) {
     if (error.response?.status === 409) {
       alert('Consolidation already exists')
@@ -99,6 +106,20 @@ async function shareConsolidation() {
   sharing.value = true
   try {
     await apiClient.post(`/consolidations/${consolidation.value.id}/share`)
+    
+    // Update local consolidation data
+    consolidation.value.sharedAt = new Date().toISOString()
+    
+    // Update round status to 'shared'
+    if (round.value) {
+      try {
+        await apiClient.put(`/rounds/${roundId}`, { status: 'shared' })
+        round.value.status = 'shared'
+      } catch (error) {
+        console.error('Failed to update round status:', error)
+      }
+    }
+    
     alert('Consolidation shared successfully!')
     await loadData()
   } catch (error) {
@@ -176,23 +197,28 @@ async function saveEdits() {
         break
     }
     
+    console.log('Saving consolidation edits:', updateData)
+    console.log('Consolidation ID:', consolidation.value.id)
+    
     await apiClient.put(`/consolidations/${consolidation.value.id}`, updateData)
+    
+    console.log('Save successful, updating local data')
     
     // Update local consolidation data
     Object.assign(consolidation.value, updateData)
     
     editingSection.value = null
     alert('Changes saved successfully!')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to save edits:', error)
-    alert('Failed to save changes')
+    console.error('Error response:', error.response?.data)
+    alert(error.response?.data?.error || 'Failed to save changes')
   }
 }
 
-function addArrayItem(array: string[], value: string) {
-  if (value.trim()) {
-    array.push(value.trim())
-  }
+function addArrayItem(array: string[]) {
+  // Add an empty string to create a new input field
+  array.push('')
 }
 
 function removeArrayItem(array: string[], index: number) {
@@ -252,6 +278,17 @@ function formatDate(dateStr: string | null): string {
         </button>
       </div>
 
+      <!-- View Feedback Button -->
+      <div v-else-if="consolidation && !showConsolidationContent" class="generate-section">
+        <p>Feedback consolidation has been generated for this round.</p>
+        <button 
+          class="btn-primary" 
+          @click="showConsolidationContent = true"
+        >
+          👁️ View Consolidated Feedback
+        </button>
+      </div>
+
       <!-- Consolidation View -->
       <div v-else-if="consolidation" class="consolidation-content">
         <div class="consolidation-header">
@@ -260,6 +297,7 @@ function formatDate(dateStr: string | null): string {
             <span v-if="consolidation.sharedAt" class="shared-badge">
               ✓ Shared {{ formatDate(consolidation.sharedAt) }}
             </span>
+            <span>Round Status: <span :class="['status-badge', round.status]">{{ round.status }}</span></span>
           </div>
           
           <div v-if="!consolidation.sharedAt" class="actions">
@@ -311,7 +349,7 @@ function formatDate(dateStr: string | null): string {
                   <input v-model="editForm.strengths[i]" placeholder="Enter strength..." class="array-input">
                   <button @click="removeArrayItem(editForm.strengths, i)" class="remove-btn">×</button>
                 </div>
-                <button @click="addArrayItem(editForm.strengths, '')" class="add-btn">+ Add Strength</button>
+                <button @click="addArrayItem(editForm.strengths)" class="add-btn">+ Add Strength</button>
               </div>
               <div class="edit-actions">
                 <button @click="saveEdits" class="btn-primary">Save</button>
@@ -339,7 +377,7 @@ function formatDate(dateStr: string | null): string {
                   <input v-model="editForm.areasForImprovement[i]" placeholder="Enter improvement..." class="array-input">
                   <button @click="removeArrayItem(editForm.areasForImprovement, i)" class="remove-btn">×</button>
                 </div>
-                <button @click="addArrayItem(editForm.areasForImprovement, '')" class="add-btn">+ Add Improvement</button>
+                <button @click="addArrayItem(editForm.areasForImprovement)" class="add-btn">+ Add Improvement</button>
               </div>
               <div class="edit-actions">
                 <button @click="saveEdits" class="btn-primary">Save</button>
@@ -367,7 +405,7 @@ function formatDate(dateStr: string | null): string {
                   <input v-model="editForm.actionableInsights[i]" placeholder="Enter insight..." class="array-input">
                   <button @click="removeArrayItem(editForm.actionableInsights, i)" class="remove-btn">×</button>
                 </div>
-                <button @click="addArrayItem(editForm.actionableInsights, '')" class="add-btn">+ Add Insight</button>
+                <button @click="addArrayItem(editForm.actionableInsights)" class="add-btn">+ Add Insight</button>
               </div>
               <div class="edit-actions">
                 <button @click="saveEdits" class="btn-primary">Save</button>

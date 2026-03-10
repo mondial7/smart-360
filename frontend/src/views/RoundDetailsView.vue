@@ -36,6 +36,11 @@ const availableUsers = computed(() => {
 
 onMounted(async () => {
   await loadData()
+  
+  // Check if URL hash indicates consolidation tab should be active
+  if (window.location.hash === '#consolidation') {
+    activeTab.value = 'consolidation'
+  }
 })
 
 async function loadData() {
@@ -49,14 +54,28 @@ async function loadData() {
     users.value = usersRes.data
     
     // Load submissions
-    const subRes = await apiClient.get(`/rounds/${roundId}/submissions`)
+    const subRes = await apiClient.get(`/submissions/round/${roundId}`)
     submissions.value = subRes.data
     
     // Try to load consolidation
     try {
       const consRes = await apiClient.get(`/consolidations/${roundId}`)
       consolidation.value = consRes.data
-    } catch {
+      // Parse consolidation fields
+      if (consolidation.value.strengths && typeof consolidation.value.strengths === 'string') {
+        consolidation.value.strengths = JSON.parse(consolidation.value.strengths)
+      }
+      if (consolidation.value.areasForImprovement && typeof consolidation.value.areasForImprovement === 'string') {
+        consolidation.value.areasForImprovement = JSON.parse(consolidation.value.areasForImprovement)
+      }
+      if (consolidation.value.actionableInsights && typeof consolidation.value.actionableInsights === 'string') {
+        consolidation.value.actionableInsights = JSON.parse(consolidation.value.actionableInsights)
+      }
+      if (consolidation.value.questionSummaries && typeof consolidation.value.questionSummaries === 'string') {
+        consolidation.value.questionSummaries = JSON.parse(consolidation.value.questionSummaries)
+      }
+    } catch (error) {
+      console.error('Error loading consolidation:', error)
       // No consolidation yet
     }
   } catch (error) {
