@@ -52,6 +52,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/rounds/:id/submission',
+      name: 'view-submission',
+      component: () => import('@/views/SubmissionView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/rounds/:roundId/consolidation',
       name: 'consolidation',
       component: () => import('@/views/ConsolidationView.vue'),

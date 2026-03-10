@@ -19,8 +19,8 @@ async function loadRounds() {
   loading.value = true
   error.value = null
   try {
-    // Admins see all rounds, members see only their created rounds
-    const endpoint = auth.isAdmin ? '/rounds' : '/my-rounds'
+    // Admins see all rounds, members see rounds where they're reviewers or subject
+    const endpoint = auth.isAdmin ? '/rounds' : '/rounds-for-me'
     const response = await apiClient.get(endpoint)
     rounds.value = response.data || []
     console.log('Loaded rounds:', rounds.value)
@@ -166,7 +166,7 @@ async function closeRound(id: string) {  // Changed from number to string
           </div>
         </div>
         
-        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id)" class="round-actions single">
+        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id) && round.status === 'active'" class="round-actions single">
           <router-link :to="`/rounds/${round.id}/submit`" class="submit-btn">
             Submit Feedback
           </router-link>
@@ -174,6 +174,9 @@ async function closeRound(id: string) {  // Changed from number to string
         
         <div v-else-if="hasSubmitted(round.id)" class="round-actions single submitted">
           <span class="submitted-badge">✓ Feedback Submitted</span>
+          <router-link :to="`/rounds/${round.id}/submission`" class="view-submission-btn">
+            View My Submission
+          </router-link>
         </div>
         
         <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-actions single">
@@ -493,6 +496,23 @@ async function closeRound(id: string) {  // Changed from number to string
   color: #4caf50;
   font-size: 0.85rem;
   font-weight: 500;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.view-submission-btn {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  background: #2196f3;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+}
+
+.view-submission-btn:hover {
+  background: #1976d2;
 }
 
 .edit-btn {

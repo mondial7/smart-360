@@ -6,7 +6,7 @@ import type { FeedbackRound } from '@/types/round'
 
 const route = useRoute()
 const router = useRouter()
-const roundId = parseInt(route.params.id as string)
+const roundId = route.params.id as string  // Changed from parseInt to string
 
 const round = ref<FeedbackRound | null>(null)
 const loading = ref(true)
@@ -62,7 +62,7 @@ async function submitFeedback() {
   try {
     await apiClient.post('/submissions', {
       roundId,
-      responses: responses.value
+      responses: JSON.stringify(responses.value)
     })
     alert('Feedback submitted successfully! Thank you for your input.')
     router.push('/rounds')

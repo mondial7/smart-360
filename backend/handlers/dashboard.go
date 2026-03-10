@@ -125,18 +125,23 @@ func GetRoundsForMe(c *gin.Context) {
 	db := database.GetDB()
 	ctx := context.Background()
 
-	// Get rounds where user is subject
-	cursor, err := db.Collection("feedback_rounds").Find(ctx, bson.M{"subject_id": currentUser.ID})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch rounds"})
-		return
-	}
-	defer cursor.Close(ctx)
-
 	var rounds []models.FeedbackRound
-	if err = cursor.All(ctx, &rounds); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode rounds"})
-		return
+
+	// Only get rounds where user is a reviewer (not subject)
+	reviewerCursor, err := db.Collection("round_reviewers").Find(ctx, bson.M{"reviewer_id": currentUser.ID})
+	if err == nil {
+		defer reviewerCursor.Close(ctx)
+
+		var reviewerAssignments []models.RoundReviewer
+		if err = reviewerCursor.All(ctx, &reviewerAssignments); err == nil {
+			for _, assignment := range reviewerAssignments {
+				var reviewerRound models.FeedbackRound
+				err := db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": assignment.RoundID}).Decode(&reviewerRound)
+				if err == nil {
+					rounds = append(rounds, reviewerRound)
+				}
+			}
+		}
 	}
 
 	// Populate each round

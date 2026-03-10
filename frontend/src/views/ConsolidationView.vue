@@ -16,6 +16,15 @@ const loading = ref(true)
 const generating = ref(false)
 const sharing = ref(false)
 const adminNotes = ref('')
+const submissions = ref<any[]>([])
+const editingSection = ref<string | null>(null)
+const editForm = ref({
+  executiveSummary: '',
+  strengths: [] as string[],
+  areasForImprovement: [] as string[],
+  actionableInsights: [] as string[],
+  questionSummaries: {} as Record<string, string>
+})
 
 onMounted(async () => {
   await loadData()
@@ -27,12 +36,22 @@ async function loadData() {
     const roundRes = await apiClient.get(`/rounds/${roundId}`)
     round.value = roundRes.data
     
+    // Load submissions to check if any exist
+    try {
+      const subRes = await apiClient.get(`/submissions/${roundId}`)
+      submissions.value = subRes.data || []
+    } catch (error) {
+      submissions.value = []
+    }
+    
     // Try to load existing consolidation
     try {
       const consRes = await apiClient.get(`/consolidations/${roundId}`)
       consolidation.value = consRes.data
+      parseConsolidationFields(consolidation.value)
       adminNotes.value = consRes.data.adminNotes || ''
-    } catch {
+    } catch (error) {
+      console.error('Error loading consolidation:', error)
       // No consolidation yet
     }
   } catch (error) {
@@ -47,6 +66,7 @@ async function generateConsolidation() {
   try {
     const res = await apiClient.post(`/rounds/${roundId}/consolidate`)
     consolidation.value = res.data
+    parseConsolidationFields(consolidation.value)
     adminNotes.value = res.data.adminNotes || ''
   } catch (error: any) {
     if (error.response?.status === 409) {
@@ -88,6 +108,97 @@ async function shareConsolidation() {
   }
 }
 
+function parseConsolidationFields(consolidation: any) {
+  try {
+    if (consolidation.strengths && typeof consolidation.strengths === 'string') {
+      consolidation.strengths = JSON.parse(consolidation.strengths)
+    }
+    if (consolidation.areasForImprovement && typeof consolidation.areasForImprovement === 'string') {
+      consolidation.areasForImprovement = JSON.parse(consolidation.areasForImprovement)
+    }
+    if (consolidation.actionableInsights && typeof consolidation.actionableInsights === 'string') {
+      consolidation.actionableInsights = JSON.parse(consolidation.actionableInsights)
+    }
+    if (consolidation.questionSummaries && typeof consolidation.questionSummaries === 'string') {
+      consolidation.questionSummaries = JSON.parse(consolidation.questionSummaries)
+    }
+  } catch (error) {
+    console.error('Error parsing consolidation fields:', error)
+  }
+}
+
+function startEditing(section: string) {
+  if (!consolidation.value) return
+  
+  editingSection.value = section
+  editForm.value = {
+    executiveSummary: consolidation.value.executiveSummary || '',
+    strengths: [...(consolidation.value.strengths || [])],
+    areasForImprovement: [...(consolidation.value.areasForImprovement || [])],
+    actionableInsights: [...(consolidation.value.actionableInsights || [])],
+    questionSummaries: {...(consolidation.value.questionSummaries || {})}
+  }
+}
+
+function cancelEditing() {
+  editingSection.value = null
+  editForm.value = {
+    executiveSummary: '',
+    strengths: [],
+    areasForImprovement: [],
+    actionableInsights: [],
+    questionSummaries: {}
+  }
+}
+
+async function saveEdits() {
+  if (!consolidation.value || !editingSection.value) return
+  
+  try {
+    const updateData: any = {}
+    
+    // Only update the section being edited
+    switch (editingSection.value) {
+      case 'executive':
+        updateData.executiveSummary = editForm.value.executiveSummary
+        break
+      case 'strengths':
+        updateData.strengths = editForm.value.strengths
+        break
+      case 'improvements':
+        updateData.areasForImprovement = editForm.value.areasForImprovement
+        break
+      case 'insights':
+        updateData.actionableInsights = editForm.value.actionableInsights
+        break
+      case 'questions':
+        updateData.questionSummaries = editForm.value.questionSummaries
+        break
+    }
+    
+    await apiClient.put(`/consolidations/${consolidation.value.id}`, updateData)
+    
+    // Update local consolidation data
+    Object.assign(consolidation.value, updateData)
+    
+    editingSection.value = null
+    alert('Changes saved successfully!')
+  } catch (error) {
+    console.error('Failed to save edits:', error)
+    alert('Failed to save changes')
+  }
+}
+
+function addArrayItem(array: string[], value: string) {
+  if (value.trim()) {
+    array.push(value.trim())
+  }
+}
+
+function removeArrayItem(array: string[], index: number) {
+  array.splice(index, 1)
+}
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return 'Not shared yet'
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -116,14 +227,21 @@ function formatDate(dateStr: string | null): string {
       </header>
 
       <!-- Generate Button -->
-      <div v-if="!consolidation && round.status === 'closed'" class="generate-section">
-        <p>This round is closed and ready for AI consolidation.</p>
+      <div v-if="!consolidation && round.status === 'closed' && submissions.length > 0" class="generate-section">
+        <p>This round is closed and ready for feedback consolidation.</p>
         <button 
           class="btn-primary" 
           @click="generateConsolidation"
           :disabled="generating"
         >
-          {{ generating ? 'Generating...' : '🤖 Generate AI Consolidation' }}
+          {{ generating ? 'Generating...' : '🤖 Generate Consolidation' }}
+        </button>
+      </div>
+
+      <div v-else-if="!consolidation && round.status === 'closed' && submissions.length === 0" class="info-section">
+        <p>No feedback submissions found. Cannot generate consolidation.</p>
+        <button class="btn-secondary" @click="router.push('/rounds')">
+          Back to Rounds
         </button>
       </div>
 
@@ -158,14 +276,49 @@ function formatDate(dateStr: string | null): string {
         <div class="consolidation-body">
           <!-- Executive Summary -->
           <section class="section">
-            <h2>Executive Summary</h2>
-            <p class="summary-text">{{ consolidation.executiveSummary }}</p>
+            <div class="section-header">
+              <h2>Executive Summary</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'executive'" @click="startEditing('executive')" class="edit-btn">
+                ✏️ Edit
+              </button>
+            </div>
+            <div v-if="editingSection === 'executive'" class="edit-mode">
+              <textarea
+                v-model="editForm.executiveSummary"
+                rows="4"
+                placeholder="Enter executive summary..."
+                class="edit-textarea"
+              ></textarea>
+              <div class="edit-actions">
+                <button @click="saveEdits" class="btn-primary">Save</button>
+                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              </div>
+            </div>
+            <p v-else class="summary-text">{{ consolidation.executiveSummary }}</p>
           </section>
 
           <!-- Strengths -->
           <section class="section">
-            <h2>💪 Key Strengths</h2>
-            <ul class="styled-list positive">
+            <div class="section-header">
+              <h2>💪 Key Strengths</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'strengths'" @click="startEditing('strengths')" class="edit-btn">
+                ✏️ Edit
+              </button>
+            </div>
+            <div v-if="editingSection === 'strengths'" class="edit-mode">
+              <div class="array-edit">
+                <div v-for="(strength, i) in editForm.strengths" :key="i" class="array-item">
+                  <input v-model="editForm.strengths[i]" placeholder="Enter strength..." class="array-input">
+                  <button @click="removeArrayItem(editForm.strengths, i)" class="remove-btn">×</button>
+                </div>
+                <button @click="addArrayItem(editForm.strengths, '')" class="add-btn">+ Add Strength</button>
+              </div>
+              <div class="edit-actions">
+                <button @click="saveEdits" class="btn-primary">Save</button>
+                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              </div>
+            </div>
+            <ul v-else class="styled-list positive">
               <li v-for="(strength, i) in consolidation.strengths" :key="i">
                 {{ strength }}
               </li>
@@ -174,8 +327,26 @@ function formatDate(dateStr: string | null): string {
 
           <!-- Areas for Improvement -->
           <section class="section">
-            <h2>📈 Areas for Improvement</h2>
-            <ul class="styled-list improvement">
+            <div class="section-header">
+              <h2>📈 Areas for Improvement</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'improvements'" @click="startEditing('improvements')" class="edit-btn">
+                ✏️ Edit
+              </button>
+            </div>
+            <div v-if="editingSection === 'improvements'" class="edit-mode">
+              <div class="array-edit">
+                <div v-for="(improvement, i) in editForm.areasForImprovement" :key="i" class="array-item">
+                  <input v-model="editForm.areasForImprovement[i]" placeholder="Enter improvement..." class="array-input">
+                  <button @click="removeArrayItem(editForm.areasForImprovement, i)" class="remove-btn">×</button>
+                </div>
+                <button @click="addArrayItem(editForm.areasForImprovement, '')" class="add-btn">+ Add Improvement</button>
+              </div>
+              <div class="edit-actions">
+                <button @click="saveEdits" class="btn-primary">Save</button>
+                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              </div>
+            </div>
+            <ul v-else class="styled-list improvement">
               <li v-for="(area, i) in consolidation.areasForImprovement" :key="i">
                 {{ area }}
               </li>
@@ -184,8 +355,26 @@ function formatDate(dateStr: string | null): string {
 
           <!-- Actionable Insights -->
           <section class="section">
-            <h2>🎯 Actionable Insights</h2>
-            <ul class="styled-list action">
+            <div class="section-header">
+              <h2>🎯 Actionable Insights</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'insights'" @click="startEditing('insights')" class="edit-btn">
+                ✏️ Edit
+              </button>
+            </div>
+            <div v-if="editingSection === 'insights'" class="edit-mode">
+              <div class="array-edit">
+                <div v-for="(insight, i) in editForm.actionableInsights" :key="i" class="array-item">
+                  <input v-model="editForm.actionableInsights[i]" placeholder="Enter insight..." class="array-input">
+                  <button @click="removeArrayItem(editForm.actionableInsights, i)" class="remove-btn">×</button>
+                </div>
+                <button @click="addArrayItem(editForm.actionableInsights, '')" class="add-btn">+ Add Insight</button>
+              </div>
+              <div class="edit-actions">
+                <button @click="saveEdits" class="btn-primary">Save</button>
+                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              </div>
+            </div>
+            <ul v-else class="styled-list action">
               <li v-for="(insight, i) in consolidation.actionableInsights" :key="i">
                 {{ insight }}
               </li>
@@ -194,8 +383,37 @@ function formatDate(dateStr: string | null): string {
 
           <!-- Question Summaries -->
           <section class="section question-summaries">
-            <h2>📋 Detailed Question Analysis</h2>
-            <div class="question-cards">
+            <div class="section-header">
+              <h2>📋 Detailed Question Analysis</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'questions'" @click="startEditing('questions')" class="edit-btn">
+                ✏️ Edit
+              </button>
+            </div>
+            <div v-if="editingSection === 'questions'" class="edit-mode">
+              <div class="question-edit">
+                <div class="question-card">
+                  <h4>1. Key Strengths</h4>
+                  <textarea v-model="editForm.questionSummaries.a" placeholder="Summary of strengths..." class="edit-textarea"></textarea>
+                </div>
+                <div class="question-card">
+                  <h4>2. Areas to Improve</h4>
+                  <textarea v-model="editForm.questionSummaries.b" placeholder="Summary of improvements..." class="edit-textarea"></textarea>
+                </div>
+                <div class="question-card">
+                  <h4>3. Observed Behaviors</h4>
+                  <textarea v-model="editForm.questionSummaries.c" placeholder="Summary of behaviors..." class="edit-textarea"></textarea>
+                </div>
+                <div class="question-card">
+                  <h4>4. Growth Advice</h4>
+                  <textarea v-model="editForm.questionSummaries.d" placeholder="Summary of advice..." class="edit-textarea"></textarea>
+                </div>
+              </div>
+              <div class="edit-actions">
+                <button @click="saveEdits" class="btn-primary">Save</button>
+                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              </div>
+            </div>
+            <div v-else class="question-cards">
               <div class="question-card">
                 <h4>1. Key Strengths</h4>
                 <p>{{ consolidation.questionSummaries?.a }}</p>
@@ -498,5 +716,129 @@ function formatDate(dateStr: string | null): string {
 
 .btn-secondary:hover {
   background: #f5f5f5;
+}
+
+/* Edit Mode Styles */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.edit-btn {
+  background: none;
+  border: 1px solid #667eea;
+  color: #667eea;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  background: #667eea;
+  color: white;
+}
+
+.edit-mode {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 1rem;
+}
+
+.edit-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.array-edit {
+  margin-bottom: 1rem;
+}
+
+.array-item {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.array-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.remove-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-btn:hover {
+  background: #d32f2f;
+}
+
+.add-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.add-btn:hover {
+  background: #45a049;
+}
+
+.question-edit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.question-edit .question-card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.question-edit .question-card h4 {
+  margin-bottom: 0.5rem;
+  color: #667eea;
+}
+
+.question-edit .edit-textarea {
+  margin: 0;
+  min-height: 80px;
 }
 </style>

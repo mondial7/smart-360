@@ -71,11 +71,14 @@ func main() {
 		// Submissions
 		authorized.POST("/submissions", handlers.SubmitFeedback)
 		authorized.GET("/submissions/check/:roundId", handlers.CheckSubmissionStatus)
-		authorized.GET("/submissions/:roundId", handlers.GetSubmissionDetails)
+		authorized.GET("/submissions/round/:roundId", handlers.GetRoundSubmissions)
+		authorized.PUT("/submissions/:id", handlers.UpdateSubmission)
+		authorized.GET("/submissions/:submissionId", handlers.GetSubmissionDetails)
 
 		// Consolidations (admin only for generation)
 		authorized.POST("/rounds/:id/consolidate", middleware.AdminOnly(), handlers.ConsolidateFeedback)
 		authorized.GET("/consolidations/:roundId", handlers.GetConsolidation)
+		authorized.PUT("/consolidations/:id", middleware.AdminOnly(), handlers.UpdateConsolidation)
 		authorized.PUT("/consolidations/:id/notes", middleware.AdminOnly(), handlers.UpdateConsolidationNotes)
 		authorized.POST("/consolidations/:id/share", middleware.AdminOnly(), handlers.ShareConsolidation)
 
