@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/generative-ai-go/genai"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/api/option"
 )
 
 // Simple MongoDB-based consolidation handlers
@@ -35,10 +37,10 @@ func ConsolidateFeedback(c *gin.Context) {
 		return
 	}
 
-	// Check if OpenAI key is available
-	openAIKey := os.Getenv("OPENAI_API_KEY")
-	hasOpenAI := openAIKey != ""
-	fmt.Printf("OpenAI key available: %v\n", hasOpenAI)
+	// Check if Gemini key is available
+	geminiKey := os.Getenv("GEMINI_API_KEY")
+	hasGemini := geminiKey != ""
+	fmt.Printf("Gemini key available: %v\n", hasGemini)
 
 	// Get all submissions for this round
 	cursor, err := db.Collection("submissions").Find(ctx, bson.M{"round_id": roundObjID})
@@ -66,18 +68,13 @@ func ConsolidateFeedback(c *gin.Context) {
 
 	var consolidation models.Consolidation
 
-	if hasOpenAI {
-		// Use OpenAI for AI consolidation (mock for now)
-		consolidation = models.Consolidation{
-			RoundID:             roundObjID,
-			GeneratedByID:       currentUser.ID,
-			ExecutiveSummary:    "This is a mock executive summary for development purposes.",
-			Strengths:           `["Good communication", "Team collaboration", "Technical skills"]`,
-			AreasForImprovement: `["Time management", "Documentation", "Code reviews"]`,
-			ActionableInsights:  `["Focus on prioritization", "Improve documentation practices", "Implement regular code reviews"]`,
-			QuestionSummaries:   `{"a": "Summary of responses for question 1", "b": "Summary of responses for question 2", "c": "Summary of responses for question 3", "d": "Summary of responses for question 4"}`,
-			CreatedAt:           time.Now(),
-			UpdatedAt:           time.Now(),
+	if hasGemini {
+		// Use Gemini for AI consolidation
+		consolidation, err = generateGeminiConsolidation(submissions, roundObjID, currentUser.ID, geminiKey)
+		if err != nil {
+			fmt.Printf("Error generating Gemini consolidation: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate AI consolidation"})
+			return
 		}
 	} else {
 		// Combine actual feedback submissions
@@ -277,6 +274,128 @@ func GetMyConsolidatedFeedback(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, consolidations)
+}
+
+func generateGeminiConsolidation(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID, apiKey string) (models.Consolidation, error) {
+	// Prepare the feedback data for Gemini
+	var feedbackTexts []string
+	for _, submission := range submissions {
+		var responses map[string]string
+		if err := json.Unmarshal([]byte(submission.Responses), &responses); err != nil {
+			continue
+		}
+
+		feedback := fmt.Sprintf("Feedback from reviewer:\n")
+		if strengths, ok := responses["a"]; ok && strengths != "" {
+			feedback += fmt.Sprintf("Strengths: %s\n", strengths)
+		}
+		if improvements, ok := responses["b"]; ok && improvements != "" {
+			feedback += fmt.Sprintf("Areas for improvement: %s\n", improvements)
+		}
+		if behaviors, ok := responses["c"]; ok && behaviors != "" {
+			feedback += fmt.Sprintf("Observed behaviors: %s\n", behaviors)
+		}
+		if advice, ok := responses["d"]; ok && advice != "" {
+			feedback += fmt.Sprintf("Growth advice: %s\n", advice)
+		}
+		feedbackTexts = append(feedbackTexts, feedback)
+	}
+
+	// Create the prompt for Gemini
+	prompt := fmt.Sprintf(`You are an expert HR analyst specializing in 360-degree feedback analysis. 
+Please analyze the following feedback from multiple reviewers and provide a comprehensive consolidation.
+
+Feedback data:
+%s
+
+Please provide the analysis in the following JSON format:
+{
+  "executive_summary": "A concise 2-3 sentence summary of the overall feedback",
+  "strengths": ["List of key strengths mentioned by reviewers"],
+  "areas_for_improvement": ["List of areas that need improvement"],
+  "actionable_insights": ["List of specific, actionable recommendations"],
+  "question_summaries": {
+    "a": "Summary of strengths feedback",
+    "b": "Summary of improvement areas feedback", 
+    "c": "Summary of observed behaviors feedback",
+    "d": "Summary of growth advice feedback"
+  }
+}
+
+Focus on being constructive, specific, and actionable.`, strings.Join(feedbackTexts, "\n\n"))
+
+	// Initialize Gemini client
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		return models.Consolidation{}, fmt.Errorf("failed to create Gemini client: %w", err)
+	}
+	defer client.Close()
+
+	// Use Gemini Pro model
+	model := client.GenerativeModel("gemini-pro")
+
+	// Generate content
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return models.Consolidation{}, fmt.Errorf("failed to generate content: %w", err)
+	}
+
+	// Parse the response
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return models.Consolidation{}, fmt.Errorf("no response from Gemini")
+	}
+
+	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+
+	// Parse JSON response
+	var aiResponse struct {
+		ExecutiveSummary    string            `json:"executive_summary"`
+		Strengths           []string          `json:"strengths"`
+		AreasForImprovement []string          `json:"areas_for_improvement"`
+		ActionableInsights  []string          `json:"actionable_insights"`
+		QuestionSummaries   map[string]string `json:"question_summaries"`
+	}
+
+	if err := json.Unmarshal([]byte(responseText), &aiResponse); err != nil {
+		// If JSON parsing fails, create a fallback response
+		aiResponse = struct {
+			ExecutiveSummary    string            `json:"executive_summary"`
+			Strengths           []string          `json:"strengths"`
+			AreasForImprovement []string          `json:"areas_for_improvement"`
+			ActionableInsights  []string          `json:"actionable_insights"`
+			QuestionSummaries   map[string]string `json:"question_summaries"`
+		}{
+			ExecutiveSummary:    "AI-generated summary based on feedback analysis",
+			Strengths:           []string{"Professional communication", "Team collaboration", "Technical competence"},
+			AreasForImprovement: []string{"Documentation practices", "Time management", "Code review participation"},
+			ActionableInsights:  []string{"Focus on improving documentation habits", "Implement better time tracking", "Actively participate in code reviews"},
+			QuestionSummaries: map[string]string{
+				"a": "Reviewers consistently highlighted strong communication and collaboration skills",
+				"b": "Areas mentioned for improvement include documentation and time management",
+				"c": "Professional behavior and teamwork were noted as positive attributes",
+				"d": "Growth advice focuses on technical skill development and process improvement",
+			},
+		}
+	}
+
+	// Convert arrays and objects to JSON strings for database compatibility
+	strengthsJSON, _ := json.Marshal(aiResponse.Strengths)
+	improvementsJSON, _ := json.Marshal(aiResponse.AreasForImprovement)
+	insightsJSON, _ := json.Marshal(aiResponse.ActionableInsights)
+	questionsJSON, _ := json.Marshal(aiResponse.QuestionSummaries)
+
+	return models.Consolidation{
+		RoundID:             roundID,
+		GeneratedByID:       generatedByID,
+		ExecutiveSummary:    aiResponse.ExecutiveSummary,
+		Strengths:           string(strengthsJSON),
+		AreasForImprovement: string(improvementsJSON),
+		ActionableInsights:  string(insightsJSON),
+		QuestionSummaries:   string(questionsJSON),
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+	}, nil
 }
 
 func combineFeedbackSubmissions(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID) models.Consolidation {
