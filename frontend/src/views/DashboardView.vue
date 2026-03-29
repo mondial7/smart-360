@@ -17,37 +17,51 @@ onMounted(async () => {
 })
 
 async function loadDashboard() {
+  console.log('🔄 Loading dashboard... isAdmin:', auth.isAdmin)
   try {
     if (auth.isAdmin) {
+      console.log('📊 Loading admin dashboard')
       const [statsRes, roundsRes] = await Promise.all([
         apiClient.get('/dashboard/stats'),
-        apiClient.get('/dashboard/active-rounds')
+        apiClient.get('/rounds')
       ])
       stats.value = statsRes.data
-      activeRounds.value = roundsRes.data
+      // Filter for active rounds only
+      activeRounds.value = (roundsRes.data || []).filter((r: FeedbackRound) => r.status === 'active')
+      console.log('✅ Admin data loaded:', { stats: stats.value, activeRounds: activeRounds.value.length })
     } else {
+      console.log('👤 Loading member dashboard')
       // Member dashboard - load rounds where they're reviewers
       const [statsRes, roundsRes] = await Promise.all([
         apiClient.get('/dashboard/stats'),
         apiClient.get('/rounds-for-me')
       ])
+      console.log('📦 Member data received:', { stats: statsRes.data, rounds: roundsRes.data })
       stats.value = statsRes.data
-      myRounds.value = roundsRes.data
-      
+      myRounds.value = roundsRes.data || []
+      console.log('✅ Member data set:', { myRounds: myRounds.value.length })
+
       // Check submission status for each round
-      for (const round of myRounds.value) {
-        try {
-          const checkRes = await apiClient.get(`/submissions/check/${round.id}`)
-          submissionStatus.value[round.id] = checkRes.data.submitted
-        } catch {
-          submissionStatus.value[round.id] = false
+      if (myRounds.value && myRounds.value.length > 0) {
+        console.log('🔍 Checking submission status for', myRounds.value.length, 'rounds')
+        for (const round of myRounds.value) {
+          try {
+            const checkRes = await apiClient.get(`/submissions/check/${round.id}`)
+            submissionStatus.value[round.id] = checkRes.data.submitted
+          } catch (err) {
+            console.log('⚠️ Failed to check submission for round', round.id, err)
+            submissionStatus.value[round.id] = false
+          }
         }
+        console.log('✅ Submission status checked:', submissionStatus.value)
       }
     }
   } catch (error) {
-    console.error('Failed to load dashboard:', error)
+    console.error('❌ Failed to load dashboard:', error)
   } finally {
+    console.log('🏁 Setting loading to false')
     loading.value = false
+    console.log('🏁 Loading value is now:', loading.value)
   }
 }
 
@@ -132,6 +146,11 @@ function getRoundStatusText(round: FeedbackRound): string {
           <router-link to="/rounds" class="view-all">View all rounds →</router-link>
         </div>
 
+        <div class="empty-state-inline" v-else>
+          <div class="empty-icon">📋</div>
+          <p>No active feedback rounds. Create your first round to get started!</p>
+        </div>
+
         <div class="quick-actions">
           <h2>Quick Actions</h2>
           <div class="action-grid">
@@ -139,13 +158,13 @@ function getRoundStatusText(round: FeedbackRound): string {
               <span class="action-icon">👥</span>
               <span class="action-text">Manage Team</span>
             </router-link>
-            <router-link to="/rounds/new" class="action-card primary">
-              <span class="action-icon">➕</span>
-              <span class="action-text">Create Round</span>
-            </router-link>
             <router-link to="/rounds" class="action-card">
               <span class="action-icon">📋</span>
               <span class="action-text">View Rounds</span>
+            </router-link>
+            <router-link to="/rounds/new" class="action-card primary">
+              <span class="action-icon">➕</span>
+              <span class="action-text">Create Round</span>
             </router-link>
           </div>
         </div>
@@ -161,7 +180,7 @@ function getRoundStatusText(round: FeedbackRound): string {
             <router-link to="/rounds" class="action-link">Review now →</router-link>
           </div>
           <div class="stat-card">
-            <span class="stat-value">{{ myRounds.filter(r => submissionStatus[r.id]).length }}</span>
+            <span class="stat-value">{{ stats?.mySubmissions || 0 }}</span>
             <span class="stat-label">Completed Reviews</span>
           </div>
           <div class="stat-card">
@@ -630,5 +649,50 @@ function getRoundStatusText(round: FeedbackRound): string {
 
 .stat-card.accent .action-link {
   color: rgba(255,255,255,0.9);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.empty-state .empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.empty-state p {
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state-inline {
+  text-align: center;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.empty-state-inline .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.empty-state-inline p {
+  color: #666;
+  margin: 0;
+  font-size: 0.95rem;
 }
 </style>

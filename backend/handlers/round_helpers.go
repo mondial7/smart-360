@@ -72,39 +72,29 @@ func getPopulatedRound(ctx context.Context, db *mongo.Database, roundID primitiv
 		}
 	}
 
-	// Populate reviewers - fetch from separate collection
-	cursor, err := db.Collection("round_reviewers").Find(ctx, bson.M{"round_id": roundID})
-	if err != nil {
-		fmt.Printf("Error fetching reviewers for round %s: %v\n", roundID.Hex(), err)
-	} else {
-		defer cursor.Close(ctx)
-
-		var reviewers []models.RoundReviewer
-		if err = cursor.All(ctx, &reviewers); err != nil {
-			fmt.Printf("Error decoding reviewers for round %s: %v\n", roundID.Hex(), err)
-		} else {
-			fmt.Printf("Found %d reviewers for round %s\n", len(reviewers), roundID.Hex())
-			for _, reviewer := range reviewers {
-				fmt.Printf("  - Reviewer ID: %s\n", reviewer.ReviewerID.Hex())
-				populatedReviewer := PopulatedRoundReviewer{
-					ID:         reviewer.ID,
-					RoundID:    reviewer.RoundID,
-					ReviewerID: reviewer.ReviewerID,
-					CreatedAt:  reviewer.CreatedAt,
-				}
-
-				// Populate reviewer user data
-				var reviewerUser models.User
-				err := db.Collection("users").FindOne(ctx, bson.M{"_id": reviewer.ReviewerID}).Decode(&reviewerUser)
-				if err == nil {
-					populatedReviewer.Reviewer = &reviewerUser
-					fmt.Printf("    - User: %s\n", reviewerUser.Name)
-				} else {
-					fmt.Printf("    - Error finding user: %v\n", err)
-				}
-
-				populatedRound.Reviewers = append(populatedRound.Reviewers, populatedReviewer)
+	// Populate reviewers - use embedded reviewers array from the round
+	if round.Reviewers != nil && len(round.Reviewers) > 0 {
+		fmt.Printf("Found %d reviewers embedded in round %s\n", len(round.Reviewers), roundID.Hex())
+		for _, reviewer := range round.Reviewers {
+			fmt.Printf("  - Reviewer ID: %s\n", reviewer.ReviewerID.Hex())
+			populatedReviewer := PopulatedRoundReviewer{
+				ID:         reviewer.ID,
+				RoundID:    reviewer.RoundID,
+				ReviewerID: reviewer.ReviewerID,
+				CreatedAt:  reviewer.CreatedAt,
 			}
+
+			// Populate reviewer user data
+			var reviewerUser models.User
+			err := db.Collection("users").FindOne(ctx, bson.M{"_id": reviewer.ReviewerID}).Decode(&reviewerUser)
+			if err == nil {
+				populatedReviewer.Reviewer = &reviewerUser
+				fmt.Printf("    - User: %s\n", reviewerUser.Name)
+			} else {
+				fmt.Printf("    - Error finding user: %v\n", err)
+			}
+
+			populatedRound.Reviewers = append(populatedRound.Reviewers, populatedReviewer)
 		}
 	}
 
