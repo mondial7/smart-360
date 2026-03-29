@@ -235,6 +235,15 @@ function formatDate(dateStr: string | null): string {
     minute: '2-digit'
   })
 }
+
+function parseResponses(responsesStr: string): Record<string, string> {
+  try {
+    return JSON.parse(responsesStr)
+  } catch (error) {
+    console.error('Error parsing responses:', error)
+    return {}
+  }
+}
 </script>
 
 <template>
@@ -467,6 +476,38 @@ function formatDate(dateStr: string | null): string {
               <div class="question-card">
                 <h4>4. Growth Advice</h4>
                 <p>{{ consolidation.questionSummaries?.d }}</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Individual Reviews -->
+          <section v-if="submissions.length > 0" class="section individual-reviews">
+            <h2>📝 Individual Reviews ({{ submissions.length }})</h2>
+            <p class="hint">View all individual feedback submissions below</p>
+            <div class="reviews-list">
+              <div v-for="(submission, idx) in submissions" :key="submission.id" class="review-card">
+                <div class="review-header">
+                  <span class="reviewer-label">Reviewer {{ idx + 1 }}</span>
+                  <span class="review-date">{{ formatDate(submission.submittedAt) }}</span>
+                </div>
+                <div class="review-content">
+                  <div class="review-question">
+                    <h4>What are this person's key strengths?</h4>
+                    <p>{{ parseResponses(submission.responses).a || 'No response' }}</p>
+                  </div>
+                  <div class="review-question">
+                    <h4>What areas could they improve?</h4>
+                    <p>{{ parseResponses(submission.responses).b || 'No response' }}</p>
+                  </div>
+                  <div class="review-question">
+                    <h4>What should they continue doing?</h4>
+                    <p>{{ parseResponses(submission.responses).c || 'No response' }}</p>
+                  </div>
+                  <div class="review-question">
+                    <h4>What should they start or stop doing?</h4>
+                    <p>{{ parseResponses(submission.responses).d || 'No response' }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -878,5 +919,72 @@ function formatDate(dateStr: string | null): string {
 .question-edit .edit-textarea {
   margin: 0;
   min-height: 80px;
+}
+
+/* Individual Reviews Styles */
+.individual-reviews .hint {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.review-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.reviewer-label {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 1rem;
+}
+
+.review-date {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.review-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.review-question {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+.review-question h4 {
+  color: #667eea;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.review-question p {
+  color: #444;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
 }
 </style>

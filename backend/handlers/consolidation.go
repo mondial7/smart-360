@@ -302,7 +302,7 @@ func generateGeminiConsolidation(submissions []models.Submission, roundID primit
 	}
 
 	// Create the prompt for Gemini
-	prompt := fmt.Sprintf(`You are an expert HR analyst specializing in 360-degree feedback analysis. 
+	prompt := fmt.Sprintf(`You are an expert and caring Engineering Team Lead proficient in 360-degree feedback analysis. 
 Please analyze the following feedback from multiple reviewers and provide a comprehensive consolidation.
 
 Feedback data:
@@ -310,7 +310,7 @@ Feedback data:
 
 Please provide the analysis in the following JSON format:
 {
-  "executive_summary": "A concise 2-3 sentence summary of the overall feedback",
+  "executive_summary": "A concise 2-3 sentence summary of the feedback from multiple reviewers and provide a comprehensive consolidation. Using an Engineering Manager tone.",
   "strengths": ["List of key strengths mentioned by reviewers"],
   "areas_for_improvement": ["List of areas that need improvement"],
   "actionable_insights": ["List of specific, actionable recommendations"],
@@ -322,7 +322,9 @@ Please provide the analysis in the following JSON format:
   }
 }
 
-Focus on being constructive, specific, and actionable.`, strings.Join(feedbackTexts, "\n\n"))
+Focus on being constructive, specific, and actionable.
+
+Return ONLY a single minified JSON object. Do not include any code fences, markdown, or explanatory text.`, strings.Join(feedbackTexts, "\n\n"))
 
 	// Initialize Gemini client
 	ctx := context.Background()
@@ -332,8 +334,38 @@ Focus on being constructive, specific, and actionable.`, strings.Join(feedbackTe
 	}
 	defer client.Close()
 
-	// Use Gemini Pro model
-	model := client.GenerativeModel("gemini-pro")
+	model := client.GenerativeModel("gemini-flash-latest")
+	// Request strict JSON output
+	model.ResponseMIMEType = "application/json"
+	model.ResponseSchema = &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"executive_summary": &genai.Schema{Type: genai.TypeString},
+			"strengths": &genai.Schema{
+				Type:  genai.TypeArray,
+				Items: &genai.Schema{Type: genai.TypeString},
+			},
+			"areas_for_improvement": &genai.Schema{
+				Type:  genai.TypeArray,
+				Items: &genai.Schema{Type: genai.TypeString},
+			},
+			"actionable_insights": &genai.Schema{
+				Type:  genai.TypeArray,
+				Items: &genai.Schema{Type: genai.TypeString},
+			},
+			"question_summaries": &genai.Schema{
+				Type: genai.TypeObject,
+				Properties: map[string]*genai.Schema{
+					"a": &genai.Schema{Type: genai.TypeString},
+					"b": &genai.Schema{Type: genai.TypeString},
+					"c": &genai.Schema{Type: genai.TypeString},
+					"d": &genai.Schema{Type: genai.TypeString},
+				},
+				Required: []string{"a", "b", "c", "d"},
+			},
+		},
+		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries"},
+	}
 
 	// Generate content
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
@@ -346,7 +378,35 @@ Focus on being constructive, specific, and actionable.`, strings.Join(feedbackTe
 		return models.Consolidation{}, fmt.Errorf("no response from Gemini")
 	}
 
-	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+	// Extract text response safely
+	var responseText string
+	firstPart := resp.Candidates[0].Content.Parts[0]
+	if t, ok := firstPart.(genai.Text); ok {
+		responseText = string(t)
+	} else {
+		var b strings.Builder
+		for _, p := range resp.Candidates[0].Content.Parts {
+			if tt, ok := p.(genai.Text); ok {
+				b.WriteString(string(tt))
+			}
+		}
+		responseText = b.String()
+	}
+
+	// Sanitize and extract JSON from the model response
+	clean := strings.TrimSpace(responseText)
+	// Strip common code-fence wrappers
+	clean = strings.TrimPrefix(clean, "```json")
+	clean = strings.TrimPrefix(clean, "```JSON")
+	clean = strings.TrimPrefix(clean, "```")
+	clean = strings.TrimSuffix(clean, "```")
+	clean = strings.TrimSpace(clean)
+	// Extract the JSON object slice in case there’s prose around it
+	if i := strings.IndexRune(clean, '{'); i != -1 {
+		if j := strings.LastIndex(clean, "}"); j != -1 && j > i {
+			clean = clean[i : j+1]
+		}
+	}
 
 	// Parse JSON response
 	var aiResponse struct {
@@ -357,8 +417,9 @@ Focus on being constructive, specific, and actionable.`, strings.Join(feedbackTe
 		QuestionSummaries   map[string]string `json:"question_summaries"`
 	}
 
-	if err := json.Unmarshal([]byte(responseText), &aiResponse); err != nil {
-		// If JSON parsing fails, create a fallback response
+	// Validate and unmarshal JSON
+	if !json.Valid([]byte(clean)) {
+		fmt.Printf("invalid JSON from Gemini. RAW AS %q\n", clean)
 		aiResponse = struct {
 			ExecutiveSummary    string            `json:"executive_summary"`
 			Strengths           []string          `json:"strengths"`
@@ -366,15 +427,35 @@ Focus on being constructive, specific, and actionable.`, strings.Join(feedbackTe
 			ActionableInsights  []string          `json:"actionable_insights"`
 			QuestionSummaries   map[string]string `json:"question_summaries"`
 		}{
-			ExecutiveSummary:    "AI-generated summary based on feedback analysis",
-			Strengths:           []string{"Professional communication", "Team collaboration", "Technical competence"},
-			AreasForImprovement: []string{"Documentation practices", "Time management", "Code review participation"},
-			ActionableInsights:  []string{"Focus on improving documentation habits", "Implement better time tracking", "Actively participate in code reviews"},
+			ExecutiveSummary:    "..",
+			Strengths:           []string{".."},
+			AreasForImprovement: []string{".."},
+			ActionableInsights:  []string{".."},
 			QuestionSummaries: map[string]string{
-				"a": "Reviewers consistently highlighted strong communication and collaboration skills",
-				"b": "Areas mentioned for improvement include documentation and time management",
-				"c": "Professional behavior and teamwork were noted as positive attributes",
-				"d": "Growth advice focuses on technical skill development and process improvement",
+				"a": "..",
+				"b": "..",
+				"c": "..",
+				"d": "..",
+			},
+		}
+	} else if err := json.Unmarshal([]byte(clean), &aiResponse); err != nil {
+		fmt.Printf("unmarshal error: %v\nRAW AS %q\n", err, clean)
+		aiResponse = struct {
+			ExecutiveSummary    string            `json:"executive_summary"`
+			Strengths           []string          `json:"strengths"`
+			AreasForImprovement []string          `json:"areas_for_improvement"`
+			ActionableInsights  []string          `json:"actionable_insights"`
+			QuestionSummaries   map[string]string `json:"question_summaries"`
+		}{
+			ExecutiveSummary:    "..",
+			Strengths:           []string{".."},
+			AreasForImprovement: []string{".."},
+			ActionableInsights:  []string{".."},
+			QuestionSummaries: map[string]string{
+				"a": "..",
+				"b": "..",
+				"c": "..",
+				"d": "..",
 			},
 		}
 	}
