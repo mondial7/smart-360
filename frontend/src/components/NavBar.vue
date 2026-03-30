@@ -12,97 +12,156 @@ function handleLogout() {
 </script>
 
 <template>
-  <nav class="navbar">
-    <div class="nav-brand">
+  <aside class="sidebar">
+    <div class="sidebar-header">
       <router-link to="/" class="brand-link">Smart 360</router-link>
     </div>
-    
-    <div class="nav-links">
-      <router-link to="/" class="nav-link">Dashboard</router-link>
-      <router-link to="/team" class="nav-link">Team</router-link>
-      <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">Teams</router-link>
-      <router-link to="/rounds" class="nav-link">Rounds</router-link>
-      <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">Audit Log</router-link>
-      <router-link to="/my-feedback" class="nav-link">My Feedback</router-link>
+
+    <nav class="sidebar-nav">
+      <router-link to="/" class="nav-link">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </router-link>
+      <router-link to="/team" class="nav-link">
+        <span class="nav-icon">👥</span>
+        <span>Team</span>
+      </router-link>
+      <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">
+        <span class="nav-icon">🏢</span>
+        <span>Teams</span>
+      </router-link>
+      <router-link to="/rounds" class="nav-link">
+        <span class="nav-icon">🔄</span>
+        <span>Rounds</span>
+      </router-link>
+      <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
+        <span class="nav-icon">📋</span>
+        <span>Audit Log</span>
+      </router-link>
+      <router-link to="/my-feedback" class="nav-link">
+        <span class="nav-icon">💬</span>
+        <span>My Feedback</span>
+      </router-link>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Profile" class="user-avatar">
+        <div class="user-details">
+          <span class="user-name">{{ auth.user?.name }}</span>
+          <button class="logout-btn" @click="handleLogout">Logout</button>
+        </div>
+      </div>
     </div>
-    
-    <div class="nav-user">
-      <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Profile" class="user-avatar">
-      <span class="user-name">{{ auth.user?.name }}</span>
-      <button class="logout-btn" @click="handleLogout">Logout</button>
-    </div>
-  </nav>
+  </aside>
 </template>
 
 <style scoped>
-.navbar {
+.sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  height: 64px;
+  bottom: 0;
+  width: 250px;
   background: white;
-  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
+  flex-direction: column;
   z-index: 100;
 }
 
-.nav-brand .brand-link {
-  font-size: 1.25rem;
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.brand-link {
+  font-size: 1.5rem;
   font-weight: 700;
   color: #667eea;
   text-decoration: none;
 }
 
-.nav-links {
-  display: flex;
-  gap: 2rem;
+.sidebar-nav {
+  flex: 1;
+  padding: 1rem 0;
+  overflow-y: auto;
 }
 
 .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   color: #666;
   text-decoration: none;
   font-weight: 500;
-  padding: 0.5rem;
-  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
   transition: all 0.2s;
 }
 
-.nav-link:hover,
-.nav-link.router-link-active {
-  color: #667eea;
+.nav-link:hover {
   background: #f5f7fa;
+  color: #667eea;
 }
 
-.nav-user {
+.nav-link.router-link-active {
+  background: #f0f4ff;
+  color: #667eea;
+  border-right: 3px solid #667eea;
+}
+
+.nav-icon {
+  font-size: 1.25rem;
+  width: 24px;
+  text-align: center;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.user-info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .user-name {
   font-weight: 500;
   color: #333;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logout-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 6px;
   background: white;
   color: #666;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 0.875rem;
+  width: 100%;
 }
 
 .logout-btn:hover {

@@ -41,6 +41,7 @@ main {
 }
 
 main.with-nav {
-  padding-top: 64px;
+  margin-left: 250px;
+  padding: 2rem;
 }
 </style>
