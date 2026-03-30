@@ -3,18 +3,23 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { UserWithFeedbackStats } from '@/types/user'
+import type { Team } from '@/types/team'
 
 const auth = useAuthStore()
 const teamMembers = ref<UserWithFeedbackStats[]>([])
+const teams = ref<Team[]>([])
 const loading = ref(true)
 const updating = ref<string | null>(null)
+
+// Filter state
+const selectedTeamId = ref<string>('')
 
 // Sorting state
 const sortColumn = ref<keyof UserWithFeedbackStats>('lastFeedbackReceived')
 const sortDirection = ref<'asc' | 'desc'>('asc')
 
 onMounted(async () => {
-  await loadTeam()
+  await Promise.all([loadTeam(), loadTeams()])
 })
 
 async function loadTeam() {
@@ -29,9 +34,29 @@ async function loadTeam() {
   }
 }
 
-// Sorting logic
+async function loadTeams() {
+  try {
+    const response = await apiClient.get('/teams')
+    teams.value = response.data
+  } catch (error) {
+    console.error('Failed to load teams:', error)
+  }
+}
+
+function getTeamName(teamId: string | null | undefined): string {
+  if (!teamId) return 'Unassigned'
+  const team = teams.value.find(t => t.id === teamId)
+  return team?.name || 'Unknown'
+}
+
+// Filter and sort logic
 const sortedTeamMembers = computed(() => {
-  const members = [...teamMembers.value]
+  let members = [...teamMembers.value]
+
+  // Apply team filter
+  if (selectedTeamId.value) {
+    members = members.filter(m => m.teamId === selectedTeamId.value)
+  }
 
   members.sort((a, b) => {
     let aVal = a[sortColumn.value]
@@ -136,6 +161,16 @@ function getRelativeTime(dateStr: string | null): string {
       <p>Organization roster with feedback insights</p>
     </header>
 
+    <!-- Team Filter -->
+    <div v-if="!loading && teams.length > 0" class="filters">
+      <select v-model="selectedTeamId" class="team-filter">
+        <option value="">All Teams</option>
+        <option v-for="team in teams" :key="team.id" :value="team.id">
+          {{ team.name }}
+        </option>
+      </select>
+    </div>
+
     <div v-if="loading" class="loading">Loading team members...</div>
 
     <div v-else class="table-container">
@@ -156,6 +191,11 @@ function getRelativeTime(dateStr: string | null): string {
                 <span class="sort-indicator" v-if="sortColumn === 'role'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                Team
               </div>
             </th>
             <th @click="sortBy('lastFeedbackReceived')" class="sortable">
@@ -210,6 +250,13 @@ function getRelativeTime(dateStr: string | null): string {
             <!-- Role Column -->
             <td>
               <span class="role-badge" :class="member.role">{{ member.role }}</span>
+            </td>
+
+            <!-- Team Column -->
+            <td>
+              <span class="team-badge" :class="{ 'unassigned': !member.teamId }">
+                {{ getTeamName(member.teamId) }}
+              </span>
             </td>
 
             <!-- Last Feedback Column -->
@@ -426,6 +473,45 @@ function getRelativeTime(dateStr: string | null): string {
 .role-badge.member {
   background: #f3e5f5;
   color: #7b1fa2;
+}
+
+.role-badge.team_admin {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.filters {
+  margin-bottom: 1.5rem;
+}
+
+.team-filter {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.team-filter:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.team-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.team-badge.unassigned {
+  background: #f5f5f5;
+  color: #999;
 }
 
 .feedback-date {

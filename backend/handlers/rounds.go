@@ -44,6 +44,15 @@ func CreateFeedbackRound(c *gin.Context) {
 		return
 	}
 
+	// Team admins can only create rounds for their team members
+	if currentUser.Role == models.RoleTeamAdmin {
+		// Verify subject is in the same team
+		if currentUser.TeamID == nil || subject.TeamID == nil || *currentUser.TeamID != *subject.TeamID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Team admins can only create rounds for their team members"})
+			return
+		}
+	}
+
 	round := models.FeedbackRound{
 		SubjectID:   req.SubjectID,
 		CreatedByID: currentUser.ID,

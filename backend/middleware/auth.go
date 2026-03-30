@@ -98,3 +98,53 @@ func AdminOnly() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func TeamAdminOrGlobalAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+			c.Abort()
+			return
+		}
+
+		u := user.(models.User)
+
+		// Global admin has access to everything
+		if u.Role == models.RoleAdmin {
+			c.Next()
+			return
+		}
+
+		// Team admin needs to manage their own team
+		if u.Role == models.RoleTeamAdmin {
+			// Get team ID from route parameter
+			teamID := c.Param("id")
+			if teamID == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Team ID required"})
+				c.Abort()
+				return
+			}
+
+			teamObjID, err := primitive.ObjectIDFromHex(teamID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid team ID"})
+				c.Abort()
+				return
+			}
+
+			// Verify user's team matches the route team
+			if u.TeamID == nil || *u.TeamID != teamObjID {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to manage this team"})
+				c.Abort()
+				return
+			}
+
+			c.Next()
+			return
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"error": "Team admin or global admin access required"})
+		c.Abort()
+	}
+}

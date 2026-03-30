@@ -75,6 +75,30 @@ const router = createRouter({
       component: () => import('@/views/MyFeedbackView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/teams',
+      name: 'teams',
+      component: () => import('@/views/TeamsManagementView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
+      path: '/teams/new',
+      name: 'create-team',
+      component: () => import('@/views/CreateTeamView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
+      path: '/teams/:id',
+      name: 'team-details',
+      component: () => import('@/views/TeamDetailsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/teams/:teamId/create-round',
+      name: 'create-team-round',
+      component: () => import('@/views/CreateTeamRoundView.vue'),
+      meta: { requiresAuth: true, teamAdminOrAdmin: true }
+    },
   ]
 })
 
@@ -86,6 +110,8 @@ router.beforeEach((to, from, next) => {
   } else if (to.meta.guestOnly && auth.isAuthenticated) {
     next('/')
   } else if (to.meta.adminOnly && !auth.isAdmin) {
+    next('/')
+  } else if (to.meta.teamAdminOrAdmin && !(auth.isAdmin || auth.user?.role === 'team_admin')) {
     next('/')
   } else {
     next()

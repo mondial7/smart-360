@@ -20,6 +20,7 @@ function handleLogout() {
     <div class="nav-links">
       <router-link to="/" class="nav-link">Dashboard</router-link>
       <router-link to="/team" class="nav-link">Team</router-link>
+      <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">Teams</router-link>
       <router-link to="/rounds" class="nav-link">Rounds</router-link>
       <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">Audit Log</router-link>
       <router-link to="/my-feedback" class="nav-link">My Feedback</router-link>

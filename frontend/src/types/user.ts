@@ -3,7 +3,8 @@ export interface User {
   email: string
   name: string
   photoUrl: string
-  role: 'admin' | 'member'
+  role: 'admin' | 'team_admin' | 'member'
+  teamId?: string | null
   createdAt: string
   lastLogin: string | null
 }

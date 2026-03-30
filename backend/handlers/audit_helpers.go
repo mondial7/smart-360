@@ -18,6 +18,8 @@ type AuditLogParams struct {
 	ActorEmail   string
 	RoundID      primitive.ObjectID
 	RoundSubject string
+	TeamID       primitive.ObjectID
+	TeamName     string
 	Description  string
 	OldValue     string
 	NewValue     string
@@ -37,6 +39,8 @@ func createAuditLog(ctx context.Context, params AuditLogParams) {
 		ActorEmail:   params.ActorEmail,
 		RoundID:      params.RoundID,
 		RoundSubject: params.RoundSubject,
+		TeamID:       params.TeamID,
+		TeamName:     params.TeamName,
 		Description:  params.Description,
 		OldValue:     params.OldValue,
 		NewValue:     params.NewValue,

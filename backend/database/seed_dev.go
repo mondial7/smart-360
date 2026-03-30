@@ -21,6 +21,7 @@ func SeedDevData() {
 	// Clear existing data
 	log.Println("🧹 Clearing existing data...")
 	db.Collection("users").DeleteMany(ctx, bson.M{})
+	db.Collection("teams").DeleteMany(ctx, bson.M{})
 	db.Collection("feedback_rounds").DeleteMany(ctx, bson.M{})
 	db.Collection("submissions").DeleteMany(ctx, bson.M{})
 	db.Collection("consolidations").DeleteMany(ctx, bson.M{})
@@ -103,6 +104,59 @@ func SeedDevData() {
 	davidID := userIDs["david@example.com"]
 	eveID := userIDs["eve@example.com"]
 
+	// Create Teams
+	log.Println("🏢 Creating teams...")
+
+	// Team 1: Engineering Team (Alice as team admin)
+	engineeringTeam := models.Team{
+		Name:        "Engineering Team",
+		TeamAdminID: aliceID,
+		MemberIDs:   []primitive.ObjectID{aliceID, bobID, carolID},
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	engResult, err := db.Collection("teams").InsertOne(ctx, engineeringTeam)
+	if err != nil {
+		log.Printf("❌ Failed to create engineering team: %v", err)
+	} else {
+		engTeamID := engResult.InsertedID.(primitive.ObjectID)
+		log.Printf("✅ Created Engineering Team")
+
+		// Update users' TeamID and promote Alice to team_admin
+		for _, email := range []string{"alice@example.com", "bob@example.com", "carol@example.com"} {
+			update := bson.M{"$set": bson.M{"team_id": engTeamID, "updated_at": now}}
+			if email == "alice@example.com" {
+				update["$set"].(bson.M)["role"] = models.RoleTeamAdmin
+			}
+			db.Collection("users").UpdateOne(ctx, bson.M{"_id": userIDs[email]}, update)
+		}
+	}
+
+	// Team 2: Product Team (David as team admin)
+	productTeam := models.Team{
+		Name:        "Product Team",
+		TeamAdminID: davidID,
+		MemberIDs:   []primitive.ObjectID{davidID, eveID},
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	prodResult, err := db.Collection("teams").InsertOne(ctx, productTeam)
+	if err != nil {
+		log.Printf("❌ Failed to create product team: %v", err)
+	} else {
+		prodTeamID := prodResult.InsertedID.(primitive.ObjectID)
+		log.Printf("✅ Created Product Team")
+
+		// Update users
+		for _, email := range []string{"david@example.com", "eve@example.com"} {
+			update := bson.M{"$set": bson.M{"team_id": prodTeamID, "updated_at": now}}
+			if email == "david@example.com" {
+				update["$set"].(bson.M)["role"] = models.RoleTeamAdmin
+			}
+			db.Collection("users").UpdateOne(ctx, bson.M{"_id": userIDs[email]}, update)
+		}
+	}
+
 	// Create feedback rounds in different statuses
 	log.Println("🔄 Creating feedback rounds...")
 
@@ -114,7 +168,7 @@ func SeedDevData() {
 		CreatedAt:   now.AddDate(0, 0, -1),
 		UpdatedAt:   now.AddDate(0, 0, -1),
 	}
-	_, err := db.Collection("feedback_rounds").InsertOne(ctx, draftRound)
+	_, err = db.Collection("feedback_rounds").InsertOne(ctx, draftRound)
 	if err != nil {
 		log.Printf("❌ Failed to create draft round: %v", err)
 	} else {
@@ -146,7 +200,7 @@ func SeedDevData() {
 				ReviewerID: reviewerID,
 				CreatedAt:  now.AddDate(0, 0, -3),
 			}
-			_, err := db.Collection("feedback_rounds").UpdateOne(
+			_, err = db.Collection("feedback_rounds").UpdateOne(
 				ctx,
 				bson.M{"_id": activeRoundID},
 				bson.M{"$push": bson.M{"reviewers": reviewer}},
@@ -202,7 +256,7 @@ func SeedDevData() {
 				ReviewerID: reviewerID,
 				CreatedAt:  now.AddDate(0, 0, -10),
 			}
-			_, err := db.Collection("feedback_rounds").UpdateOne(
+			_, err = db.Collection("feedback_rounds").UpdateOne(
 				ctx,
 				bson.M{"_id": closedRoundID},
 				bson.M{"$push": bson.M{"reviewers": reviewer}},
@@ -265,7 +319,7 @@ func SeedDevData() {
 		}
 
 		for _, submission := range submissions {
-			_, err := db.Collection("submissions").InsertOne(ctx, submission)
+			_, err = db.Collection("submissions").InsertOne(ctx, submission)
 			if err != nil {
 				log.Printf("❌ Failed to create submission: %v", err)
 			}
@@ -299,7 +353,7 @@ func SeedDevData() {
 				ReviewerID: reviewerID,
 				CreatedAt:  now.AddDate(0, 0, -20),
 			}
-			_, err := db.Collection("feedback_rounds").UpdateOne(
+			_, err = db.Collection("feedback_rounds").UpdateOne(
 				ctx,
 				bson.M{"_id": sharedRoundID},
 				bson.M{"$push": bson.M{"reviewers": reviewer}},
@@ -350,7 +404,7 @@ func SeedDevData() {
 		}
 
 		for _, submission := range sharedSubmissions {
-			_, err := db.Collection("submissions").InsertOne(ctx, submission)
+			_, err = db.Collection("submissions").InsertOne(ctx, submission)
 			if err != nil {
 				log.Printf("❌ Failed to create submission: %v", err)
 			}
@@ -406,7 +460,10 @@ func SeedDevData() {
 
 	log.Println("\n✨ Development data seeding complete!")
 	log.Println("\n📋 Summary:")
-	log.Println("  • 6 users (1 admin, 5 members)")
+	log.Println("  • 6 users (1 global admin, 2 team admins, 3 members)")
+	log.Println("  • 2 teams:")
+	log.Println("    - Engineering Team: Alice (admin), Bob, Carol")
+	log.Println("    - Product Team: David (admin), Eve")
 	log.Println("  • 4 feedback rounds in different statuses:")
 	log.Println("    - DRAFT: Alice (no reviewers yet)")
 	log.Println("    - ACTIVE: Bob (3 reviewers, 1 submission)")
@@ -417,9 +474,12 @@ func SeedDevData() {
 	}
 	log.Println("    - SHARED: David (3 reviewers, 3 submissions, consolidation shared)")
 	log.Println("\n🔑 Login credentials:")
-	log.Println("  • admin@example.com (Admin)")
-	log.Println("  • alice@example.com, bob@example.com, carol@example.com, etc. (Members)")
+	log.Println("  • admin@example.com (Global Admin)")
+	log.Println("  • alice@example.com (Engineering Team Admin)")
+	log.Println("  • david@example.com (Product Team Admin)")
+	log.Println("  • bob@example.com, carol@example.com, eve@example.com (Team Members)")
 	log.Println("\n💡 Use /api/auth/dev-login?email=admin@example.com to login in dev mode")
+	log.Println("💡 Team admins can create team rounds: /teams/:id/create-round")
 }
 
 func toJSON(v interface{}) string {

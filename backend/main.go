@@ -25,7 +25,7 @@ func main() {
 	database.InitDB()
 
 	// Seed development data
-	database.SeedData()
+	database.SeedDevData()
 
 	// Initialize OAuth
 	handlers.InitOAuthConfig()
@@ -57,8 +57,19 @@ func main() {
 		authorized.GET("/users/:id", handlers.GetUserByID)
 		authorized.PUT("/users/:id/role", middleware.AdminOnly(), handlers.UpdateUserRole)
 
-		// Rounds - admin only for creation
-		authorized.POST("/rounds", middleware.AdminOnly(), handlers.CreateFeedbackRound)
+		// Teams
+		authorized.GET("/teams", middleware.AdminOnly(), handlers.GetTeams)
+		authorized.GET("/teams/:id", middleware.TeamAdminOrGlobalAdmin(), handlers.GetTeam)
+		authorized.GET("/my-team", handlers.GetMyTeam)
+		authorized.POST("/teams", middleware.AdminOnly(), handlers.CreateTeam)
+		authorized.PUT("/teams/:id", middleware.TeamAdminOrGlobalAdmin(), handlers.UpdateTeam)
+		authorized.DELETE("/teams/:id", middleware.AdminOnly(), handlers.DeleteTeam)
+		authorized.POST("/teams/:id/members", middleware.TeamAdminOrGlobalAdmin(), handlers.AddTeamMembers)
+		authorized.DELETE("/teams/:id/members/:userId", middleware.TeamAdminOrGlobalAdmin(), handlers.RemoveTeamMember)
+		authorized.POST("/teams/:id/rounds/create-batch", middleware.TeamAdminOrGlobalAdmin(), handlers.CreateTeamRounds)
+
+		// Rounds - admin and team admin can create
+		authorized.POST("/rounds", handlers.CreateFeedbackRound)
 		authorized.GET("/rounds", middleware.AdminOnly(), handlers.GetAllRounds)
 		authorized.GET("/rounds/:id", handlers.GetRoundDetails)
 		authorized.PUT("/rounds/:id", handlers.UpdateFeedbackRound)

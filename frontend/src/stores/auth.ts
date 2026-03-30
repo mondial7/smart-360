@@ -12,6 +12,8 @@ export const useAuthStore = defineStore('auth', () => {
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  const isTeamAdmin = computed(() => user.value?.role === 'team_admin')
+  const canManageTeams = computed(() => isAdmin.value || isTeamAdmin.value)
 
   // Actions
   async function init() {
@@ -60,6 +62,8 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     isAuthenticated,
     isAdmin,
+    isTeamAdmin,
+    canManageTeams,
     init,
     fetchUser,
     setToken,
