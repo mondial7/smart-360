@@ -154,6 +154,8 @@ func UpdateConsolidationNotes(c *gin.Context) {
 
 func ShareConsolidation(c *gin.Context) {
 	id := c.Param("id")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
 	db := database.GetDB()
 	ctx := context.Background()
 
@@ -164,6 +166,35 @@ func ShareConsolidation(c *gin.Context) {
 		return
 	}
 
+	// Get consolidation to find round ID
+	var consolidation models.Consolidation
+	err = db.Collection("consolidations").FindOne(ctx, bson.M{"_id": consolidationObjID}).Decode(&consolidation)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Consolidation not found"})
+		return
+	}
+
+	// Get the round to validate status
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": consolidation.RoundID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	// Validate round is in Closed status
+	if round.Status != models.RoundClosed {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Cannot share consolidation. Round status is '%s', must be 'closed'.", round.Status),
+		})
+		return
+	}
+
+	// Get subject for audit log
+	var subject models.User
+	db.Collection("users").FindOne(ctx, bson.M{"_id": round.SubjectID}).Decode(&subject)
+
+	// Update consolidation with shared timestamp
 	update := bson.M{"$set": bson.M{
 		"shared_at":  time.Now(),
 		"updated_at": time.Now(),
@@ -174,6 +205,33 @@ func ShareConsolidation(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to share consolidation"})
 		return
 	}
+
+	// Update round status to shared
+	_, err = db.Collection("feedback_rounds").UpdateOne(
+		ctx,
+		bson.M{"_id": consolidation.RoundID},
+		bson.M{"$set": bson.M{
+			"status":     models.RoundShared,
+			"updated_at": time.Now(),
+		}},
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update round status"})
+		return
+	}
+
+	// Create audit log
+	createAuditLog(ctx, AuditLogParams{
+		Action:       models.AuditConsolidationShared,
+		ActorID:      currentUser.ID,
+		ActorName:    currentUser.Name,
+		ActorEmail:   currentUser.Email,
+		RoundID:      consolidation.RoundID,
+		RoundSubject: subject.Name,
+		Description:  fmt.Sprintf("Shared consolidation with subject (closed → shared)"),
+		OldValue:     string(models.RoundClosed),
+		NewValue:     string(models.RoundShared),
+	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "Consolidation shared successfully"})
 }

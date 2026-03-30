@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 
 const auth = useAuthStore()
+const router = useRouter()
+
+function handleLogout() {
+  auth.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -14,13 +21,14 @@ const auth = useAuthStore()
       <router-link to="/" class="nav-link">Dashboard</router-link>
       <router-link to="/team" class="nav-link">Team</router-link>
       <router-link to="/rounds" class="nav-link">Rounds</router-link>
+      <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">Audit Log</router-link>
       <router-link to="/my-feedback" class="nav-link">My Feedback</router-link>
     </div>
     
     <div class="nav-user">
       <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Profile" class="user-avatar">
       <span class="user-name">{{ auth.user?.name }}</span>
-      <button class="logout-btn" @click="auth.logout">Logout</button>
+      <button class="logout-btn" @click="handleLogout">Logout</button>
     </div>
   </nav>
 </template>

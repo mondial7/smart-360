@@ -53,6 +53,7 @@ func main() {
 	{
 		authorized.GET("/me", handlers.GetCurrentUser)
 		authorized.GET("/users", handlers.GetUsers)
+		authorized.GET("/users/with-feedback-stats", middleware.AdminOnly(), handlers.GetUsersWithFeedbackStats)
 		authorized.GET("/users/:id", handlers.GetUserByID)
 		authorized.PUT("/users/:id/role", middleware.AdminOnly(), handlers.UpdateUserRole)
 
@@ -81,6 +82,10 @@ func main() {
 		authorized.PUT("/consolidations/:id", middleware.AdminOnly(), handlers.UpdateConsolidation)
 		authorized.PUT("/consolidations/:id/notes", middleware.AdminOnly(), handlers.UpdateConsolidationNotes)
 		authorized.POST("/consolidations/:id/share", middleware.AdminOnly(), handlers.ShareConsolidation)
+
+		// Audit logs (admin only)
+		authorized.GET("/audit-logs", middleware.AdminOnly(), handlers.GetAuditLogs)
+		authorized.GET("/audit-logs/round/:id", middleware.AdminOnly(), handlers.GetRoundAuditLogs)
 
 		// Dashboard
 		authorized.GET("/dashboard/stats", handlers.GetDashboardStats)

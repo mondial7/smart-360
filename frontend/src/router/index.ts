@@ -64,6 +64,12 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true }
     },
     {
+      path: '/audit-logs',
+      name: 'audit-logs',
+      component: () => import('@/views/AuditLogView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
       path: '/my-feedback',
       name: 'my-feedback',
       component: () => import('@/views/MyFeedbackView.vue'),

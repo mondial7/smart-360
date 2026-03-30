@@ -37,6 +37,11 @@ func InitDB() *mongo.Database {
 	DB = client.Database(dbName)
 	log.Printf("Successfully connected to MongoDB!")
 
+	// Create indexes
+	if err := CreateIndexes(DB); err != nil {
+		log.Printf("Warning: Failed to create indexes: %v", err)
+	}
+
 	return DB
 }
 

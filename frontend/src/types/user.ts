@@ -7,3 +7,10 @@ export interface User {
   createdAt: string
   lastLogin: string | null
 }
+
+export interface UserWithFeedbackStats extends User {
+  lastFeedbackReceived: string | null
+  activeRoundsAsSubject: number
+  pendingReviews: number
+  totalFeedbackReceived: number
+}
