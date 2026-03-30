@@ -4,12 +4,12 @@ import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 
 const devUsers = [
-  { email: 'dev@example.com', name: 'Dev Admin', role: 'Admin' },
-  { email: 'alice@example.com', name: 'Alice Johnson', role: 'Member' },
+  { email: 'admin@example.com', name: 'Emma Admin', role: 'Admin' },
+  { email: 'alice@example.com', name: 'Alice Johnson', role: 'Team Admin' },
   { email: 'bob@example.com', name: 'Bob Smith', role: 'Member' },
   { email: 'carol@example.com', name: 'Carol Williams', role: 'Member' },
-  { email: 'david@example.com', name: 'David Brown', role: 'Member' },
-  { email: 'emma@example.com', name: 'Emma Davis', role: 'Admin' },
+  { email: 'david@example.com', name: 'David Brown', role: 'Team Admin' },
+  { email: 'eve@example.com', name: 'Eve Martinez', role: 'Member' },
 ]
 </script>
 
