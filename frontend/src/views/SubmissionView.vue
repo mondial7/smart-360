@@ -114,315 +114,375 @@ function canEdit() {
 </script>
 
 <template>
-  <div class="submission-view">
-    <div v-if="loading" class="loading">Loading...</div>
-    
+  <div class="submission">
+    <div v-if="loading" class="submission__loading">Loading...</div>
+
     <template v-else-if="round && submission">
-      <header class="page-header">
-        <router-link to="/rounds" class="back-link">← Back to Rounds</router-link>
-        <h1>My Feedback Submission</h1>
-        <p class="subtitle">
-          For <strong>{{ round.subject?.name }}</strong> • 
+      <header class="submission__header">
+        <router-link to="/rounds" class="submission__back">← Back to Rounds</router-link>
+        <h1 class="submission__title">My Feedback Submission</h1>
+        <p class="submission__subtitle">
+          For <strong class="submission__subject">{{ round.subject?.name }}</strong> •
           Submitted {{ formatDate(submission.submittedAt) }}
         </p>
       </header>
 
-      <div class="submission-content">
-        <div class="submission-header">
-          <div class="meta">
-            <span>Status: <span class="status-badge submitted">Submitted</span></span>
-            <span>Round: {{ round.status }}</span>
-            <span v-if="submission.updatedAt && submission.updatedAt !== submission.submittedAt">
+      <div class="submission__content">
+        <div class="submission__meta">
+          <div class="submission__meta-info">
+            <span class="submission__meta-item">Status: <span class="badge badge--success">Submitted</span></span>
+            <span class="submission__meta-item">Round: {{ round.status }}</span>
+            <span v-if="submission.updatedAt && submission.updatedAt !== submission.submittedAt" class="submission__meta-item">
               Last updated: {{ formatDate(submission.updatedAt) }}
             </span>
           </div>
-          <div v-if="canEdit()" class="actions">
-            <button @click="startEditing" class="edit-btn">✏️ Edit Feedback</button>
+          <div v-if="canEdit()" class="submission__meta-actions">
+            <button @click="startEditing" class="btn btn--secondary submission__edit-btn">✏️ Edit Feedback</button>
           </div>
         </div>
 
-        <div v-if="!editing" class="questions-section">
-          <h2>Your Feedback Responses</h2>
-          
-          <div class="question-item">
-            <h3>1. What are this person's key strengths?</h3>
-            <div class="response">
+        <div v-if="!editing" class="submission__responses">
+          <h2 class="submission__responses-title">Your Feedback Responses</h2>
+
+          <div class="response-item">
+            <h3 class="response-item__question">1. What are this person's key strengths?</h3>
+            <div class="response-item__answer">
               {{ submission.responsesParsed?.a || 'No response provided' }}
             </div>
           </div>
 
-          <div class="question-item">
-            <h3>2. What areas could this person improve?</h3>
-            <div class="response">
+          <div class="response-item">
+            <h3 class="response-item__question">2. What areas could this person improve?</h3>
+            <div class="response-item__answer">
               {{ submission.responsesParsed?.b || 'No response provided' }}
             </div>
           </div>
 
-          <div class="question-item">
-            <h3>3. What specific behaviors or actions have you observed that stood out?</h3>
-            <div class="response">
+          <div class="response-item">
+            <h3 class="response-item__question">3. What specific behaviors or actions have you observed that stood out?</h3>
+            <div class="response-item__answer">
               {{ submission.responsesParsed?.c || 'No response provided' }}
             </div>
           </div>
 
-          <div class="question-item">
-            <h3>4. What advice would you give to help this person grow?</h3>
-            <div class="response">
+          <div class="response-item">
+            <h3 class="response-item__question">4. What advice would you give to help this person grow?</h3>
+            <div class="response-item__answer">
               {{ submission.responsesParsed?.d || 'No response provided' }}
             </div>
           </div>
         </div>
 
-        <div v-else class="edit-section">
-          <h2>Edit Your Feedback</h2>
-          
-          <div class="edit-form">
-            <div v-for="question in questions" :key="question.key" class="question-edit">
-              <h3>{{ question.text }}</h3>
+        <div v-else class="submission__edit">
+          <h2 class="submission__edit-title">Edit Your Feedback</h2>
+
+          <div class="submission__edit-form">
+            <div v-for="question in questions" :key="question.key" class="edit-question">
+              <h3 class="edit-question__label">{{ question.text }}</h3>
               <textarea
                 v-model="editResponses[question.key]"
                 placeholder="Enter your response..."
                 rows="3"
-                class="response-textarea"
+                class="edit-question__textarea"
               ></textarea>
             </div>
           </div>
 
-          <div class="edit-actions">
-            <button @click="saveEdits" class="btn-primary">Save Changes</button>
-            <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+          <div class="submission__edit-actions">
+            <button @click="saveEdits" class="btn btn--primary">Save Changes</button>
+            <button @click="cancelEditing" class="btn btn--secondary">Cancel</button>
           </div>
         </div>
 
-        <div v-if="round.status !== 'active'" class="notice">
-          <p>⚠️ This round is {{ round.status }}. Feedback can only be edited while the round is active.</p>
+        <div v-if="round.status !== 'active'" class="submission__notice">
+          <p class="submission__notice-text">⚠️ This round is {{ round.status }}. Feedback can only be edited while the round is active.</p>
         </div>
       </div>
     </template>
 
-    <div v-else class="error-state">
-      <p>Submission not found.</p>
-      <router-link to="/rounds" class="btn-primary">Back to Rounds</router-link>
+    <div v-else class="submission__error">
+      <p class="submission__error-text">Submission not found.</p>
+      <router-link to="/rounds" class="btn btn--primary">Back to Rounds</router-link>
     </div>
   </div>
 </template>
 
-<style scoped>
-.submission-view {
-  padding: 2rem;
+<style scoped lang="scss">
+.submission {
+  padding: 1rem;
   max-width: 800px;
   margin: 0 auto;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+
+  &__loading,
+  &__error {
+    text-align: center;
+    padding: 2rem 1rem;
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
+
+  &__error-text {
+    color: var(--color-error);
+    margin-bottom: 1.5rem;
+  }
+
+  &__header {
+    margin-bottom: 2rem;
+  }
+
+  &__back {
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
+
+  &__subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__subject {
+    color: var(--text-primary);
+  }
+
+  &__content {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+    }
+  }
+
+  &__meta-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+  }
+
+  &__meta-item {
+    display: block;
+  }
+
+  &__meta-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__edit-btn {
+    font-size: 0.8rem;
+    padding: 0.375rem 0.75rem;
+
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__responses {
+    padding: 1.25rem;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__responses-title {
+    font-size: 1.125rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__edit {
+    padding: 1.25rem;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__edit-title {
+    font-size: 1.125rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__edit-form {
+    margin-bottom: 1.5rem;
+  }
+
+  &__edit-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+  }
+
+  &__notice {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid var(--color-warning);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem;
+  }
+
+  &__notice-text {
+    color: var(--text-primary);
+    margin: 0;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 }
 
-.loading, .error-state {
-  text-align: center;
-  padding: 3rem;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.back-link {
-  display: block;
-  margin-bottom: 1rem;
-  color: #667eea;
-  text-decoration: none;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.subtitle {
-  color: #666;
-}
-
-.subtitle strong {
-  color: #333;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.status-badge.submitted {
-  background: #e8f5e9;
-  color: #4caf50;
-}
-
-.submission-content {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  overflow: hidden;
-}
-
-.submission-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.meta {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.edit-btn {
-  background: none;
-  border: 1px solid #667eea;
-  color: #667eea;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.edit-btn:hover {
-  background: #667eea;
-  color: white;
-}
-
-.questions-section {
-  padding: 1.5rem;
-}
-
-.questions-section h2 {
-  font-size: 1.25rem;
+.response-item {
   margin-bottom: 1.5rem;
-  color: #333;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  &__question {
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary);
+    font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__answer {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--color-primary);
+    line-height: 1.6;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 }
 
-.question-item {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #eee;
-}
+.edit-question {
+  margin-bottom: 1.25rem;
 
-.question-item:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
+  @media (min-width: 768px) {
+    margin-bottom: 1.5rem;
+  }
 
-.question-item h3 {
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-  color: #667eea;
-  font-weight: 600;
-}
+  &__label {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-primary);
+    font-weight: 600;
 
-.response {
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
-  line-height: 1.6;
-  color: #444;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 
-.edit-section {
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  margin-bottom: 1rem;
-}
+  &__textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    line-height: 1.5;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 80px;
 
-.edit-section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1.5rem;
-  color: #333;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
 
-.edit-form {
-  margin-bottom: 1.5rem;
-}
-
-.question-edit {
-  margin-bottom: 1.5rem;
-}
-
-.question-edit h3 {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-  color: #667eea;
-  font-weight: 600;
-}
-
-.response-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
-  resize: vertical;
-  line-height: 1.5;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.notice {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  color: #856404;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-}
-
-.btn-primary {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: background 0.2s;
-}
-
-.btn-primary:hover {
-  background: #5a6fd6;
-}
-
-.btn-secondary {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background: white;
-  color: #666;
-  text-decoration: none;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: background 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #f5f5f5;
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
 }
 </style>

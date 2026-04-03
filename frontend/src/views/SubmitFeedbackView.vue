@@ -86,201 +86,238 @@ function formatDate(dateStr: string | null): string {
 </script>
 
 <template>
-  <div class="submission-page">
-    <div v-if="loading" class="loading">Loading...</div>
+  <div class="submit">
+    <div v-if="loading" class="submit__loading">Loading...</div>
 
-    <div v-else-if="alreadySubmitted" class="submitted-state">
-      <h2>Already Submitted</h2>
-      <p>You have already submitted feedback for this round.</p>
-      <router-link to="/rounds" class="btn-primary">Back to Rounds</router-link>
+    <div v-else-if="alreadySubmitted" class="submit__submitted">
+      <h2 class="submit__submitted-title">Already Submitted</h2>
+      <p class="submit__submitted-text">You have already submitted feedback for this round.</p>
+      <router-link to="/rounds" class="btn btn--primary">Back to Rounds</router-link>
     </div>
 
     <template v-else-if="round">
-      <header class="page-header">
-        <h1>Submit Feedback</h1>
-        <p class="subtitle">
-          Anonymous feedback for <strong>{{ round.subject?.name }}</strong>
+      <header class="submit__header">
+        <h1 class="submit__title">Submit Feedback</h1>
+        <p class="submit__subtitle">
+          Anonymous feedback for <strong class="submit__subject">{{ round.subject?.name }}</strong>
         </p>
-        <p class="deadline">Deadline: {{ formatDate(round.deadline) }}</p>
+        <p class="submit__deadline">Deadline: {{ formatDate(round.deadline) }}</p>
       </header>
 
-      <div class="anonymity-banner">
-        <span class="icon">🔒</span>
-        <span>Your feedback is completely anonymous. The subject will never know who wrote what.</span>
+      <div class="submit__banner">
+        <span class="submit__banner-icon">🔒</span>
+        <span class="submit__banner-text">Your feedback is completely anonymous. The subject will never know who wrote what.</span>
       </div>
 
-      <form @submit.prevent="submitFeedback" class="feedback-form">
-        <div v-for="question in questions" :key="question.key" class="question-card">
-          <label :for="question.key">{{ question.text }}</label>
+      <form @submit.prevent="submitFeedback" class="submit__form">
+        <div v-for="question in questions" :key="question.key" class="question">
+          <label :for="question.key" class="question__label">{{ question.text }}</label>
           <textarea
             :id="question.key"
             v-model="responses[question.key]"
             rows="4"
             placeholder="Type your answer here..."
             required
+            class="question__textarea"
           ></textarea>
         </div>
 
-        <div class="form-actions">
-          <router-link to="/rounds" class="btn-secondary">Cancel</router-link>
-          <button type="submit" class="btn-primary" :disabled="submitting">
+        <div class="submit__actions">
+          <router-link to="/rounds" class="btn btn--secondary">Cancel</router-link>
+          <button type="submit" class="btn btn--primary" :disabled="submitting">
             {{ submitting ? 'Submitting...' : 'Submit Feedback' }}
           </button>
         </div>
       </form>
     </template>
 
-    <div v-else class="error-state">
-      <p>Failed to load feedback round.</p>
-      <router-link to="/rounds" class="btn-primary">Back to Rounds</router-link>
+    <div v-else class="submit__error">
+      <p class="submit__error-text">Failed to load feedback round.</p>
+      <router-link to="/rounds" class="btn btn--primary">Back to Rounds</router-link>
     </div>
   </div>
 </template>
 
-<style scoped>
-.submission-page {
-  padding: 2rem;
+<style scoped lang="scss">
+.submit {
+  padding: 1rem;
   max-width: 800px;
   margin: 0 auto;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+
+  &__loading,
+  &__submitted,
+  &__error {
+    text-align: center;
+    padding: 2rem 1rem;
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
+
+  &__submitted {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+  }
+
+  &__submitted-title {
+    margin-bottom: 1rem;
+    color: var(--color-success);
+    font-size: 1.5rem;
+
+    @media (min-width: 768px) {
+      font-size: 1.75rem;
+    }
+  }
+
+  &__submitted-text {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+  }
+
+  &__error-text {
+    color: var(--color-error);
+    margin-bottom: 1.5rem;
+  }
+
+  &__header {
+    margin-bottom: 2rem;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
+
+  &__subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
+
+  &__subject {
+    color: var(--color-primary);
+  }
+
+  &__deadline {
+    color: var(--color-error);
+    font-weight: 500;
+    margin-top: 0.5rem;
+  }
+
+  &__banner {
+    background: rgba(33, 150, 243, 0.1);
+    border-left: 4px solid #1976d2;
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #1976d2;
+  }
+
+  &__banner-icon {
+    font-size: 1.125rem;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__banner-text {
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      gap: 1.5rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+  }
 }
 
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.subtitle {
-  color: #666;
-  font-size: 1.1rem;
-}
-
-.subtitle strong {
-  color: #667eea;
-}
-
-.deadline {
-  color: #f44336;
-  font-weight: 500;
-  margin-top: 0.5rem;
-}
-
-.anonymity-banner {
-  background: #e3f2fd;
-  border-left: 4px solid #1976d2;
-  padding: 1rem;
-  border-radius: 0 8px 8px 0;
-  margin-bottom: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: #1976d2;
-}
-
-.icon {
-  font-size: 1.25rem;
-}
-
-.feedback-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.question-card {
-  background: white;
-  padding: 1.5rem;
+.question {
+  background: var(--bg-primary);
+  padding: 1.25rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+  border: 1px solid var(--border-color);
 
-.question-card label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  color: #333;
-  font-size: 1.1rem;
-}
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 
-.question-card textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  resize: vertical;
-  font-family: inherit;
-}
+  &__label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+    font-size: 1rem;
 
-.question-card textarea:focus {
-  outline: none;
-  border-color: #667eea;
-}
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1rem;
-}
+  &__textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    resize: vertical;
+    font-family: inherit;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100px;
 
-.btn-primary, .btn-secondary {
-  padding: 0.875rem 2rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
 
-.btn-primary {
-  background: #667eea;
-  color: white;
-  border: none;
-}
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
 
-.btn-primary:hover:not(:disabled) {
-  background: #5a6fd6;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: white;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.btn-secondary:hover {
-  background: #f5f5f5;
-}
-
-.loading, .submitted-state, .error-state {
-  text-align: center;
-  padding: 3rem;
-}
-
-.submitted-state {
-  background: #f5f5f5;
-  border-radius: 12px;
-}
-
-.submitted-state h2 {
-  margin-bottom: 1rem;
-  color: #4caf50;
-}
-
-.submitted-state p {
-  color: #666;
-  margin-bottom: 1.5rem;
+    &::placeholder {
+      color: var(--text-tertiary);
+    }
+  }
 }
 </style>
