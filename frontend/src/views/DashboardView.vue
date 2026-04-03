@@ -17,51 +17,37 @@ onMounted(async () => {
 })
 
 async function loadDashboard() {
-  console.log('🔄 Loading dashboard... isAdmin:', auth.isAdmin)
   try {
     if (auth.isAdmin) {
-      console.log('📊 Loading admin dashboard')
       const [statsRes, roundsRes] = await Promise.all([
         apiClient.get('/dashboard/stats'),
         apiClient.get('/rounds')
       ])
       stats.value = statsRes.data
-      // Filter for active rounds only
       activeRounds.value = (roundsRes.data || []).filter((r: FeedbackRound) => r.status === 'active')
-      console.log('✅ Admin data loaded:', { stats: stats.value, activeRounds: activeRounds.value.length })
     } else {
-      console.log('👤 Loading member dashboard')
-      // Member dashboard - load rounds where they're reviewers
       const [statsRes, roundsRes] = await Promise.all([
         apiClient.get('/dashboard/stats'),
         apiClient.get('/rounds-for-me')
       ])
-      console.log('📦 Member data received:', { stats: statsRes.data, rounds: roundsRes.data })
       stats.value = statsRes.data
       myRounds.value = roundsRes.data || []
-      console.log('✅ Member data set:', { myRounds: myRounds.value.length })
 
-      // Check submission status for each round
       if (myRounds.value && myRounds.value.length > 0) {
-        console.log('🔍 Checking submission status for', myRounds.value.length, 'rounds')
         for (const round of myRounds.value) {
           try {
             const checkRes = await apiClient.get(`/submissions/check/${round.id}`)
             submissionStatus.value[round.id] = checkRes.data.submitted
           } catch (err) {
-            console.log('⚠️ Failed to check submission for round', round.id, err)
             submissionStatus.value[round.id] = false
           }
         }
-        console.log('✅ Submission status checked:', submissionStatus.value)
       }
     }
   } catch (error) {
-    console.error('❌ Failed to load dashboard:', error)
+    console.error('Failed to load dashboard:', error)
   } finally {
-    console.log('🏁 Setting loading to false')
     loading.value = false
-    console.log('🏁 Loading value is now:', loading.value)
   }
 }
 
@@ -78,7 +64,7 @@ function getDeadlineStatus(deadline: string | null): string {
   const deadlineDate = new Date(deadline)
   const today = new Date()
   const daysLeft = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  
+
   if (daysLeft < 0) return 'overdue'
   if (daysLeft === 0) return 'due-today'
   if (daysLeft <= 3) return 'due-soon'
@@ -95,180 +81,220 @@ function getRoundStatusText(round: FeedbackRound): string {
 
 <template>
   <div class="dashboard">
-    <header class="page-header">
-      <h1>Dashboard</h1>
-      <p class="welcome">Welcome back, {{ auth.user?.name }}</p>
-    </header>
+    <div class="dashboard__header">
+      <h1 class="dashboard__title">Dashboard</h1>
+      <p class="dashboard__welcome">Welcome back, {{ auth.user?.name }}</p>
+    </div>
 
-    <div v-if="loading" class="loading">Loading dashboard...</div>
+    <div v-if="loading" class="dashboard__loading">Loading dashboard...</div>
 
     <template v-else>
       <!-- Admin Dashboard -->
       <template v-if="auth.isAdmin">
         <div class="stats-grid">
           <div class="stat-card">
-            <span class="stat-value">{{ stats?.totalUsers || 0 }}</span>
-            <span class="stat-label">Total Users</span>
-            <div class="stat-breakdown">
+            <div class="stat-card__value">{{ stats?.totalUsers || 0 }}</div>
+            <div class="stat-card__label">Total Users</div>
+            <div class="stat-card__breakdown">
               <span>{{ stats?.adminCount || 0 }} admins</span>
               <span>{{ stats?.memberCount || 0 }} members</span>
             </div>
           </div>
+
           <div class="stat-card">
-            <span class="stat-value">{{ stats?.totalRounds || 0 }}</span>
-            <span class="stat-label">Total Rounds</span>
+            <div class="stat-card__value">{{ stats?.totalRounds || 0 }}</div>
+            <div class="stat-card__label">Total Rounds</div>
           </div>
-          <div class="stat-card accent">
-            <span class="stat-value">{{ stats?.activeRounds || 0 }}</span>
-            <span class="stat-label">Active Rounds</span>
+
+          <div class="stat-card stat-card--accent">
+            <div class="stat-card__value">{{ stats?.activeRounds || 0 }}</div>
+            <div class="stat-card__label">Active Rounds</div>
           </div>
+
           <div class="stat-card" v-if="stats?.pendingReviews">
-            <span class="stat-value">{{ stats.pendingReviews }}</span>
-            <span class="stat-label">Pending Reviews</span>
+            <div class="stat-card__value">{{ stats.pendingReviews }}</div>
+            <div class="stat-card__label">Pending Reviews</div>
           </div>
         </div>
 
-        <div class="dashboard-section" v-if="activeRounds.length > 0">
-          <h2>Active Rounds</h2>
-          <div class="rounds-preview">
+        <div class="card dashboard__section" v-if="activeRounds.length > 0">
+          <h2 class="dashboard__section-title">Active Rounds</h2>
+          <div class="rounds-list">
             <div v-for="round in activeRounds.slice(0, 3)" :key="round.id" class="round-item">
-              <div class="round-subject">
-                <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="mini-avatar">
-                <div v-else class="mini-avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
-                <span>{{ round.subject?.name }}</span>
+              <div class="round-item__subject">
+                <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="round-item__avatar">
+                <div v-else class="round-item__avatar round-item__avatar--placeholder">
+                  {{ round.subject?.name.charAt(0) }}
+                </div>
+                <span class="round-item__name">{{ round.subject?.name }}</span>
               </div>
-              <div class="round-meta">
-                <span class="deadline">Due {{ formatDate(round.deadline) }}</span>
-                <span class="reviewer-count">{{ round.reviewers?.length || 0 }} reviewers</span>
+              <div class="round-item__meta">
+                <span class="round-item__deadline">Due {{ formatDate(round.deadline) }}</span>
+                <span class="round-item__count">{{ round.reviewers?.length || 0 }} reviewers</span>
               </div>
             </div>
           </div>
-          <router-link to="/rounds" class="view-all">View all rounds →</router-link>
+          <router-link to="/rounds" class="dashboard__view-all">View all rounds →</router-link>
         </div>
 
-        <div class="empty-state-inline" v-else>
-          <div class="empty-icon">📋</div>
-          <p>No active feedback rounds. Create your first round to get started!</p>
+        <div class="empty-state" v-else>
+          <div class="empty-state__icon">📋</div>
+          <p class="empty-state__text">No active feedback rounds. Create your first round to get started!</p>
         </div>
 
-        <div class="quick-actions">
-          <h2>Quick Actions</h2>
+        <div class="dashboard__section">
+          <h2 class="dashboard__section-title">Quick Actions</h2>
           <div class="action-grid">
             <router-link to="/team" class="action-card">
-              <span class="action-icon">👥</span>
-              <span class="action-text">Manage Team</span>
+              <span class="action-card__icon">👥</span>
+              <span class="action-card__text">Manage Team</span>
             </router-link>
             <router-link to="/rounds" class="action-card">
-              <span class="action-icon">📋</span>
-              <span class="action-text">View Rounds</span>
+              <span class="action-card__icon">📋</span>
+              <span class="action-card__text">View Rounds</span>
             </router-link>
-            <router-link to="/rounds/new" class="action-card primary">
-              <span class="action-icon">➕</span>
-              <span class="action-text">Create Round</span>
+            <router-link to="/rounds/new" class="action-card action-card--primary">
+              <span class="action-card__icon">➕</span>
+              <span class="action-card__text">Create Round</span>
             </router-link>
           </div>
         </div>
       </template>
 
-      <!-- Team Member Dashboard -->
+      <!-- Member Dashboard -->
       <template v-else>
-        <!-- Stats Overview -->
-        <div class="stats-grid member">
-          <div class="stat-card accent" v-if="myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length > 0">
-            <span class="stat-value">{{ myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length }}</span>
-            <span class="stat-label">Pending Reviews</span>
-            <router-link to="/rounds" class="action-link">Review now →</router-link>
+        <div class="stats-grid stats-grid--member">
+          <div class="stat-card stat-card--accent" v-if="myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length > 0">
+            <div class="stat-card__value">
+              {{ myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length }}
+            </div>
+            <div class="stat-card__label">Pending Reviews</div>
+            <router-link to="/rounds" class="stat-card__link">Review now →</router-link>
           </div>
+
           <div class="stat-card">
-            <span class="stat-value">{{ stats?.mySubmissions || 0 }}</span>
-            <span class="stat-label">Completed Reviews</span>
+            <div class="stat-card__value">{{ stats?.mySubmissions || 0 }}</div>
+            <div class="stat-card__label">Completed Reviews</div>
           </div>
+
           <div class="stat-card">
-            <span class="stat-value">{{ stats?.myFeedbackCount || 0 }}</span>
-            <span class="stat-label">My Feedback</span>
-            <router-link to="/my-feedback" class="action-link">View →</router-link>
+            <div class="stat-card__value">{{ stats?.myFeedbackCount || 0 }}</div>
+            <div class="stat-card__label">My Feedback</div>
+            <router-link to="/my-feedback" class="stat-card__link">View →</router-link>
           </div>
         </div>
 
-        <!-- Feedback Requests -->
-        <div class="feedback-section" v-if="myRounds.length > 0">
-          <h2>Feedback Requests</h2>
+        <div v-if="myRounds.length > 0" class="feedback-section">
+          <h2 class="dashboard__section-title">Feedback Requests</h2>
           <div class="feedback-list">
-            <div v-for="round in myRounds" :key="round.id" class="feedback-item">
-              <div class="feedback-header">
-                <div class="person-info">
-                  <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="avatar">
-                  <div v-else class="avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
+            <div v-for="round in myRounds" :key="round.id" class="feedback-item card">
+              <div class="feedback-item__header">
+                <div class="feedback-item__person">
+                  <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="feedback-item__avatar">
+                  <div v-else class="feedback-item__avatar feedback-item__avatar--placeholder">
+                    {{ round.subject?.name.charAt(0) }}
+                  </div>
                   <div>
-                    <h3>{{ round.subject?.name }}</h3>
-                    <span :class="['status', getRoundStatusText(round).toLowerCase()]">
+                    <h3 class="feedback-item__name">{{ round.subject?.name }}</h3>
+                    <span :class="['feedback-item__status', `feedback-item__status--${getRoundStatusText(round).toLowerCase()}`]">
                       {{ getRoundStatusText(round) }}
                     </span>
                   </div>
                 </div>
-                <div class="deadline">
-                  <span class="label">Due</span>
-                  <span :class="getDeadlineStatus(round.deadline)">
+                <div class="feedback-item__deadline">
+                  <span class="feedback-item__deadline-label">Due</span>
+                  <span :class="['feedback-item__deadline-date', `feedback-item__deadline-date--${getDeadlineStatus(round.deadline)}`]">
                     {{ formatDate(round.deadline) }}
                   </span>
                 </div>
               </div>
-              
-              <div class="feedback-actions">
+
+              <div class="feedback-item__actions">
                 <template v-if="!submissionStatus[round.id] && round.status === 'active'">
-                  <router-link :to="`/rounds/${round.id}/submit`" class="btn-primary">
+                  <router-link :to="`/rounds/${round.id}/submit`" class="btn btn--primary">
                     Submit Feedback
                   </router-link>
                 </template>
                 <template v-else-if="submissionStatus[round.id]">
-                  <router-link :to="`/rounds/${round.id}/submission`" class="btn-secondary">
+                  <router-link :to="`/rounds/${round.id}/submission`" class="btn btn--secondary">
                     View Submission
                   </router-link>
                 </template>
                 <template v-else>
-                  <span class="closed-text">Round Closed</span>
+                  <span class="feedback-item__closed">Round Closed</span>
                 </template>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- No Feedback Requests -->
-        <div class="empty-state" v-else>
-          <div class="empty-icon">📋</div>
-          <h2>No Feedback Requests</h2>
-          <p>You don't have any pending feedback requests at the moment.</p>
-          <router-link to="/team" class="btn-primary">View Team</router-link>
+        <div class="empty-state card" v-else>
+          <div class="empty-state__icon">📋</div>
+          <h2 class="empty-state__title">No Feedback Requests</h2>
+          <p class="empty-state__text">You don't have any pending feedback requests at the moment.</p>
+          <router-link to="/team" class="btn btn--primary">View Team</router-link>
         </div>
       </template>
     </template>
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .dashboard {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-}
 
-.page-header {
-  margin-bottom: 2rem;
-}
+  @media (max-width: 767px) {
+    padding: 1rem;
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
+  &__header {
+    margin-bottom: 2rem;
+  }
 
-.welcome {
-  color: #666;
-}
+  &__title {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
 
-.loading {
-  text-align: center;
-  color: #666;
-  padding: 3rem;
+    @media (max-width: 767px) {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__welcome {
+    color: var(--text-secondary);
+  }
+
+  &__loading {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem;
+  }
+
+  &__section {
+    margin-bottom: 2rem;
+  }
+
+  &__section-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+  }
+
+  &__view-all {
+    display: block;
+    margin-top: 1rem;
+    text-align: center;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .stats-grid {
@@ -276,65 +302,75 @@ function getRoundStatusText(round: FeedbackRound): string {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
-}
 
-.stats-grid.member {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 600px;
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr;
+  }
+
+  &--member {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    max-width: 600px;
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
+  }
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg-primary);
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+
+  &--accent {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+  }
+
+  &__value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+
+    @media (max-width: 767px) {
+      font-size: 2rem;
+    }
+  }
+
+  &__label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+
+    .stat-card--accent & {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  &__breakdown {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+  }
+
+  &__link {
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    margin-top: 0.5rem;
+
+    .stat-card--accent & {
+      color: rgba(255, 255, 255, 0.9);
+    }
+  }
 }
 
-.stat-card.accent {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.stat-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: #666;
-  margin-top: 0.5rem;
-}
-
-.stat-card.accent .stat-label {
-  color: rgba(255,255,255,0.8);
-}
-
-.stat-breakdown {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
-  color: #888;
-}
-
-.dashboard-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  margin-bottom: 2rem;
-}
-
-.dashboard-section h2 {
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-}
-
-.rounds-preview {
+.rounds-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -345,98 +381,99 @@ function getRoundStatusText(round: FeedbackRound): string {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  &__subject {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+
+    &--placeholder {
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+
+  &__name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+
+    @media (max-width: 767px) {
+      align-items: flex-start;
+    }
+  }
+
+  &__deadline {
+    font-size: 0.85rem;
+    color: var(--color-error);
+    font-weight: 500;
+  }
+
+  &__count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
 }
 
-.round-subject {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.mini-avatar, .mini-avatar-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-}
-
-.mini-avatar {
-  object-fit: cover;
-}
-
-.mini-avatar-placeholder {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.round-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-}
-
-.deadline {
-  font-size: 0.85rem;
-  color: #f44336;
-  font-weight: 500;
-}
-
-.reviewer-count {
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.view-all {
-  display: block;
-  margin-top: 1rem;
+.empty-state {
   text-align: center;
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.view-all:hover {
-  color: #667eea;
-  text-decoration: underline;
-}
-
-.welcome-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem;
+  padding: 3rem 2rem;
+  background: var(--bg-secondary);
   border-radius: 12px;
   margin-bottom: 2rem;
-}
 
-.welcome-card h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
+  &__icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
 
-.welcome-card p {
-  opacity: 0.9;
-}
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
 
-.quick-actions {
-  margin-top: 2rem;
-}
-
-.quick-actions h2 {
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
+  &__text {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+  }
 }
 
 .action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
+
+  @media (max-width: 767px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .action-card {
@@ -445,42 +482,36 @@ function getRoundStatusText(round: FeedbackRound): string {
   align-items: center;
   gap: 0.5rem;
   padding: 1.5rem;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   text-decoration: none;
-  color: #333;
+  color: var(--text-primary);
   transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  &--primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+  }
+
+  &__icon {
+    font-size: 1.5rem;
+  }
+
+  &__text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+  }
 }
 
-.action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-}
-
-.action-card.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.action-icon {
-  font-size: 1.5rem;
-}
-
-.action-text {
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-/* Member Dashboard Styles */
 .feedback-section {
   margin-top: 2rem;
-}
-
-.feedback-section h2 {
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-  color: #333;
 }
 
 .feedback-list {
@@ -490,209 +521,113 @@ function getRoundStatusText(round: FeedbackRound): string {
 }
 
 .feedback-item {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  transition: border-color 0.2s;
-}
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
 
-.feedback-item:hover {
-  border-color: #667eea;
-}
+    @media (max-width: 767px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+  }
 
-.feedback-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
+  &__person {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
 
-.person-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+    &--placeholder {
+      background: var(--color-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+  }
 
-.avatar-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #667eea;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-}
+  &__name {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
 
-.person-info h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1rem;
-  color: #333;
-}
+  &__status {
+    font-size: 0.85rem;
+    font-weight: 500;
 
-.status {
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-transform: capitalize;
-}
+    &--pending {
+      color: var(--color-warning);
+    }
 
-.status.pending {
-  color: #ff6b35;
-}
+    &--submitted {
+      color: var(--color-success);
+    }
 
-.status.submitted {
-  color: #51cf66;
-}
+    &--overdue {
+      color: var(--color-error);
+    }
 
-.status.overdue {
-  color: #ff6348;
-}
+    &--closed {
+      color: var(--text-tertiary);
+    }
+  }
 
-.status.closed {
-  color: #868e96;
-}
+  &__deadline {
+    text-align: right;
 
-.deadline {
-  text-align: right;
-}
+    @media (max-width: 767px) {
+      text-align: left;
+    }
+  }
 
-.deadline .label {
-  font-size: 0.75rem;
-  color: #868e96;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+  &__deadline-label {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-.deadline span:last-child {
-  font-size: 0.9rem;
-  font-weight: 500;
-  display: block;
-  margin-top: 0.25rem;
-}
+  &__deadline-date {
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: block;
+    margin-top: 0.25rem;
 
-.deadline .overdue {
-  color: #ff6348;
-}
+    &--overdue {
+      color: var(--color-error);
+    }
 
-.deadline .due-today {
-  color: #ff6b35;
-}
+    &--due-today,
+    &--due-soon {
+      color: var(--color-warning);
+    }
 
-.deadline .due-soon {
-  color: #ff9800;
-}
+    &--on-time {
+      color: var(--color-success);
+    }
+  }
 
-.deadline .on-time {
-  color: #51cf66;
-}
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
 
-.feedback-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.btn-primary {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: background 0.2s;
-  border: none;
-}
-
-.btn-primary:hover {
-  background: #5a6fd6;
-}
-
-.btn-secondary {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: white;
-  color: #666;
-  text-decoration: none;
-  border-radius: 6px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: background 0.2s;
-  border: 1px solid #ddd;
-}
-
-.btn-secondary:hover {
-  background: #f8f9fa;
-}
-
-.closed-text {
-  color: #868e96;
-  font-size: 0.9rem;
-  font-style: italic;
-}
-
-.action-link {
-  font-size: 0.85rem;
-  color: #667eea;
-  text-decoration: none;
-  margin-top: 0.5rem;
-}
-
-.stat-card.accent .action-link {
-  color: rgba(255,255,255,0.9);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.empty-state .empty-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
-.empty-state h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.empty-state p {
-  color: #666;
-  margin-bottom: 1.5rem;
-}
-
-.empty-state-inline {
-  text-align: center;
-  padding: 2rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-}
-
-.empty-state-inline .empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  opacity: 0.5;
-}
-
-.empty-state-inline p {
-  color: #666;
-  margin: 0;
-  font-size: 0.95rem;
+  &__closed {
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+    font-style: italic;
+  }
 }
 </style>

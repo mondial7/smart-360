@@ -73,107 +73,107 @@ function formatDate(dateStr: string | null): string {
 </script>
 
 <template>
-  <div class="my-feedback-page">
-    <header class="page-header">
-      <h1>My Feedback</h1>
-      <p>View your consolidated feedback and development insights</p>
+  <div class="feedback">
+    <header class="feedback__header">
+      <h1 class="feedback__title">My Feedback</h1>
+      <p class="feedback__subtitle">View your consolidated feedback and development insights</p>
     </header>
 
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading your feedback...</p>
+    <div v-if="loading" class="feedback__loading">
+      <div class="feedback__spinner"></div>
+      <p class="feedback__loading-text">Loading your feedback...</p>
     </div>
 
-    <div v-else-if="error" class="error-state">
-      <p class="error-message">{{ error }}</p>
-      <button @click="loadConsolidations" class="btn-secondary">Try Again</button>
+    <div v-else-if="error" class="feedback__error">
+      <p class="feedback__error-message">{{ error }}</p>
+      <button @click="loadConsolidations" class="btn btn--secondary">Try Again</button>
     </div>
 
-    <div v-else-if="consolidations.length === 0" class="empty-state">
-      <p>No feedback has been shared with you yet.</p>
-      <p class="subtext">When an administrator shares consolidated feedback, it will appear here.</p>
+    <div v-else-if="consolidations.length === 0" class="feedback__empty">
+      <p class="feedback__empty-text">No feedback has been shared with you yet.</p>
+      <p class="feedback__empty-subtext">When an administrator shares consolidated feedback, it will appear here.</p>
     </div>
 
-    <div v-else class="feedback-list">
+    <div v-else class="feedback__list">
       <div
         v-for="consolidation in consolidations"
         :key="consolidation.id"
-        class="consolidation-card"
+        class="feedback-card"
       >
-        <div class="card-header" @click="toggleExpanded(consolidation.id)">
-          <div class="header-content">
-            <h2>Feedback Received</h2>
-            <p class="date">Shared {{ formatDate(consolidation.sharedAt) }}</p>
+        <div class="feedback-card__header" @click="toggleExpanded(consolidation.id)">
+          <div class="feedback-card__header-content">
+            <h2 class="feedback-card__title">Feedback Received</h2>
+            <p class="feedback-card__date">Shared {{ formatDate(consolidation.sharedAt) }}</p>
           </div>
-          <button class="expand-btn" :class="{ expanded: isExpanded(consolidation.id) }">
+          <button class="feedback-card__toggle" :class="{ 'feedback-card__toggle--expanded': isExpanded(consolidation.id) }">
             {{ isExpanded(consolidation.id) ? '−' : '+' }}
           </button>
         </div>
 
-        <div v-if="isExpanded(consolidation.id)" class="card-body">
+        <div v-if="isExpanded(consolidation.id)" class="feedback-card__body">
           <!-- Executive Summary -->
-          <section class="section">
-            <h3>📄 Executive Summary</h3>
-            <p class="summary-text">{{ consolidation.executiveSummary }}</p>
+          <section class="feedback-section">
+            <h3 class="feedback-section__title">📄 Executive Summary</h3>
+            <p class="feedback-section__summary">{{ consolidation.executiveSummary }}</p>
           </section>
 
           <!-- Strengths -->
-          <section class="section">
-            <h3>💪 Key Strengths</h3>
-            <ul class="styled-list positive">
-              <li v-for="(strength, i) in consolidation.strengths" :key="i">
+          <section class="feedback-section">
+            <h3 class="feedback-section__title">💪 Key Strengths</h3>
+            <ul class="feedback-list feedback-list--positive">
+              <li v-for="(strength, i) in consolidation.strengths" :key="i" class="feedback-list__item">
                 {{ strength }}
               </li>
             </ul>
           </section>
 
           <!-- Areas for Improvement -->
-          <section class="section">
-            <h3>📈 Areas for Improvement</h3>
-            <ul class="styled-list improvement">
-              <li v-for="(area, i) in consolidation.areasForImprovement" :key="i">
+          <section class="feedback-section">
+            <h3 class="feedback-section__title">📈 Areas for Improvement</h3>
+            <ul class="feedback-list feedback-list--improvement">
+              <li v-for="(area, i) in consolidation.areasForImprovement" :key="i" class="feedback-list__item">
                 {{ area }}
               </li>
             </ul>
           </section>
 
           <!-- Actionable Insights -->
-          <section class="section">
-            <h3>🎯 Actionable Insights</h3>
-            <ul class="styled-list action">
-              <li v-for="(insight, i) in consolidation.actionableInsights" :key="i">
+          <section class="feedback-section">
+            <h3 class="feedback-section__title">🎯 Actionable Insights</h3>
+            <ul class="feedback-list feedback-list--action">
+              <li v-for="(insight, i) in consolidation.actionableInsights" :key="i" class="feedback-list__item">
                 {{ insight }}
               </li>
             </ul>
           </section>
 
           <!-- Question Summaries -->
-          <section class="section question-summaries">
-            <h3>📋 Detailed Question Analysis</h3>
-            <div class="question-cards">
+          <section class="feedback-section">
+            <h3 class="feedback-section__title">📋 Detailed Question Analysis</h3>
+            <div class="questions">
               <div class="question-card">
-                <h4>1. Key Strengths</h4>
-                <p>{{ consolidation.questionSummaries?.a || 'No summary available' }}</p>
+                <h4 class="question-card__title">1. Key Strengths</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.a || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4>2. Areas to Improve</h4>
-                <p>{{ consolidation.questionSummaries?.b || 'No summary available' }}</p>
+                <h4 class="question-card__title">2. Areas to Improve</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.b || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4>3. Observed Behaviors</h4>
-                <p>{{ consolidation.questionSummaries?.c || 'No summary available' }}</p>
+                <h4 class="question-card__title">3. Observed Behaviors</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.c || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4>4. Growth Advice</h4>
-                <p>{{ consolidation.questionSummaries?.d || 'No summary available' }}</p>
+                <h4 class="question-card__title">4. Growth Advice</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.d || 'No summary available' }}</p>
               </div>
             </div>
           </section>
 
           <!-- Admin Notes -->
-          <section v-if="consolidation.adminNotes" class="section admin-notes">
-            <h3>📝 Additional Notes</h3>
-            <div class="admin-note-display">{{ consolidation.adminNotes }}</div>
+          <section v-if="consolidation.adminNotes" class="feedback-section">
+            <h3 class="feedback-section__title feedback-section__title--admin">📝 Additional Notes</h3>
+            <div class="admin-notes">{{ consolidation.adminNotes }}</div>
           </section>
         </div>
       </div>
@@ -181,137 +181,109 @@ function formatDate(dateStr: string | null): string {
   </div>
 </template>
 
-<style scoped>
-.my-feedback-page {
-  padding: 2rem;
+<style scoped lang="scss">
+.feedback {
+  padding: 1rem;
   max-width: 900px;
   margin: 0 auto;
-}
 
-.page-header {
-  margin-bottom: 2rem;
-}
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
+  &__header {
+    margin-bottom: 2rem;
+  }
 
-.page-header p {
-  color: #666;
-}
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
 
-.loading-state, .error-state, .empty-state {
-  background: white;
-  padding: 3rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  text-align: center;
-}
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
 
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
+  &__subtitle {
+    color: var(--text-secondary);
+    margin: 0;
+  }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+  &__loading,
+  &__error,
+  &__empty {
+    background: var(--bg-primary);
+    padding: 2rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__spinner {
+    width: 36px;
+    height: 36px;
+    border: 4px solid var(--bg-tertiary);
+    border-top: 4px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  &__loading-text {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  &__error-message {
+    color: var(--color-error);
+    margin: 0 0 1rem 0;
+  }
+
+  &__empty-text {
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+  }
+
+  &__empty-subtext {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    margin: 0.5rem 0 0 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      gap: 1.5rem;
+    }
+  }
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.error-state p {
-  color: #d32f2f;
-  margin-bottom: 1rem;
-}
-
-.empty-state p {
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.subtext {
-  font-size: 0.9rem;
-  color: #999;
-}
-
-.feedback-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.consolidation-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  overflow: hidden;
-  transition: box-shadow 0.2s;
-}
-
-.consolidation-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  cursor: pointer;
-  user-select: none;
-}
-
-.header-content h2 {
-  font-size: 1.25rem;
-  margin: 0 0 0.25rem 0;
-}
-
-.date {
-  font-size: 0.9rem;
-  opacity: 0.9;
-  margin: 0;
-}
-
-.expand-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.expand-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-}
-
-.expand-btn.expanded {
-  transform: rotate(180deg);
-}
-
-.card-body {
-  padding: 2rem;
-  animation: slideDown 0.3s ease-out;
 }
 
 @keyframes slideDown {
@@ -325,136 +297,250 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-.section {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #eee;
+.feedback-card {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    cursor: pointer;
+    user-select: none;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__header-content {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 1.125rem;
+    margin: 0 0 0.25rem 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__date {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__toggle {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    min-height: 44px;
+    min-width: 44px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    &--expanded {
+      transform: rotate(180deg);
+
+      &:hover {
+        transform: rotate(180deg) scale(1.1);
+      }
+    }
+  }
+
+  &__body {
+    padding: 1.5rem;
+    animation: slideDown 0.3s ease-out;
+
+    @media (min-width: 768px) {
+      padding: 2rem;
+    }
+  }
 }
 
-.section:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
+.feedback-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  &__title {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.125rem;
+    }
+
+    &--admin {
+      color: var(--color-primary);
+    }
+  }
+
+  &__summary {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.05rem;
+    }
+  }
 }
 
-.section h3 {
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.summary-text {
-  font-size: 1.05rem;
-  line-height: 1.7;
-  color: #444;
-}
-
-.styled-list {
+.feedback-list {
   list-style: none;
   padding: 0;
   margin: 0;
+
+  &__item {
+    padding: 0.875rem 0.875rem 0.875rem 2.25rem;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    position: relative;
+    line-height: 1.5;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      padding: 1rem 1rem 1rem 2.5rem;
+    }
+
+    &::before {
+      position: absolute;
+      left: 0.75rem;
+      font-size: 1.125rem;
+
+      @media (min-width: 768px) {
+        font-size: 1.25rem;
+      }
+    }
+  }
+
+  &--positive &__item {
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 3px solid var(--color-success);
+
+    &::before {
+      content: '✓';
+      color: var(--color-success);
+    }
+  }
+
+  &--improvement &__item {
+    background: rgba(255, 152, 0, 0.1);
+    border-left: 3px solid var(--color-warning);
+
+    &::before {
+      content: '↑';
+      color: var(--color-warning);
+    }
+  }
+
+  &--action &__item {
+    background: rgba(33, 150, 243, 0.1);
+    border-left: 3px solid #2196f3;
+
+    &::before {
+      content: '→';
+      color: #2196f3;
+    }
+  }
 }
 
-.styled-list li {
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border-radius: 8px;
-  position: relative;
-  padding-left: 2.5rem;
-  line-height: 1.5;
-}
-
-.styled-list li::before {
-  position: absolute;
-  left: 0.75rem;
-  font-size: 1.25rem;
-}
-
-.styled-list.positive li {
-  background: #e8f5e9;
-  border-left: 3px solid #4caf50;
-}
-
-.styled-list.positive li::before {
-  content: '✓';
-  color: #4caf50;
-}
-
-.styled-list.improvement li {
-  background: #fff3e0;
-  border-left: 3px solid #ff9800;
-}
-
-.styled-list.improvement li::before {
-  content: '↑';
-  color: #ff9800;
-}
-
-.styled-list.action li {
-  background: #e3f2fd;
-  border-left: 3px solid #2196f3;
-}
-
-.styled-list.action li::before {
-  content: '→';
-  color: #2196f3;
-}
-
-.question-cards {
+.questions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
 }
 
 .question-card {
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.question-card h4 {
-  color: #667eea;
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-  font-weight: 600;
-}
-
-.question-card p {
-  color: #555;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.admin-notes h3 {
-  color: #667eea;
-}
-
-.admin-note-display {
-  background: #f5f5f5;
   padding: 1.25rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
+
+  &__title {
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    margin: 0 0 0.75rem 0;
+    font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__text {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.95rem;
+    }
+  }
+}
+
+.admin-notes {
+  background: var(--bg-secondary);
+  padding: 1.125rem;
   border-radius: 8px;
   font-style: italic;
-  color: #555;
+  color: var(--text-primary);
   line-height: 1.6;
-  border-left: 4px solid #667eea;
-}
+  border-left: 4px solid var(--color-primary);
 
-.btn-secondary {
-  background: white;
-  color: #666;
-  border: 1px solid #ddd;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #f5f5f5;
-  border-color: #bbb;
+  @media (min-width: 768px) {
+    padding: 1.25rem;
+  }
 }
 </style>

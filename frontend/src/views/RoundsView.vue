@@ -95,120 +95,132 @@ async function closeRound(id: string) {  // Changed from number to string
 </script>
 
 <template>
-  <div class="rounds-page">
-    <header class="page-header">
-      <div>
-        <h1>Feedback Rounds</h1>
-        <p>Manage all feedback collection cycles</p>
+  <div class="rounds">
+    <header class="rounds__header">
+      <div class="rounds__header-text">
+        <h1 class="rounds__title">Feedback Rounds</h1>
+        <p class="rounds__subtitle">Manage all feedback collection cycles</p>
       </div>
-      <router-link v-if="auth.isAdmin" to="/rounds/new" class="create-btn">
+      <router-link v-if="auth.isAdmin" to="/rounds/new" class="btn btn--primary">
         + Create Round
       </router-link>
     </header>
 
-    <div v-if="loading" class="loading">Loading rounds...</div>
-    
-    <div v-else-if="error" class="error-state">
-      <p>Error: {{ error }}</p>
-      <button @click="loadRounds" class="retry-btn">Retry</button>
+    <div v-if="loading" class="rounds__loading">Loading rounds...</div>
+
+    <div v-else-if="error" class="rounds__error">
+      <p class="rounds__error-message">Error: {{ error }}</p>
+      <button @click="loadRounds" class="btn btn--secondary">Retry</button>
     </div>
-    
-    <div v-else-if="rounds.length === 0" class="empty-state">
-      <p>No feedback rounds yet.</p>
-      <p v-if="auth.isAdmin" class="subtext">
+
+    <div v-else-if="rounds.length === 0" class="rounds__empty">
+      <p class="rounds__empty-text">No feedback rounds yet.</p>
+      <p v-if="auth.isAdmin" class="rounds__empty-subtext">
         <router-link to="/rounds/new">Create your first round</router-link> to start collecting feedback.
       </p>
     </div>
-    
-    <div v-else class="rounds-list">
+
+    <div v-else class="rounds__grid">
       <div v-for="round in rounds" :key="round.id" class="round-card">
-        <div class="round-header">
-          <span class="status-badge" :style="{ backgroundColor: getStatusColor(round.status) + '20', color: getStatusColor(round.status) }">
+        <div class="round-card__header">
+          <span
+            class="badge"
+            :class="{
+              'badge--active': round.status === 'active',
+              'badge--draft': round.status === 'draft',
+              'badge--closed': round.status === 'closed',
+              'badge--shared': round.status === 'shared'
+            }"
+          >
             {{ round.status }}
           </span>
-          <span class="date">Created {{ formatDate(round.createdAt) }}</span>
+          <span class="round-card__date">Created {{ formatDate(round.createdAt) }}</span>
         </div>
-        
-        <div class="round-body">
-          <div class="subject-section">
-            <span class="label">Feedback for</span>
-            <div class="subject">
-              <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="mini-avatar">
-              <div v-else class="mini-avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
-              <router-link 
-                v-if="auth.isAdmin" 
-                :to="`/rounds/${round.id}`" 
-                class="name-link"
+
+        <div class="round-card__body">
+          <div class="round-card__section">
+            <span class="round-card__label">Feedback for</span>
+            <div class="round-card__subject">
+              <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="round-card__avatar" alt="">
+              <div v-else class="round-card__avatar round-card__avatar--placeholder">{{ round.subject?.name.charAt(0) }}</div>
+              <router-link
+                v-if="auth.isAdmin"
+                :to="`/rounds/${round.id}`"
+                class="round-card__name round-card__name--link"
               >
                 {{ round.subject?.name }}
               </router-link>
-              <span v-else class="name">{{ round.subject?.name }}</span>
+              <span v-else class="round-card__name">{{ round.subject?.name }}</span>
             </div>
           </div>
-          
-          <div class="reviewers-section">
-            <span class="label">{{ round.reviewers?.length || 0 }} reviewers assigned</span>
-            <div class="reviewer-list">
+
+          <div class="round-card__section">
+            <span class="round-card__label">{{ round.reviewers?.length || 0 }} reviewers assigned</span>
+            <div class="round-card__reviewers">
               <template v-for="reviewer in round.reviewers?.slice(0, 5)" :key="reviewer.id">
-                <img 
+                <img
                   v-if="reviewer.reviewer?.photoUrl"
                   :src="reviewer.reviewer.photoUrl"
                   :title="reviewer.reviewer.name"
-                  class="reviewer-avatar"
+                  class="round-card__reviewer-avatar"
+                  alt=""
                 >
-                <div 
+                <div
                   v-else
                   :title="reviewer.reviewer?.name || 'Unknown'"
-                  class="reviewer-avatar-placeholder"
+                  class="round-card__reviewer-avatar round-card__reviewer-avatar--placeholder"
                 >
                   {{ reviewer.reviewer?.name?.charAt(0) || '?' }}
                 </div>
               </template>
-              <span v-if="(round.reviewers?.length || 0) > 5" class="more">+{{ (round.reviewers?.length || 0) - 5 }}</span>
+              <span v-if="(round.reviewers?.length || 0) > 5" class="round-card__more">+{{ (round.reviewers?.length || 0) - 5 }}</span>
             </div>
           </div>
-          
-          <div class="deadline-section">
-            <span class="label">Deadline</span>
-            <span :class="['deadline', { overdue: round.status === 'active' && round.deadline && new Date(round.deadline) < new Date() }]">
+
+          <div class="round-card__section">
+            <span class="round-card__label">Deadline</span>
+            <span
+              class="round-card__deadline"
+              :class="{ 'round-card__deadline--overdue': round.status === 'active' && round.deadline && new Date(round.deadline) < new Date() }"
+            >
               {{ formatDate(round.deadline) }}
             </span>
           </div>
         </div>
-        
-        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id) && round.status === 'active'" class="round-actions single">
-          <router-link :to="`/rounds/${round.id}/submit`" class="submit-btn">
+
+        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id) && round.status === 'active'" class="round-card__actions">
+          <router-link :to="`/rounds/${round.id}/submit`" class="btn btn--primary round-card__btn">
             Submit Feedback
           </router-link>
         </div>
-        
-        <div v-else-if="hasSubmitted(round.id)" class="round-actions single submitted">
-          <span class="submitted-badge">✓ Feedback Submitted</span>
-          <router-link :to="`/rounds/${round.id}/submission`" class="view-submission-btn">
+
+        <div v-else-if="hasSubmitted(round.id)" class="round-card__actions round-card__actions--column">
+          <span class="round-card__submitted">✓ Feedback Submitted</span>
+          <router-link :to="`/rounds/${round.id}/submission`" class="btn btn--secondary round-card__btn">
             View My Submission
           </router-link>
         </div>
-        
-        <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-actions single">
-          <router-link v-if="!consolidationStatus[round.id]" :to="`/rounds/${round.id}/consolidation`" class="consolidate-btn">
+
+        <div v-else-if="auth.isAdmin && round.status === 'closed'" class="round-card__actions">
+          <router-link v-if="!consolidationStatus[round.id]" :to="`/rounds/${round.id}/consolidation`" class="btn btn--primary round-card__btn">
             Consolidate Feedback
           </router-link>
-          <router-link v-else :to="`/rounds/${round.id}#consolidation`" class="view-feedback-btn">
+          <router-link v-else :to="`/rounds/${round.id}#consolidation`" class="btn btn--success round-card__btn">
             👁️ View Feedback
           </router-link>
         </div>
-        
-        <div v-else-if="auth.isAdmin && round.status === 'active'" class="round-actions">
-          <router-link :to="`/rounds/${round.id}`" class="edit-btn">
+
+        <div v-else-if="auth.isAdmin && round.status === 'active'" class="round-card__actions round-card__actions--split">
+          <router-link :to="`/rounds/${round.id}`" class="btn btn--primary round-card__btn">
             ✏️ Edit
           </router-link>
-          <button class="close-btn" @click="closeRound(round.id)">
+          <button class="btn btn--danger round-card__btn" @click="closeRound(round.id)">
             Close Round
           </button>
         </div>
-        
-        <div v-else-if="auth.isAdmin" class="round-actions single">
-          <router-link :to="`/rounds/${round.id}`" class="edit-btn">
+
+        <div v-else-if="auth.isAdmin" class="round-card__actions">
+          <router-link :to="`/rounds/${round.id}`" class="btn btn--primary round-card__btn">
             ✏️ Edit
           </router-link>
         </div>
@@ -217,360 +229,318 @@ async function closeRound(id: string) {  // Changed from number to string
   </div>
 </template>
 
-<style scoped>
-.rounds-page {
-  padding: 2rem;
+<style scoped lang="scss">
+.rounds {
+  padding: 1rem;
   max-width: 1200px;
   margin: 0 auto;
-}
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
 
-.page-header p {
-  color: #666;
-}
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
 
-.create-btn {
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: background 0.2s;
-}
+  &__header-text {
+    flex: 1;
+  }
 
-.create-btn:hover {
-  background: #5a6fd6;
-}
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
 
-.loading {
-  text-align: center;
-  color: #666;
-  padding: 3rem;
-}
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
 
-.error-state {
-  text-align: center;
-  padding: 3rem;
-  background: #ffebee;
-  border-radius: 12px;
-  color: #c62828;
-}
+  &__subtitle {
+    color: var(--text-secondary);
+    margin: 0;
+  }
 
-.error-state p {
-  margin-bottom: 1rem;
-}
+  &__loading {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem 1rem;
+  }
 
-.retry-btn {
-  padding: 0.5rem 1.5rem;
-  background: #c62828;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
+  &__error {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--color-error);
 
-.retry-btn:hover {
-  background: #a02222;
-}
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
 
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+  &__error-message {
+    color: var(--color-error);
+    margin-bottom: 1rem;
+  }
 
-.empty-state p {
-  color: #666;
-}
+  &__empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
 
-.subtext {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-}
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
 
-.subtext a {
-  color: #667eea;
-  text-decoration: none;
-}
+  &__empty-text {
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+  }
 
-.rounds-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  &__empty-subtext {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+
+    a {
+      color: var(--color-primary);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+  }
 }
 
 .round-card {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 1.5rem;
-}
+  border: 1px solid var(--border-color);
+  padding: 1.25rem;
+  transition: box-shadow 0.2s;
 
-.round-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 
-.status-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
-}
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 
-.date {
-  font-size: 0.8rem;
-  color: #888;
-}
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 
-.round-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+  &__date {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
 
-.label {
-  font-size: 0.75rem;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: block;
-  margin-bottom: 0.25rem;
-}
+    @media (min-width: 768px) {
+      font-size: 0.8rem;
+    }
+  }
 
-.subject {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
 
-.avatar, .avatar-placeholder {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-}
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 
-.avatar {
-  object-fit: cover;
-}
+  &__label {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 
-.avatar-placeholder {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
+    @media (min-width: 768px) {
+      font-size: 0.75rem;
+    }
+  }
 
-.name {
-  font-weight: 500;
-}
+  &__subject {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
 
-.name-link {
-  font-weight: 500;
-  color: #667eea;
-  text-decoration: none;
-}
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 
-.name-link:hover {
-  text-decoration: underline;
-}
+    @media (min-width: 768px) {
+      width: 36px;
+      height: 36px;
+    }
 
-.reviewer-list {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
+    &--placeholder {
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+  }
 
-.reviewer-avatar, .reviewer-avatar-placeholder {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid white;
-  margin-left: -8px;
-}
+  &__name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
 
-.reviewer-avatar:first-child, .reviewer-avatar-placeholder:first-child {
-  margin-left: 0;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
 
-.reviewer-avatar {
-  object-fit: cover;
-}
+    &--link {
+      color: var(--color-primary);
+      text-decoration: none;
 
-.reviewer-avatar-placeholder {
-  background: #e0e0e0;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
 
-.more {
-  margin-left: 4px;
-  font-size: 0.8rem;
-  color: #666;
-}
+  &__reviewers {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
 
-.deadline {
-  font-size: 0.9rem;
-  color: #333;
-}
+  &__reviewer-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--bg-primary);
+    margin-left: -8px;
 
-.deadline.overdue {
-  color: #f44336;
-  font-weight: 500;
-}
+    @media (min-width: 768px) {
+      width: 28px;
+      height: 28px;
+    }
 
-.round-actions {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
-  display: flex;
-  gap: 0.5rem;
-}
+    &:first-child {
+      margin-left: 0;
+    }
 
-.round-actions.single {
-  display: block;
-}
+    &--placeholder {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
 
-.close-btn {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #f44336;
-  background: transparent;
-  color: #f44336;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.2s;
-}
+      @media (min-width: 768px) {
+        font-size: 0.7rem;
+      }
+    }
+  }
 
-.close-btn:hover {
-  background: #ffebee;
-}
+  &__more {
+    margin-left: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
 
-.submit-btn, .edit-btn, .consolidate-btn {
-  flex: 1;
-  display: block;
-  padding: 0.5rem;
-  text-decoration: none;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 0.85rem;
-  transition: background 0.2s;
-}
+    @media (min-width: 768px) {
+      font-size: 0.8rem;
+    }
+  }
 
-.submit-btn, .edit-btn {
-  background: #667eea;
-  color: white;
-}
+  &__deadline {
+    font-size: 0.85rem;
+    color: var(--text-primary);
 
-.submit-btn:hover, .edit-btn:hover {
-  background: #5a6fd6;
-}
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
 
-.consolidate-btn {
-  background: #2196f3;
-  color: white;
-}
+    &--overdue {
+      color: var(--color-error);
+      font-weight: 500;
+    }
+  }
 
-.consolidate-btn:hover {
-  background: #1976d2;
-}
+  &__actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.5rem;
 
-.submitted {
-  text-align: center;
-}
+    &--split {
+      display: flex;
+      gap: 0.5rem;
+    }
 
-.submitted-badge {
-  color: #4caf50;
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: block;
-  margin-bottom: 0.5rem;
-}
+    &--column {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+    }
+  }
 
-.view-submission-btn {
-  display: inline-block;
-  padding: 0.4rem 0.8rem;
-  background: #2196f3;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  transition: background 0.2s;
-}
+  &__btn {
+    flex: 1;
+    min-height: 44px;
+    font-size: 0.85rem;
 
-.view-submission-btn:hover {
-  background: #1976d2;
-}
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
 
-.view-feedback-btn {
-  display: block;
-  width: 100%;
-  padding: 0.5rem;
-  background: #4caf50;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 0.85rem;
-  transition: background 0.2s;
-}
+  &__submitted {
+    color: var(--color-success);
+    font-size: 0.85rem;
+    font-weight: 500;
 
-.view-feedback-btn:hover {
-  background: #45a049;
-}
-
-.submitted {
-  text-align: center;
-}
-
-.submitted-badge {
-  color: #4caf50;
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.edit-btn {
-  display: block;
-  width: 100%;
-  padding: 0.5rem;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 0.85rem;
-  transition: background 0.2s;
-}
-
-.edit-btn:hover {
-  background: #5a6fd6;
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
 }
 </style>

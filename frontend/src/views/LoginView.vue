@@ -14,13 +14,13 @@ const devUsers = [
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h1>Smart 360 Feedback</h1>
-      <p class="subtitle">Anonymous peer feedback platform</p>
-      
-      <button class="google-btn" @click="auth.loginWithGoogle">
-        <svg class="google-icon" viewBox="0 0 24 24">
+  <div class="login">
+    <div class="login__card">
+      <h1 class="login__title">Smart 360 Feedback</h1>
+      <p class="login__subtitle">Anonymous peer feedback platform</p>
+
+      <button @click="auth.loginWithGoogle" class="login__google-btn">
+        <svg class="login__google-icon" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -29,168 +29,168 @@ const devUsers = [
         Sign in with Google
       </button>
 
-      <div class="divider">or</div>
+      <div class="login__divider">
+        <span class="login__divider-text">or</span>
+      </div>
 
-      <p class="dev-title">Dev Login (No Google)</p>
-      <div class="dev-users">
-        <button 
-          v-for="user in devUsers" 
+      <p class="login__dev-title">Dev Login (No Google)</p>
+      <div class="login__dev-users">
+        <button
+          v-for="user in devUsers"
           :key="user.email"
-          class="dev-user-btn"
-          :class="{ admin: user.role === 'Admin' }"
           @click="auth.devLogin(user.email)"
+          :class="['login__dev-user', { 'login__dev-user--admin': user.role === 'Admin' }]"
         >
-          <span class="dev-user-name">{{ user.name }}</span>
-          <span class="dev-user-role">{{ user.role }}</span>
+          <span class="login__dev-user-name">{{ user.name }}</span>
+          <span class="login__dev-user-role">{{ user.role }}</span>
         </button>
       </div>
     </div>
   </div>
 </template>
 
-<style scoped>
-.login-container {
+<style scoped lang="scss">
+.login {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  padding: 1rem;
 
-.login-card {
-  background: white;
-  padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  text-align: center;
-  max-width: 400px;
-  width: 90%;
-}
+  &__card {
+    background: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
 
-h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
+    @media (min-width: 640px) {
+      padding: 3rem;
+    }
+  }
 
-.subtitle {
-  color: #666;
-  margin-bottom: 2rem;
-}
+  &__title {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
 
-.google-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px 24px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+    @media (min-width: 640px) {
+      font-size: 2rem;
+    }
+  }
 
-.google-btn:hover {
-  background: #f8f9fa;
-  border-color: #ccc;
-}
+  &__subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+  }
 
-.google-icon {
-  width: 20px;
-  height: 20px;
-}
+  &__google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-primary);
+    min-height: 44px;
 
-.divider {
-  margin: 1.5rem 0;
-  color: #999;
-  font-size: 0.9rem;
-  position: relative;
-}
+    &:hover {
+      background: var(--bg-secondary);
+    }
+  }
 
-.divider::before,
-.divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 80px;
-  height: 1px;
-  background: #ddd;
-}
+  &__google-icon {
+    width: 20px;
+    height: 20px;
+  }
 
-.divider::before {
-  left: 0;
-}
+  &__divider {
+    margin: 1.5rem 0;
+    position: relative;
+    text-align: center;
 
-.divider::after {
-  right: 0;
-}
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: calc(50% - 40px);
+      height: 1px;
+      background: var(--border-color);
+    }
 
-.dev-btn {
-  width: 100%;
-  padding: 14px 24px;
-  border: 1px solid #667eea;
-  border-radius: 8px;
-  background: transparent;
-  color: #667eea;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+    &::before {
+      left: 0;
+    }
 
-.dev-btn:hover {
-  background: #667eea;
-  color: white;
-}
+    &::after {
+      right: 0;
+    }
+  }
 
-.dev-title {
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0.75rem;
-}
+  &__divider-text {
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    padding: 0 0.5rem;
+  }
 
-.dev-users {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-}
+  &__dev-title {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
 
-.dev-user-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+  &__dev-users {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
 
-.dev-user-btn:hover {
-  border-color: #667eea;
-  background: #f5f7ff;
-}
+  &__dev-user {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
 
-.dev-user-btn.admin {
-  border-color: #667eea;
-  background: #f5f7ff;
-}
+    &:hover {
+      border-color: var(--color-primary);
+      background: var(--bg-secondary);
+    }
 
-.dev-user-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #333;
-}
+    &--admin {
+      border-color: var(--color-primary);
+      background: var(--bg-secondary);
+    }
+  }
 
-.dev-user-role {
-  font-size: 0.7rem;
-  color: #888;
-  text-transform: uppercase;
-  margin-top: 0.25rem;
+  &__dev-user-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  &__dev-user-role {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
 }
 </style>

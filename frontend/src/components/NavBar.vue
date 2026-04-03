@@ -1,171 +1,497 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { useRouter } from 'vue-router'
 
 const auth = useAuthStore()
+const theme = useThemeStore()
 const router = useRouter()
+
+const isMobileMenuOpen = ref(false)
 
 function handleLogout() {
   auth.logout()
   router.push('/login')
+  closeMobileMenu()
 }
+
+function closeMobileMenu() {
+  isMobileMenuOpen.value = false
+}
+
+function toggleMobileMenu() {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+// Close menu when route changes
+router.afterEach(() => {
+  closeMobileMenu()
+})
 </script>
 
 <template>
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <router-link to="/" class="brand-link">Smart 360</router-link>
-    </div>
+  <div>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <div class="mobile-header__content">
+        <router-link to="/" class="mobile-header__brand">Smart 360</router-link>
 
-    <nav class="sidebar-nav">
-      <router-link to="/" class="nav-link">
-        <span class="nav-icon">📊</span>
-        <span>Dashboard</span>
-      </router-link>
-      <router-link to="/team" class="nav-link">
-        <span class="nav-icon">👥</span>
-        <span>Team</span>
-      </router-link>
-      <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">
-        <span class="nav-icon">🏢</span>
-        <span>Teams</span>
-      </router-link>
-      <router-link to="/rounds" class="nav-link">
-        <span class="nav-icon">🔄</span>
-        <span>Rounds</span>
-      </router-link>
-      <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
-        <span class="nav-icon">📋</span>
-        <span>Audit Log</span>
-      </router-link>
-      <router-link to="/my-feedback" class="nav-link">
-        <span class="nav-icon">💬</span>
-        <span>My Feedback</span>
-      </router-link>
-    </nav>
+        <div class="mobile-header__actions">
+          <button @click="theme.toggleTheme()" class="mobile-header__theme-btn" aria-label="Toggle theme">
+            <svg v-if="theme.isDark" class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <svg v-else class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+          </button>
 
-    <div class="sidebar-footer">
-      <div class="user-info">
-        <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Profile" class="user-avatar">
-        <div class="user-details">
-          <span class="user-name">{{ auth.user?.name }}</span>
-          <button class="logout-btn" @click="handleLogout">Logout</button>
+          <button @click="toggleMobileMenu" class="mobile-header__hamburger" aria-label="Toggle menu">
+            <svg v-if="!isMobileMenuOpen" class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+            <svg v-else class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
       </div>
-    </div>
-  </aside>
+    </header>
+
+    <!-- Mobile Overlay -->
+    <Transition name="overlay">
+      <div v-if="isMobileMenuOpen" class="mobile-overlay" @click="closeMobileMenu"></div>
+    </Transition>
+
+    <!-- Mobile Drawer -->
+    <Transition name="drawer">
+      <aside v-if="isMobileMenuOpen" class="mobile-drawer">
+        <div class="mobile-drawer__header">
+          <router-link to="/" class="mobile-drawer__brand">Smart 360</router-link>
+        </div>
+
+        <nav class="mobile-drawer__nav">
+          <router-link to="/" class="nav-link">
+            <span class="nav-link__icon">📊</span>
+            <span class="nav-link__text">Dashboard</span>
+          </router-link>
+          <router-link to="/team" class="nav-link">
+            <span class="nav-link__icon">👥</span>
+            <span class="nav-link__text">Team</span>
+          </router-link>
+          <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">
+            <span class="nav-link__icon">🏢</span>
+            <span class="nav-link__text">Teams</span>
+          </router-link>
+          <router-link to="/rounds" class="nav-link">
+            <span class="nav-link__icon">🔄</span>
+            <span class="nav-link__text">Rounds</span>
+          </router-link>
+          <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
+            <span class="nav-link__icon">📋</span>
+            <span class="nav-link__text">Audit Log</span>
+          </router-link>
+          <router-link to="/my-feedback" class="nav-link">
+            <span class="nav-link__icon">💬</span>
+            <span class="nav-link__text">My Feedback</span>
+          </router-link>
+        </nav>
+
+        <div class="mobile-drawer__footer">
+          <div class="mobile-drawer__user">
+            <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Profile" class="mobile-drawer__avatar">
+            <div class="mobile-drawer__user-info">
+              <p class="mobile-drawer__user-name">{{ auth.user?.name }}</p>
+              <button @click="handleLogout" class="mobile-drawer__logout">Logout</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </Transition>
+
+    <!-- Desktop Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar__header">
+        <router-link to="/" class="sidebar__brand">Smart 360</router-link>
+      </div>
+
+      <nav class="sidebar__nav">
+        <router-link to="/" class="nav-link">
+          <span class="nav-link__icon">📊</span>
+          <span class="nav-link__text">Dashboard</span>
+        </router-link>
+        <router-link to="/team" class="nav-link">
+          <span class="nav-link__icon">👥</span>
+          <span class="nav-link__text">Team</span>
+        </router-link>
+        <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">
+          <span class="nav-link__icon">🏢</span>
+          <span class="nav-link__text">Teams</span>
+        </router-link>
+        <router-link to="/rounds" class="nav-link">
+          <span class="nav-link__icon">🔄</span>
+          <span class="nav-link__text">Rounds</span>
+        </router-link>
+        <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
+          <span class="nav-link__icon">📋</span>
+          <span class="nav-link__text">Audit Log</span>
+        </router-link>
+        <router-link to="/my-feedback" class="nav-link">
+          <span class="nav-link__icon">💬</span>
+          <span class="nav-link__text">My Feedback</span>
+        </router-link>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button @click="theme.toggleTheme()" class="sidebar__theme-btn">
+          <svg v-if="theme.isDark" class="sidebar__theme-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <svg v-else class="sidebar__theme-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+          <span>{{ theme.isDark ? 'Light' : 'Dark' }}</span>
+        </button>
+
+        <div class="sidebar__user">
+          <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" alt="Profile" class="sidebar__avatar">
+          <div class="sidebar__user-details">
+            <span class="sidebar__user-name">{{ auth.user?.name }}</span>
+            <button class="sidebar__logout" @click="handleLogout">Logout</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+// Mobile Header
+.mobile-header {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+
+  &__content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 1rem;
+  }
+
+  &__brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__theme-btn,
+  &__hamburger {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: background 0.2s;
+
+    &:hover {
+      background: var(--bg-secondary);
+    }
+  }
+
+  &__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+// Mobile Overlay
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+// Mobile Drawer
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+
+  &__header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  &__brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  &__nav {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+  }
+
+  &__footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__user-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__logout {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+}
+
+// Desktop Sidebar
 .sidebar {
+  display: none;
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   width: 250px;
-  background: white;
-  border-right: 1px solid #e0e0e0;
-  display: flex;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
   flex-direction: column;
   z-index: 100;
+
+  @media (min-width: 1024px) {
+    display: flex;
+  }
+
+  &__header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  &__brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  &__nav {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+  }
+
+  &__footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  &__theme-btn {
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--bg-secondary);
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    transition: background 0.2s;
+    min-height: 44px;
+
+    &:hover {
+      background: var(--bg-tertiary);
+    }
+  }
+
+  &__theme-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__user-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__user-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__logout {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    width: 100%;
+
+    &:hover {
+      background: var(--bg-secondary);
+    }
+  }
 }
 
-.sidebar-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.brand-link {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #667eea;
-  text-decoration: none;
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: 1rem 0;
-  overflow-y: auto;
-}
-
+// Navigation Links (shared between mobile and desktop)
 .nav-link {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: #666;
+  color: var(--text-secondary);
   text-decoration: none;
   font-weight: 500;
   padding: 0.75rem 1.5rem;
   transition: all 0.2s;
+  min-height: 44px;
+
+  &:hover {
+    background: var(--bg-secondary);
+    color: var(--color-primary);
+  }
+
+  &.router-link-active {
+    background: var(--bg-secondary);
+    color: var(--color-primary);
+    border-right: 3px solid var(--color-primary);
+  }
+
+  &__icon {
+    font-size: 1.25rem;
+    width: 24px;
+    text-align: center;
+  }
+
+  &__text {
+    flex: 1;
+  }
 }
 
-.nav-link:hover {
-  background: #f5f7fa;
-  color: #667eea;
+// Transitions
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: transform 0.3s ease-out;
 }
 
-.nav-link.router-link-active {
-  background: #f0f4ff;
-  color: #667eea;
-  border-right: 3px solid #667eea;
+.drawer-enter-from {
+  transform: translateX(-100%);
 }
 
-.nav-icon {
-  font-size: 1.25rem;
-  width: 24px;
-  text-align: center;
+.drawer-leave-to {
+  transform: translateX(-100%);
 }
 
-.sidebar-footer {
-  padding: 1rem;
-  border-top: 1px solid #e0e0e0;
+.overlay-enter-active,
+.overlay-leave-active {
+  transition: opacity 0.3s ease-out;
 }
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.user-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.user-name {
-  font-weight: 500;
-  color: #333;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.logout-btn {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.875rem;
-  width: 100%;
-}
-
-.logout-btn:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
+.overlay-enter-from,
+.overlay-leave-to {
+  opacity: 0;
 }
 </style>

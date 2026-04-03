@@ -155,15 +155,15 @@ function getRelativeTime(dateStr: string | null): string {
 </script>
 
 <template>
-  <div class="team-page">
-    <header class="page-header">
-      <h1>Team</h1>
-      <p>Organization roster with feedback insights</p>
+  <div class="team">
+    <header class="team__header">
+      <h1 class="team__title">Team</h1>
+      <p class="team__subtitle">Organization roster with feedback insights</p>
     </header>
 
     <!-- Team Filter -->
-    <div v-if="!loading && teams.length > 0" class="filters">
-      <select v-model="selectedTeamId" class="team-filter">
+    <div v-if="!loading && teams.length > 0" class="team__filters">
+      <select v-model="selectedTeamId" class="team__filter-select">
         <option value="">All Teams</option>
         <option v-for="team in teams" :key="team.id" :value="team.id">
           {{ team.name }}
@@ -171,129 +171,133 @@ function getRelativeTime(dateStr: string | null): string {
       </select>
     </div>
 
-    <div v-if="loading" class="loading">Loading team members...</div>
+    <div v-if="loading" class="team__loading">Loading team members...</div>
 
-    <div v-else class="table-container">
+    <div v-else class="team__table-wrapper">
       <table class="team-table">
-        <thead>
+        <thead class="team-table__head">
           <tr>
-            <th @click="sortBy('name')" class="sortable">
-              <div class="th-content">
+            <th @click="sortBy('name')" class="team-table__th team-table__th--sortable">
+              <div class="team-table__th-content">
                 Team Member
-                <span class="sort-indicator" v-if="sortColumn === 'name'">
+                <span class="team-table__sort" v-if="sortColumn === 'name'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </div>
             </th>
-            <th @click="sortBy('role')" class="sortable">
-              <div class="th-content">
+            <th @click="sortBy('role')" class="team-table__th team-table__th--sortable">
+              <div class="team-table__th-content">
                 Role
-                <span class="sort-indicator" v-if="sortColumn === 'role'">
+                <span class="team-table__sort" v-if="sortColumn === 'role'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </div>
             </th>
-            <th>
-              <div class="th-content">
-                Team
-              </div>
+            <th class="team-table__th">
+              <div class="team-table__th-content">Team</div>
             </th>
-            <th @click="sortBy('lastFeedbackReceived')" class="sortable">
-              <div class="th-content">
+            <th @click="sortBy('lastFeedbackReceived')" class="team-table__th team-table__th--sortable">
+              <div class="team-table__th-content">
                 Last Feedback
-                <span class="sort-indicator" v-if="sortColumn === 'lastFeedbackReceived'">
+                <span class="team-table__sort" v-if="sortColumn === 'lastFeedbackReceived'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </div>
             </th>
-            <th @click="sortBy('activeRoundsAsSubject')" class="sortable">
-              <div class="th-content">
+            <th @click="sortBy('activeRoundsAsSubject')" class="team-table__th team-table__th--sortable">
+              <div class="team-table__th-content">
                 Active Rounds
-                <span class="sort-indicator" v-if="sortColumn === 'activeRoundsAsSubject'">
+                <span class="team-table__sort" v-if="sortColumn === 'activeRoundsAsSubject'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </div>
             </th>
-            <th @click="sortBy('pendingReviews')" class="sortable">
-              <div class="th-content">
+            <th @click="sortBy('pendingReviews')" class="team-table__th team-table__th--sortable">
+              <div class="team-table__th-content">
                 Pending Reviews
-                <span class="sort-indicator" v-if="sortColumn === 'pendingReviews'">
+                <span class="team-table__sort" v-if="sortColumn === 'pendingReviews'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </div>
             </th>
-            <th @click="sortBy('totalFeedbackReceived')" class="sortable">
-              <div class="th-content">
+            <th @click="sortBy('totalFeedbackReceived')" class="team-table__th team-table__th--sortable">
+              <div class="team-table__th-content">
                 Total Feedback
-                <span class="sort-indicator" v-if="sortColumn === 'totalFeedbackReceived'">
+                <span class="team-table__sort" v-if="sortColumn === 'totalFeedbackReceived'">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </div>
             </th>
-            <th v-if="auth.isAdmin">Actions</th>
+            <th v-if="auth.isAdmin" class="team-table__th">Actions</th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-for="member in sortedTeamMembers" :key="member.id">
+        <tbody class="team-table__body">
+          <tr v-for="member in sortedTeamMembers" :key="member.id" class="team-table__row">
             <!-- Team Member Column -->
-            <td class="member-cell">
-              <div class="member-info">
-                <img v-if="member.photoUrl" :src="member.photoUrl" :alt="member.name" class="member-photo">
-                <div v-else class="member-photo-placeholder">{{ member.name.charAt(0).toUpperCase() }}</div>
-                <div class="member-details">
-                  <div class="member-name">{{ member.name }}</div>
-                  <div class="member-email">{{ member.email }}</div>
+            <td class="team-table__td team-table__td--member">
+              <div class="member">
+                <img v-if="member.photoUrl" :src="member.photoUrl" :alt="member.name" class="member__photo">
+                <div v-else class="member__photo member__photo--placeholder">{{ member.name.charAt(0).toUpperCase() }}</div>
+                <div class="member__details">
+                  <div class="member__name">{{ member.name }}</div>
+                  <div class="member__email">{{ member.email }}</div>
                 </div>
               </div>
             </td>
 
             <!-- Role Column -->
-            <td>
-              <span class="role-badge" :class="member.role">{{ member.role }}</span>
+            <td class="team-table__td">
+              <span class="badge" :class="{
+                'badge--admin': member.role === 'admin',
+                'badge--member': member.role === 'member',
+                'badge--team-admin': member.role === 'team_admin'
+              }">
+                {{ member.role }}
+              </span>
             </td>
 
             <!-- Team Column -->
-            <td>
-              <span class="team-badge" :class="{ 'unassigned': !member.teamId }">
+            <td class="team-table__td">
+              <span class="badge badge--team" :class="{ 'badge--unassigned': !member.teamId }">
                 {{ getTeamName(member.teamId) }}
               </span>
             </td>
 
             <!-- Last Feedback Column -->
-            <td>
+            <td class="team-table__td">
               <div class="feedback-date">
-                <div class="date-main">{{ formatDate(member.lastFeedbackReceived) }}</div>
-                <div class="date-relative" v-if="member.lastFeedbackReceived">
+                <div class="feedback-date__main">{{ formatDate(member.lastFeedbackReceived) }}</div>
+                <div class="feedback-date__relative" v-if="member.lastFeedbackReceived">
                   {{ getRelativeTime(member.lastFeedbackReceived) }}
                 </div>
               </div>
             </td>
 
             <!-- Active Rounds Column -->
-            <td class="center">
-              <span class="metric-badge" :class="{ 'has-value': member.activeRoundsAsSubject > 0 }">
+            <td class="team-table__td team-table__td--center">
+              <span class="metric" :class="{ 'metric--active': member.activeRoundsAsSubject > 0 }">
                 {{ member.activeRoundsAsSubject }}
               </span>
             </td>
 
             <!-- Pending Reviews Column -->
-            <td class="center">
-              <span class="metric-badge warning" :class="{ 'has-value': member.pendingReviews > 0 }">
+            <td class="team-table__td team-table__td--center">
+              <span class="metric metric--warning" :class="{ 'metric--active': member.pendingReviews > 0 }">
                 {{ member.pendingReviews }}
               </span>
             </td>
 
             <!-- Total Feedback Column -->
-            <td class="center">
-              <span class="metric-badge">{{ member.totalFeedbackReceived }}</span>
+            <td class="team-table__td team-table__td--center">
+              <span class="metric">{{ member.totalFeedbackReceived }}</span>
             </td>
 
             <!-- Actions Column -->
-            <td v-if="auth.isAdmin">
+            <td v-if="auth.isAdmin" class="team-table__td">
               <button
                 v-if="member.id !== auth.user?.id"
-                class="role-toggle-btn"
-                :class="{ 'loading': updating === member.id }"
+                class="team-table__action-btn"
+                :class="{ 'team-table__action-btn--loading': updating === member.id }"
                 @click="toggleRole(member)"
                 :disabled="updating === member.id"
               >
@@ -304,317 +308,375 @@ function getRelativeTime(dateStr: string | null): string {
         </tbody>
       </table>
 
-      <div v-if="sortedTeamMembers.length === 0" class="empty-state">
+      <div v-if="sortedTeamMembers.length === 0" class="team__empty">
         No team members found.
       </div>
     </div>
   </div>
 </template>
 
-<style scoped>
-.team-page {
-  padding: 2rem;
+<style scoped lang="scss">
+.team {
+  padding: 1rem;
   max-width: 1400px;
   margin: 0 auto;
-}
 
-.page-header {
-  margin-bottom: 2rem;
-}
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
+  &__header {
+    margin-bottom: 2rem;
+  }
 
-.page-header p {
-  color: #666;
-}
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
 
-.loading {
-  text-align: center;
-  color: #666;
-  padding: 3rem;
-}
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
 
-.table-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  overflow: hidden;
+  &__subtitle {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  &__filters {
+    margin-bottom: 1.5rem;
+  }
+
+  &__filter-select {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s;
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 0.95rem;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+
+  &__loading {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem 1rem;
+  }
+
+  &__table-wrapper {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+
+    @media (max-width: 768px) {
+      overflow-x: auto;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
 }
 
 .team-table {
   width: 100%;
   border-collapse: collapse;
+
+  @media (max-width: 768px) {
+    min-width: 900px;
+    font-size: 0.85rem;
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    font-size: 0.9rem;
+  }
+
+  &__head {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  &__th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+
+    @media (min-width: 768px) {
+      padding: 1rem;
+      font-size: 0.85rem;
+    }
+
+    &--sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+
+      &:hover {
+        background: var(--bg-tertiary);
+      }
+    }
+  }
+
+  &__th-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__sort {
+    font-size: 0.9rem;
+    color: var(--color-primary);
+  }
+
+  &__body {
+  }
+
+  &__row {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--bg-secondary);
+    }
+  }
+
+  &__td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      padding: 1rem;
+    }
+
+    &--member {
+      min-width: 220px;
+
+      @media (min-width: 768px) {
+        min-width: 250px;
+      }
+    }
+
+    &--center {
+      text-align: center;
+    }
+  }
+
+  &__action-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.85rem;
+    }
+
+    &:hover {
+      background: var(--bg-secondary);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &--loading {
+      opacity: 0.6;
+    }
+  }
 }
 
-.team-table thead {
-  background: #f8f9fa;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.team-table th {
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #555;
-}
-
-.team-table th.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s;
-}
-
-.team-table th.sortable:hover {
-  background: #eff0f2;
-}
-
-.th-content {
+.member {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+
+  @media (min-width: 768px) {
+    gap: 0.75rem;
+  }
+
+  &__photo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+
+    &--placeholder {
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 600;
+
+      @media (min-width: 768px) {
+        font-size: 1.1rem;
+      }
+    }
+  }
+
+  &__details {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__name {
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 0.95rem;
+    }
+  }
+
+  &__email {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
 }
 
-.sort-indicator {
-  font-size: 0.9rem;
-  color: #667eea;
-}
-
-.team-table tbody tr {
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.15s;
-}
-
-.team-table tbody tr:hover {
-  background: #f9fafb;
-}
-
-.team-table td {
-  padding: 1rem;
-  vertical-align: middle;
-}
-
-.team-table td.center {
-  text-align: center;
-}
-
-.member-cell {
-  min-width: 250px;
-}
-
-.member-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.member-photo {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.member-photo-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.member-details {
-  min-width: 0;
-}
-
-.member-name {
-  font-weight: 500;
-  font-size: 0.95rem;
-  margin-bottom: 0.15rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.member-email {
-  color: #666;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.role-badge {
+.badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 500;
   text-transform: capitalize;
-}
 
-.role-badge.admin {
-  background: #e3f2fd;
-  color: #1976d2;
-}
+  @media (min-width: 768px) {
+    font-size: 0.75rem;
+  }
 
-.role-badge.member {
-  background: #f3e5f5;
-  color: #7b1fa2;
-}
+  &--admin {
+    background: rgba(25, 118, 210, 0.1);
+    color: #1976d2;
+  }
 
-.role-badge.team_admin {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
+  &--member {
+    background: rgba(123, 31, 162, 0.1);
+    color: #7b1fa2;
+  }
 
-.filters {
-  margin-bottom: 1.5rem;
-}
+  &--team-admin {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2e7d32;
+  }
 
-.team-filter {
-  padding: 0.5rem 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  background: white;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
+  &--team {
+    background: rgba(25, 118, 210, 0.1);
+    color: #1976d2;
+  }
 
-.team-filter:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.team-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.team-badge.unassigned {
-  background: #f5f5f5;
-  color: #999;
+  &--unassigned {
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+  }
 }
 
 .feedback-date {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+
+  &__main {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__relative {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+
+    @media (min-width: 768px) {
+      font-size: 0.75rem;
+    }
+  }
 }
 
-.date-main {
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.date-relative {
-  font-size: 0.75rem;
-  color: #888;
-}
-
-.metric-badge {
+.metric {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  padding: 0.25rem 0.5rem;
+  min-width: 28px;
+  padding: 0.25rem 0.4rem;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
-  background: #f5f5f5;
-  color: #666;
-}
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 
-.metric-badge.has-value {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.metric-badge.warning.has-value {
-  background: #fff3e0;
-  color: #f57c00;
-}
-
-.role-toggle-btn {
-  font-size: 0.8rem;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.role-toggle-btn:hover {
-  background: #f5f5f5;
-  border-color: #667eea;
-  color: #667eea;
-}
-
-.role-toggle-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.role-toggle-btn.loading {
-  opacity: 0.6;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .team-table {
+  @media (min-width: 768px) {
+    min-width: 32px;
+    padding: 0.25rem 0.5rem;
     font-size: 0.9rem;
   }
 
-  .team-table th,
-  .team-table td {
-    padding: 0.75rem;
+  &--active {
+    background: rgba(25, 118, 210, 0.1);
+    color: #1976d2;
   }
 
-  .member-photo,
-  .member-photo-placeholder {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-@media (max-width: 768px) {
-  .team-page {
-    padding: 1rem;
-  }
-
-  .table-container {
-    overflow-x: auto;
-  }
-
-  .team-table {
-    min-width: 900px;
+  &--warning {
+    &.metric--active {
+      background: rgba(245, 124, 0, 0.1);
+      color: #f57c00;
+    }
   }
 }
 </style>
