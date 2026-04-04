@@ -218,62 +218,62 @@ function getUserById(userId: string) {
 
 <template>
   <div class="round-details">
-    <div v-if="loading" class="loading">Loading...</div>
-    
+    <div v-if="loading" class="round-details__loading">Loading...</div>
+
     <template v-else-if="round">
-      <header class="page-header">
-        <router-link to="/rounds" class="back-link">← Back to Rounds</router-link>
-        <div class="header-content">
-          <h1>Round Details</h1>
-          <button 
-            v-if="auth.isAdmin || round.createdById === auth.user?.id" 
-            @click="openEditModal" 
-            class="edit-btn"
+      <header class="round-details__header">
+        <router-link to="/rounds" class="round-details__back">← Back to Rounds</router-link>
+        <div class="round-details__header-content">
+          <h1 class="round-details__title">Round Details</h1>
+          <button
+            v-if="auth.isAdmin || round.createdById === auth.user?.id"
+            @click="openEditModal"
+            class="btn btn--primary round-details__edit-btn"
           >
             ✏️ Edit Round
           </button>
         </div>
-        <div class="round-meta">
-          <div class="meta-item">
-            <span class="label">Subject:</span>
-            <div class="subject">
-              <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="avatar">
-              <div v-else class="avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
+        <div class="round-details__meta">
+          <div class="round-details__meta-item">
+            <span class="round-details__meta-label">Subject:</span>
+            <div class="round-details__subject">
+              <img v-if="round.subject?.photoUrl" :src="round.subject.photoUrl" class="round-details__avatar">
+              <div v-else class="round-details__avatar-placeholder">{{ round.subject?.name.charAt(0) }}</div>
               <span>{{ round.subject?.name }}</span>
             </div>
           </div>
-          <div class="meta-item">
-            <span class="label">Status:</span>
-            <span :class="['status-badge', round.status]">{{ round.status }}</span>
+          <div class="round-details__meta-item">
+            <span class="round-details__meta-label">Status:</span>
+            <span :class="['badge', `badge--${round.status}`]">{{ round.status }}</span>
           </div>
-          <div class="meta-item">
-            <span class="label">Deadline:</span>
-            <span :class="{ overdue: round.status === 'active' && round.deadline && new Date(round.deadline) < new Date() }">
+          <div class="round-details__meta-item">
+            <span class="round-details__meta-label">Deadline:</span>
+            <span :class="{ 'round-details__overdue': round.status === 'active' && round.deadline && new Date(round.deadline) < new Date() }">
               {{ formatDate(round.deadline) }}
             </span>
           </div>
-          <div class="meta-item">
-            <span class="label">Reviewers:</span>
+          <div class="round-details__meta-item">
+            <span class="round-details__meta-label">Reviewers:</span>
             <span>{{ round.reviewers?.length || 0 }} assigned</span>
           </div>
-          <div class="meta-item">
-            <span class="label">Submissions:</span>
+          <div class="round-details__meta-item">
+            <span class="round-details__meta-label">Submissions:</span>
             <span>{{ submissions.length }} received</span>
           </div>
         </div>
       </header>
 
       <!-- Tab Navigation -->
-      <div class="tabs">
-        <button 
-          :class="['tab', { active: activeTab === 'submissions' }]"
+      <div class="round-details__tabs">
+        <button
+          :class="['round-details__tab', { 'round-details__tab--active': activeTab === 'submissions' }]"
           @click="activeTab = 'submissions'"
         >
           Raw Submissions ({{ submissions.length }})
         </button>
-        <button 
+        <button
           v-if="consolidation"
-          :class="['tab', { active: activeTab === 'consolidation' }]"
+          :class="['round-details__tab', { 'round-details__tab--active': activeTab === 'consolidation' }]"
           @click="activeTab = 'consolidation'"
         >
           Consolidated Feedback
@@ -281,25 +281,25 @@ function getUserById(userId: string) {
       </div>
 
       <!-- Raw Submissions Tab -->
-      <div v-if="activeTab === 'submissions'" class="tab-content">
-        <div v-if="submissions.length === 0" class="empty-state">
-          <p>No submissions received yet.</p>
-          <p v-if="round.status === 'active'" class="hint">
+      <div v-if="activeTab === 'submissions'" class="round-details__tab-content">
+        <div v-if="submissions.length === 0" class="round-details__empty">
+          <p class="round-details__empty-text">No submissions received yet.</p>
+          <p v-if="round.status === 'active'" class="round-details__empty-hint">
             {{ round.reviewers?.length || 0 }} reviewers assigned, deadline is {{ formatDate(round.deadline) }}
           </p>
         </div>
-        
-        <div v-else class="submissions-grid">
-          <div v-for="submission in submissions" :key="submission.id" class="submission-card">
-            <div class="submission-header">
-              <span class="reviewer-id">Reviewer #{{ submission.id }}</span>
-              <span class="submitted-at">Submitted {{ formatDate(submission.submittedAt) }}</span>
+
+        <div v-else class="round-details__submissions">
+          <div v-for="submission in submissions" :key="submission.id" class="submission">
+            <div class="submission__header">
+              <span class="submission__reviewer-id">Reviewer #{{ submission.id }}</span>
+              <span class="submission__submitted-at">Submitted {{ formatDate(submission.submittedAt) }}</span>
             </div>
-            
-            <div class="responses">
-              <div v-for="(response, key) in parseResponses(submission.responses)" :key="key" class="response-item">
-                <h4 class="question">{{ getQuestionText(key) }}</h4>
-                <p class="answer">{{ response }}</p>
+
+            <div class="submission__responses">
+              <div v-for="(response, key) in parseResponses(submission.responses)" :key="key" class="submission__response">
+                <h4 class="submission__question">{{ getQuestionText(key) }}</h4>
+                <p class="submission__answer">{{ response }}</p>
               </div>
             </div>
           </div>
@@ -307,28 +307,28 @@ function getUserById(userId: string) {
       </div>
 
       <!-- Consolidated Feedback Tab -->
-      <div v-if="activeTab === 'consolidation' && consolidation" class="tab-content">
-        <div class="consolidation-header">
-          <div class="meta">
+      <div v-if="activeTab === 'consolidation' && consolidation" class="round-details__tab-content">
+        <div class="round-details__consolidation-header">
+          <div class="round-details__consolidation-meta">
             <span>Generated {{ formatDate(consolidation.createdAt) }}</span>
-            <span v-if="consolidation.sharedAt" class="shared-badge">
+            <span v-if="consolidation.sharedAt" class="round-details__shared-badge">
               ✓ Shared {{ formatDate(consolidation.sharedAt) }}
             </span>
-            <span v-else class="not-shared">Not yet shared</span>
+            <span v-else class="round-details__not-shared">Not yet shared</span>
           </div>
         </div>
 
-        <div class="consolidation-body">
+        <div class="round-details__consolidation-body">
           <!-- Executive Summary -->
-          <section class="section">
-            <h2>Executive Summary</h2>
-            <p class="summary-text">{{ consolidation.executiveSummary }}</p>
+          <section class="consolidation-section">
+            <h2 class="consolidation-section__title">Executive Summary</h2>
+            <p class="consolidation-section__summary">{{ consolidation.executiveSummary }}</p>
           </section>
 
           <!-- Strengths -->
-          <section class="section">
-            <h2>💪 Key Strengths</h2>
-            <ul class="styled-list positive">
+          <section class="consolidation-section">
+            <h2 class="consolidation-section__title">💪 Key Strengths</h2>
+            <ul class="consolidation-list consolidation-list--positive">
               <li v-for="(strength, i) in consolidation.strengths" :key="i">
                 {{ strength }}
               </li>
@@ -336,9 +336,9 @@ function getUserById(userId: string) {
           </section>
 
           <!-- Areas for Improvement -->
-          <section class="section">
-            <h2>📈 Areas for Improvement</h2>
-            <ul class="styled-list improvement">
+          <section class="consolidation-section">
+            <h2 class="consolidation-section__title">📈 Areas for Improvement</h2>
+            <ul class="consolidation-list consolidation-list--improvement">
               <li v-for="(area, i) in consolidation.areasForImprovement" :key="i">
                 {{ area }}
               </li>
@@ -346,9 +346,9 @@ function getUserById(userId: string) {
           </section>
 
           <!-- Actionable Insights -->
-          <section class="section">
-            <h2>🎯 Actionable Insights</h2>
-            <ul class="styled-list action">
+          <section class="consolidation-section">
+            <h2 class="consolidation-section__title">🎯 Actionable Insights</h2>
+            <ul class="consolidation-list consolidation-list--action">
               <li v-for="(insight, i) in consolidation.actionableInsights" :key="i">
                 {{ insight }}
               </li>
@@ -356,123 +356,126 @@ function getUserById(userId: string) {
           </section>
 
           <!-- Question Summaries -->
-          <section class="section question-summaries">
-            <h2>📋 Detailed Question Analysis</h2>
-            <div class="question-cards">
+          <section class="consolidation-section">
+            <h2 class="consolidation-section__title">📋 Detailed Question Analysis</h2>
+            <div class="questions">
               <div class="question-card">
-                <h4>1. Key Strengths</h4>
-                <p>{{ consolidation.questionSummaries?.a }}</p>
+                <h4 class="question-card__title">1. Key Strengths</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.a }}</p>
               </div>
               <div class="question-card">
-                <h4>2. Areas to Improve</h4>
-                <p>{{ consolidation.questionSummaries?.b }}</p>
+                <h4 class="question-card__title">2. Areas to Improve</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.b }}</p>
               </div>
               <div class="question-card">
-                <h4>3. Observed Behaviors</h4>
-                <p>{{ consolidation.questionSummaries?.c }}</p>
+                <h4 class="question-card__title">3. Observed Behaviors</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.c }}</p>
               </div>
               <div class="question-card">
-                <h4>4. Growth Advice</h4>
-                <p>{{ consolidation.questionSummaries?.d }}</p>
+                <h4 class="question-card__title">4. Growth Advice</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
               </div>
             </div>
           </section>
 
           <!-- Admin Notes -->
-          <section v-if="consolidation.adminNotes" class="section">
-            <h2>📝 Admin Notes</h2>
-            <p class="admin-note-display">{{ consolidation.adminNotes }}</p>
+          <section v-if="consolidation.adminNotes" class="consolidation-section">
+            <h2 class="consolidation-section__title">📝 Admin Notes</h2>
+            <p class="consolidation-section__admin-notes">{{ consolidation.adminNotes }}</p>
           </section>
         </div>
       </div>
     </template>
 
-    <div v-else class="error-state">
-      <p>Round not found.</p>
-      <router-link to="/rounds" class="btn-primary">Back to Rounds</router-link>
+    <div v-else class="round-details__error">
+      <p class="round-details__error-text">Round not found.</p>
+      <router-link to="/rounds" class="btn btn--primary">Back to Rounds</router-link>
     </div>
 
     <!-- Edit Modal -->
     <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Edit Round</h2>
-          <button @click="showEditModal = false" class="close-btn">×</button>
+      <div class="modal">
+        <div class="modal__header">
+          <h2 class="modal__title">Edit Round</h2>
+          <button @click="showEditModal = false" class="modal__close">×</button>
         </div>
-        
-        <form @submit.prevent="updateRound" class="edit-form">
-          <div class="form-group">
-            <label for="subjectId">Subject</label>
-            <select id="subjectId" v-model="editForm.subjectId" required>
+
+        <form @submit.prevent="updateRound" class="modal__form">
+          <div class="modal__field">
+            <label for="subjectId" class="modal__label">Subject</label>
+            <select id="subjectId" v-model="editForm.subjectId" required class="modal__select">
               <option value="">Select a subject</option>
-              <option 
-                v-for="user in users.filter(u => u.id !== auth.user?.id)" 
-                :key="user.id" 
+              <option
+                v-for="user in users.filter(u => u.id !== auth.user?.id)"
+                :key="user.id"
                 :value="user.id"
               >
                 {{ user.name }}
               </option>
             </select>
           </div>
-          
-          <div class="form-group">
-            <label for="deadline">Deadline</label>
-            <input 
-              id="deadline" 
-              type="datetime-local" 
+
+          <div class="modal__field">
+            <label for="deadline" class="modal__label">Deadline</label>
+            <input
+              id="deadline"
+              type="datetime-local"
               v-model="editForm.deadline"
               :min="new Date().toISOString().slice(0, 16)"
+              class="modal__input"
             >
           </div>
-          
-          <div class="form-group">
-            <label for="status">Status</label>
-            <select id="status" v-model="editForm.status" required>
+
+          <div class="modal__field">
+            <label for="status" class="modal__label">Status</label>
+            <select id="status" v-model="editForm.status" required class="modal__select">
               <option value="draft">Draft</option>
               <option value="active">Active</option>
               <option value="closed">Closed</option>
               <option value="shared">Shared</option>
             </select>
           </div>
-          
-          <div class="form-group">
-            <label>Reviewers</label>
-            <div class="reviewer-management">
+
+
+          <div class="modal__field">
+            <label class="modal__label">Reviewers</label>
+            <div class="reviewer-mgmt">
               <!-- Show warning if subject was previously assigned as reviewer -->
-              <div v-if="round.value?.reviewers?.some(r => r.reviewerId === round.value?.subjectId)" class="subject-reviewer-warning">
+              <div v-if="round.value?.reviewers?.some(r => r.reviewerId === round.value?.subjectId)" class="reviewer-mgmt__warning">
                 ⚠️ The subject ({{ getUserById(round.value?.subjectId || '')?.name }}) was previously assigned as a reviewer and has been removed.
               </div>
-              
+
               <!-- Current reviewers -->
-              <div v-if="editForm.reviewerIds.length > 0" class="current-reviewers">
-                <div class="reviewer-list">
-                  <div 
-                    v-for="reviewerId in editForm.reviewerIds" 
+              <div v-if="editForm.reviewerIds.length > 0" class="reviewer-mgmt__current">
+                <div class="reviewer-mgmt__list">
+                  <div
+                    v-for="reviewerId in editForm.reviewerIds"
                     :key="reviewerId"
                     class="reviewer-tag"
                   >
-                    <span>{{ getUserById(reviewerId)?.name || reviewerId }}</span>
-                    <button 
-                      type="button" 
+                    <span class="reviewer-tag__name">{{ getUserById(reviewerId)?.name || reviewerId }}</span>
+                    <button
+                      type="button"
                       @click="removeReviewer(reviewerId)"
-                      class="remove-btn"
+                      class="reviewer-tag__remove"
                     >
                       ×
                     </button>
                   </div>
                 </div>
               </div>
-              
+
               <!-- Add new reviewers -->
-              <div class="add-reviewer">
-                <select 
-                  v-model="selectedReviewer" 
+              <div class="reviewer-mgmt__add">
+                <select
+                  v-model="selectedReviewer"
                   @change="addReviewer(selectedReviewer)"
+                  class="reviewer-mgmt__select"
                 >
                   <option value="">Add reviewer...</option>
-                  <option 
-                    v-for="user in availableUsers" 
-                    :key="user.id" 
+                  <option
+                    v-for="user in availableUsers"
+                    :key="user.id"
                     :value="user.id"
                   >
                     {{ user.name }}
@@ -481,12 +484,12 @@ function getUserById(userId: string) {
               </div>
             </div>
           </div>
-          
-          <div class="form-actions">
-            <button type="button" @click="showEditModal = false" class="cancel-btn">
+
+          <div class="modal__actions">
+            <button type="button" @click="showEditModal = false" class="btn btn--secondary">
               Cancel
             </button>
-            <button type="submit" :disabled="editLoading" class="save-btn">
+            <button type="submit" :disabled="editLoading" class="btn btn--primary">
               {{ editLoading ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
@@ -496,378 +499,506 @@ function getUserById(userId: string) {
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .round-details {
-  padding: 2rem;
+  padding: 1rem;
   max-width: 1200px;
   margin: 0 auto;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+
+  &__loading,
+  &__error {
+    text-align: center;
+    padding: 2rem 1rem;
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
+
+  &__error-text {
+    color: var(--color-error);
+    margin-bottom: 1.5rem;
+  }
+
+  &__header {
+    margin-bottom: 1.5rem;
+
+    @media (min-width: 768px) {
+      margin-bottom: 2rem;
+    }
+  }
+
+  &__back {
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    margin: 0;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
+
+  &__edit-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    align-self: flex-start;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+      align-self: auto;
+    }
+  }
+
+  &__meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    background: var(--bg-primary);
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      padding: 1.5rem;
+    }
+  }
+
+  &__meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__meta-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    @media (min-width: 768px) {
+      font-size: 0.75rem;
+    }
+  }
+
+  &__subject {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__avatar,
+  &__avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__avatar {
+    object-fit: cover;
+  }
+
+  &__avatar-placeholder {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &__overdue {
+    color: var(--color-error);
+    font-weight: 500;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+    overflow-x: auto;
+
+    @media (min-width: 768px) {
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+  }
+
+  &__tab {
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    white-space: nowrap;
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
+    }
+
+    &--active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+
+  &__tab-content {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 1.25rem;
+
+    @media (min-width: 768px) {
+      padding: 2rem;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
+
+  &__empty-text {
+    margin: 0 0 0.5rem 0;
+  }
+
+  &__empty-hint {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    margin: 0.5rem 0 0 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__submissions {
+    display: grid;
+    gap: 1.25rem;
+
+    @media (min-width: 768px) {
+      gap: 1.5rem;
+    }
+  }
+
+  &__consolidation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      margin-bottom: 2rem;
+    }
+  }
+
+  &__consolidation-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+  }
+
+  &__shared-badge {
+    color: var(--color-success);
+    font-weight: 500;
+  }
+
+  &__not-shared {
+    color: var(--color-warning);
+    font-weight: 500;
+  }
+
+  &__consolidation-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    @media (min-width: 768px) {
+      gap: 2rem;
+    }
+  }
 }
 
-.loading, .error-state {
-  text-align: center;
-  padding: 3rem;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.edit-btn {
-  padding: 0.5rem 1rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.edit-btn:hover {
-  background: #5a6fd6;
-}
-
-.back-link {
-  display: block;
-  margin-bottom: 1rem;
-  color: #667eea;
-  text-decoration: none;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
-
-.round-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  background: white;
-  padding: 1.5rem;
+.submission {
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 1.25rem;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  &__reviewer-id {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__submitted-at {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__responses {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    @media (min-width: 768px) {
+      gap: 1.5rem;
+    }
+  }
+
+  &__response {
+    // No specific styles needed, children styled below
+  }
+
+  &__question {
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__answer {
+    color: var(--text-primary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin: 0;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 }
 
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.consolidation-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    padding-bottom: 2rem;
+  }
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &__title {
+    font-size: 1.125rem;
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__summary {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
+
+  &__admin-notes {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    font-style: italic;
+    color: var(--text-secondary);
+    margin: 0;
+  }
 }
 
-.label {
-  font-size: 0.75rem;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.subject {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.avatar, .avatar-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-}
-
-.avatar {
-  object-fit: cover;
-}
-
-.avatar-placeholder {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.status-badge.active {
-  background: #e8f5e9;
-  color: #4caf50;
-}
-
-.status-badge.closed {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.status-badge.shared {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.overdue {
-  color: #f44336;
-  font-weight: 500;
-}
-
-.tabs {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.tab {
-  padding: 1rem 1.5rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #666;
-  transition: all 0.2s;
-}
-
-.tab.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-}
-
-.tab:hover {
-  color: #667eea;
-}
-
-.tab-content {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 2rem;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-}
-
-.hint {
-  font-size: 0.9rem;
-  color: #888;
-  margin-top: 0.5rem;
-}
-
-.submissions-grid {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.submission-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.submission-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.reviewer-id {
-  font-weight: 500;
-  color: #333;
-}
-
-.submitted-at {
-  font-size: 0.85rem;
-  color: #888;
-}
-
-.responses {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.response-item .question {
-  font-size: 0.9rem;
-  color: #667eea;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.response-item .answer {
-  color: #444;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.consolidation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.meta {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.shared-badge {
-  color: #4caf50;
-  font-weight: 500;
-}
-
-.not-shared {
-  color: #ff9800;
-  font-weight: 500;
-}
-
-.consolidation-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.section {
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #eee;
-}
-
-.section:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.summary-text {
-  font-size: 1.1rem;
-  line-height: 1.6;
-  color: #444;
-}
-
-.styled-list {
+.consolidation-list {
   list-style: none;
   padding: 0;
+  margin: 0;
+
+  li {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    position: relative;
+    padding-left: 2.5rem;
+    color: var(--text-primary);
+
+    &::before {
+      position: absolute;
+      left: 0.75rem;
+      font-size: 1.25rem;
+    }
+  }
+
+  &--positive li {
+    background: rgba(76, 175, 80, 0.1);
+
+    &::before {
+      content: '✓';
+      color: var(--color-success);
+    }
+  }
+
+  &--improvement li {
+    background: rgba(255, 152, 0, 0.1);
+
+    &::before {
+      content: '↑';
+      color: var(--color-warning);
+    }
+  }
+
+  &--action li {
+    background: rgba(33, 150, 243, 0.1);
+
+    &::before {
+      content: '→';
+      color: var(--color-info);
+    }
+  }
 }
 
-.styled-list li {
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border-radius: 8px;
-  position: relative;
-  padding-left: 2.5rem;
-}
-
-.styled-list li::before {
-  position: absolute;
-  left: 0.75rem;
-  font-size: 1.25rem;
-}
-
-.styled-list.positive li {
-  background: #e8f5e9;
-}
-
-.styled-list.positive li::before {
-  content: '✓';
-  color: #4caf50;
-}
-
-.styled-list.improvement li {
-  background: #fff3e0;
-}
-
-.styled-list.improvement li::before {
-  content: '↑';
-  color: #ff9800;
-}
-
-.styled-list.action li {
-  background: #e3f2fd;
-}
-
-.styled-list.action li::before {
-  content: '→';
-  color: #2196f3;
-}
-
-.question-cards {
+.questions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
 }
 
 .question-card {
-  padding: 1.5rem;
-  background: #f8f9fa;
+  padding: 1.25rem;
+  background: var(--bg-secondary);
   border-radius: 8px;
+  border: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
+
+  &__title {
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
 }
 
-.question-card h4 {
-  color: #667eea;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-}
-
-.question-card p {
-  color: #666;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.admin-note-display {
-  background: #f5f5f5;
-  padding: 1rem;
-  border-radius: 8px;
-  font-style: italic;
-  color: #666;
-}
-
-.btn-primary {
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-block;
-}
-
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -879,205 +1010,216 @@ function getUserById(userId: string) {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
-.modal-content {
-  background: white;
+.modal {
+  background: var(--bg-primary);
   border-radius: 12px;
-  padding: 0;
-  width: 90%;
+  width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+
+  &__form {
+    padding: 1.25rem;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__field {
+    margin-bottom: 1.5rem;
+  }
+
+  &__label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__input,
+  &__select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 2rem;
+    }
+  }
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  color: #333;
-}
-
-.edit-form {
-  padding: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
-}
-
-.cancel-btn {
-  padding: 0.75rem 1.5rem;
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.cancel-btn:hover {
-  background: #e0e0e0;
-}
-
-.save-btn {
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.save-btn:hover:not(:disabled) {
-  background: #5a6fd6;
-}
-
-.save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Reviewer Management Styles */
-.reviewer-management {
-  border: 1px solid #e0e0e0;
+.reviewer-mgmt {
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 1rem;
-  background: #f8f9fa;
-}
+  background: var(--bg-secondary);
 
-.current-reviewers {
-  margin-bottom: 1rem;
-}
+  &__warning {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid var(--color-warning);
+    color: var(--text-primary);
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 
-.reviewer-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__current {
+    margin-bottom: 1rem;
+  }
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__add {
+    // No specific styles needed
+  }
+
+  &__select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
 }
 
 .reviewer-tag {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: #667eea;
+  background: var(--color-primary);
   color: white;
-  padding: 0.25rem 0.5rem;
+  padding: 0.375rem 0.625rem;
   border-radius: 12px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
-}
 
-.reviewer-tag span {
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  @media (min-width: 768px) {
+    font-size: 0.8rem;
+  }
 
-.remove-btn {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.2s;
-}
+  &__name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.remove-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+  &__remove {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    min-width: 20px;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
 
-.add-reviewer select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  font-size: 0.9rem;
-}
-
-.add-reviewer select:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.subject-reviewer-warning {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  color: #856404;
-  padding: 0.75rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
 }
 </style>

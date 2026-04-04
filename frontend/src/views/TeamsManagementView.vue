@@ -39,60 +39,60 @@ function createTeamRound(teamId: string) {
 </script>
 
 <template>
-  <div class="teams-page">
-    <header class="page-header">
-      <h1>Teams</h1>
-      <button v-if="auth.isAdmin" @click="createTeam" class="btn-primary">
+  <div class="teams">
+    <header class="teams__header">
+      <h1 class="teams__title">Teams</h1>
+      <button v-if="auth.isAdmin" @click="createTeam" class="btn btn--primary">
         Create Team
       </button>
     </header>
 
-    <div v-if="loading" class="loading">Loading teams...</div>
+    <div v-if="loading" class="teams__loading">Loading teams...</div>
 
-    <div v-else-if="teams.length === 0" class="empty-state">
-      <p>No teams have been created yet.</p>
-      <button v-if="auth.isAdmin" @click="createTeam" class="btn-primary">
+    <div v-else-if="teams.length === 0" class="teams__empty">
+      <p class="teams__empty-text">No teams have been created yet.</p>
+      <button v-if="auth.isAdmin" @click="createTeam" class="btn btn--primary">
         Create Your First Team
       </button>
     </div>
 
-    <div v-else class="teams-grid">
+    <div v-else class="teams__grid">
       <div v-for="team in teams" :key="team.id" class="team-card">
-        <div class="team-card-header">
-          <h3>{{ team.name }}</h3>
+        <div class="team-card__header">
+          <h3 class="team-card__name">{{ team.name }}</h3>
         </div>
 
-        <div class="team-admin">
-          <div class="admin-label">Team Admin</div>
-          <div class="admin-info">
+        <div class="team-card__admin">
+          <div class="team-card__admin-label">Team Admin</div>
+          <div class="team-card__admin-info">
             <img
               v-if="team.teamAdmin?.photoUrl"
               :src="team.teamAdmin.photoUrl"
               :alt="team.teamAdmin.name"
-              class="admin-photo"
+              class="team-card__admin-photo"
             >
-            <div v-else class="admin-photo-placeholder">
+            <div v-else class="team-card__admin-photo-placeholder">
               {{ team.teamAdmin?.name.charAt(0).toUpperCase() }}
             </div>
-            <div class="admin-details">
-              <div class="admin-name">{{ team.teamAdmin?.name }}</div>
-              <div class="admin-email">{{ team.teamAdmin?.email }}</div>
+            <div class="team-card__admin-details">
+              <div class="team-card__admin-name">{{ team.teamAdmin?.name }}</div>
+              <div class="team-card__admin-email">{{ team.teamAdmin?.email }}</div>
             </div>
           </div>
         </div>
 
-        <div class="team-stats">
+        <div class="team-card__stats">
           <div class="stat">
-            <span class="stat-value">{{ team.members?.length || 0 }}</span>
-            <span class="stat-label">Members</span>
+            <span class="stat__value">{{ team.members?.length || 0 }}</span>
+            <span class="stat__label">Members</span>
           </div>
         </div>
 
-        <div class="team-actions">
-          <button @click="viewTeam(team.id)" class="btn-secondary">
+        <div class="team-card__actions">
+          <button @click="viewTeam(team.id)" class="btn btn--secondary">
             View Team
           </button>
-          <button @click="createTeamRound(team.id)" class="btn-primary">
+          <button @click="createTeamRound(team.id)" class="btn btn--primary">
             Create Team Round
           </button>
         </div>
@@ -101,186 +101,234 @@ function createTeamRound(teamId: string) {
   </div>
 </template>
 
-<style scoped>
-.teams-page {
+<style scoped lang="scss">
+.teams {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
-}
+  padding: 1rem;
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  color: #333;
-  margin: 0;
-}
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
 
-.loading {
-  text-align: center;
-  padding: 3rem;
-  color: #666;
-  font-size: 1.1rem;
-}
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+  }
 
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
+  &__title {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin: 0;
 
-.empty-state p {
-  color: #666;
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-}
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
 
-.teams-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  &__loading {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+
+    @media (min-width: 768px) {
+      padding: 3rem;
+      font-size: 1.1rem;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      padding: 4rem 2rem;
+    }
+  }
+
+  &__empty-text {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0 0 1.5rem 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+  }
 }
 
 .team-card {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 1.25rem;
+  border: 1px solid var(--border-color);
   transition: box-shadow 0.2s;
-}
 
-.team-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 
-.team-card-header h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
-  color: #333;
-}
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
 
-.team-admin {
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-}
+  &__header {
+    margin-bottom: 1rem;
+  }
 
-.admin-label {
-  font-size: 0.85rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.5rem;
-}
+  &__name {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
 
-.admin-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
 
-.admin-photo {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+  &__admin {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
 
-.admin-photo-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
+  &__admin-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
 
-.admin-details {
-  flex: 1;
-}
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
 
-.admin-name {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.25rem;
-}
+  &__admin-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
 
-.admin-email {
-  font-size: 0.85rem;
-  color: #666;
-}
+  &__admin-photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
 
-.team-stats {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1rem;
+  &__admin-photo-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.2rem;
+    }
+  }
+
+  &__admin-details {
+    flex: 1;
+  }
+
+  &__admin-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__admin-email {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 768px) {
+      gap: 2rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+    }
+  }
 }
 
 .stat {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-}
 
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #667eea;
-}
+  &__value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--color-primary);
 
-.stat-label {
-  font-size: 0.85rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
 
-.team-actions {
-  display: flex;
-  gap: 0.75rem;
-}
+  &__label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 
-.btn-primary,
-.btn-secondary {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.btn-secondary {
-  background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
-}
-
-.btn-secondary:hover {
-  background: #f5f7ff;
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
 }
 </style>

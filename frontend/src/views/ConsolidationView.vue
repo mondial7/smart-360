@@ -247,25 +247,25 @@ function parseResponses(responsesStr: string): Record<string, string> {
 </script>
 
 <template>
-  <div class="consolidation-page">
-    <div v-if="loading" class="loading">Loading...</div>
-    
+  <div class="consolidation">
+    <div v-if="loading" class="consolidation__loading">Loading...</div>
+
     <template v-else-if="round">
-      <header class="page-header">
-        <router-link to="/rounds" class="back-link">← Back to Rounds</router-link>
-        <h1>Feedback Consolidation</h1>
-        <p class="subtitle">
-          For <strong>{{ round.subject?.name }}</strong> • 
-          {{ round.reviewers?.length || 0 }} reviewers • 
-          Status: <span :class="['status-badge', round.status]">{{ round.status }}</span>
+      <header class="consolidation__header">
+        <router-link to="/rounds" class="consolidation__back">← Back to Rounds</router-link>
+        <h1 class="consolidation__title">Feedback Consolidation</h1>
+        <p class="consolidation__subtitle">
+          For <strong class="consolidation__subject">{{ round.subject?.name }}</strong> •
+          {{ round.reviewers?.length || 0 }} reviewers •
+          Status: <span class="badge" :class="[`badge--${round.status}`]">{{ round.status }}</span>
         </p>
       </header>
 
       <!-- Generate Button -->
-      <div v-if="!consolidation && round.status === 'closed' && submissions.length > 0" class="generate-section">
-        <p>This round is closed and ready for feedback consolidation.</p>
-        <button 
-          class="btn-primary" 
+      <div v-if="!consolidation && round.status === 'closed' && submissions.length > 0" class="consolidation__prompt">
+        <p class="consolidation__prompt-text">This round is closed and ready for feedback consolidation.</p>
+        <button
+          class="btn btn--primary"
           @click="generateConsolidation"
           :disabled="generating"
         >
@@ -273,25 +273,25 @@ function parseResponses(responsesStr: string): Record<string, string> {
         </button>
       </div>
 
-      <div v-else-if="!consolidation && round.status === 'closed' && submissions.length === 0" class="info-section">
-        <p>No feedback submissions found. Cannot generate consolidation.</p>
-        <button class="btn-secondary" @click="router.push('/rounds')">
+      <div v-else-if="!consolidation && round.status === 'closed' && submissions.length === 0" class="consolidation__prompt">
+        <p class="consolidation__prompt-text">No feedback submissions found. Cannot generate consolidation.</p>
+        <button class="btn btn--secondary" @click="router.push('/rounds')">
           Back to Rounds
         </button>
       </div>
 
-      <div v-else-if="!consolidation && round.status !== 'closed'" class="info-section">
-        <p>Round must be closed before generating consolidation.</p>
-        <button class="btn-secondary" @click="router.push('/rounds')">
+      <div v-else-if="!consolidation && round.status !== 'closed'" class="consolidation__prompt">
+        <p class="consolidation__prompt-text">Round must be closed before generating consolidation.</p>
+        <button class="btn btn--secondary" @click="router.push('/rounds')">
           Close Round First
         </button>
       </div>
 
       <!-- View Feedback Button -->
-      <div v-else-if="consolidation && !showConsolidationContent" class="generate-section">
-        <p>Feedback consolidation has been generated for this round.</p>
-        <button 
-          class="btn-primary" 
+      <div v-else-if="consolidation && !showConsolidationContent" class="consolidation__prompt">
+        <p class="consolidation__prompt-text">Feedback consolidation has been generated for this round.</p>
+        <button
+          class="btn btn--primary"
           @click="showConsolidationContent = true"
         >
           👁️ View Consolidated Feedback
@@ -299,19 +299,19 @@ function parseResponses(responsesStr: string): Record<string, string> {
       </div>
 
       <!-- Consolidation View -->
-      <div v-else-if="consolidation" class="consolidation-content">
-        <div class="consolidation-header">
-          <div class="meta">
-            <span>Generated {{ formatDate(consolidation.createdAt) }}</span>
-            <span v-if="consolidation.sharedAt" class="shared-badge">
+      <div v-else-if="consolidation" class="consolidation__content">
+        <div class="consolidation__meta">
+          <div class="consolidation__meta-info">
+            <span class="consolidation__meta-item">Generated {{ formatDate(consolidation.createdAt) }}</span>
+            <span v-if="consolidation.sharedAt" class="consolidation__meta-item consolidation__meta-item--shared">
               ✓ Shared {{ formatDate(consolidation.sharedAt) }}
             </span>
-            <span>Round Status: <span :class="['status-badge', round.status]">{{ round.status }}</span></span>
+            <span class="consolidation__meta-item">Round Status: <span class="badge" :class="[`badge--${round.status}`]">{{ round.status }}</span></span>
           </div>
-          
-          <div v-if="!consolidation.sharedAt" class="actions">
-            <button 
-              class="btn-primary" 
+
+          <div v-if="!consolidation.sharedAt" class="consolidation__meta-actions">
+            <button
+              class="btn btn--primary"
               @click="shareConsolidation"
               :disabled="sharing"
             >
@@ -320,53 +320,53 @@ function parseResponses(responsesStr: string): Record<string, string> {
           </div>
         </div>
 
-        <div class="consolidation-body">
+        <div class="consolidation__body">
           <!-- Executive Summary -->
           <section class="section">
-            <div class="section-header">
-              <h2>Executive Summary</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'executive'" @click="startEditing('executive')" class="edit-btn">
+            <div class="section__header">
+              <h2 class="section__title">Executive Summary</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'executive'" @click="startEditing('executive')" class="btn btn--secondary section__edit-btn">
                 ✏️ Edit
               </button>
             </div>
-            <div v-if="editingSection === 'executive'" class="edit-mode">
+            <div v-if="editingSection === 'executive'" class="section__edit">
               <textarea
                 v-model="editForm.executiveSummary"
                 rows="4"
                 placeholder="Enter executive summary..."
-                class="edit-textarea"
+                class="section__textarea"
               ></textarea>
-              <div class="edit-actions">
-                <button @click="saveEdits" class="btn-primary">Save</button>
-                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              <div class="section__edit-actions">
+                <button @click="saveEdits" class="btn btn--primary">Save</button>
+                <button @click="cancelEditing" class="btn btn--secondary">Cancel</button>
               </div>
             </div>
-            <p v-else class="summary-text">{{ consolidation.executiveSummary }}</p>
+            <p v-else class="section__summary">{{ consolidation.executiveSummary }}</p>
           </section>
 
           <!-- Strengths -->
           <section class="section">
-            <div class="section-header">
-              <h2>💪 Key Strengths</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'strengths'" @click="startEditing('strengths')" class="edit-btn">
+            <div class="section__header">
+              <h2 class="section__title">💪 Key Strengths</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'strengths'" @click="startEditing('strengths')" class="btn btn--secondary section__edit-btn">
                 ✏️ Edit
               </button>
             </div>
-            <div v-if="editingSection === 'strengths'" class="edit-mode">
-              <div class="array-edit">
-                <div v-for="(strength, i) in editForm.strengths" :key="i" class="array-item">
-                  <input v-model="editForm.strengths[i]" placeholder="Enter strength..." class="array-input">
-                  <button @click="removeArrayItem(editForm.strengths, i)" class="remove-btn">×</button>
+            <div v-if="editingSection === 'strengths'" class="section__edit">
+              <div class="array-editor">
+                <div v-for="(strength, i) in editForm.strengths" :key="i" class="array-editor__item">
+                  <input v-model="editForm.strengths[i]" placeholder="Enter strength..." class="array-editor__input">
+                  <button @click="removeArrayItem(editForm.strengths, i)" class="array-editor__remove">×</button>
                 </div>
-                <button @click="addArrayItem(editForm.strengths)" class="add-btn">+ Add Strength</button>
+                <button @click="addArrayItem(editForm.strengths)" class="array-editor__add">+ Add Strength</button>
               </div>
-              <div class="edit-actions">
-                <button @click="saveEdits" class="btn-primary">Save</button>
-                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              <div class="section__edit-actions">
+                <button @click="saveEdits" class="btn btn--primary">Save</button>
+                <button @click="cancelEditing" class="btn btn--secondary">Cancel</button>
               </div>
             </div>
-            <ul v-else class="styled-list positive">
-              <li v-for="(strength, i) in consolidation.strengths" :key="i">
+            <ul v-else class="feedback-list feedback-list--positive">
+              <li v-for="(strength, i) in consolidation.strengths" :key="i" class="feedback-list__item">
                 {{ strength }}
               </li>
             </ul>
@@ -374,27 +374,27 @@ function parseResponses(responsesStr: string): Record<string, string> {
 
           <!-- Areas for Improvement -->
           <section class="section">
-            <div class="section-header">
-              <h2>📈 Areas for Improvement</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'improvements'" @click="startEditing('improvements')" class="edit-btn">
+            <div class="section__header">
+              <h2 class="section__title">📈 Areas for Improvement</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'improvements'" @click="startEditing('improvements')" class="btn btn--secondary section__edit-btn">
                 ✏️ Edit
               </button>
             </div>
-            <div v-if="editingSection === 'improvements'" class="edit-mode">
-              <div class="array-edit">
-                <div v-for="(improvement, i) in editForm.areasForImprovement" :key="i" class="array-item">
-                  <input v-model="editForm.areasForImprovement[i]" placeholder="Enter improvement..." class="array-input">
-                  <button @click="removeArrayItem(editForm.areasForImprovement, i)" class="remove-btn">×</button>
+            <div v-if="editingSection === 'improvements'" class="section__edit">
+              <div class="array-editor">
+                <div v-for="(improvement, i) in editForm.areasForImprovement" :key="i" class="array-editor__item">
+                  <input v-model="editForm.areasForImprovement[i]" placeholder="Enter improvement..." class="array-editor__input">
+                  <button @click="removeArrayItem(editForm.areasForImprovement, i)" class="array-editor__remove">×</button>
                 </div>
-                <button @click="addArrayItem(editForm.areasForImprovement)" class="add-btn">+ Add Improvement</button>
+                <button @click="addArrayItem(editForm.areasForImprovement)" class="array-editor__add">+ Add Improvement</button>
               </div>
-              <div class="edit-actions">
-                <button @click="saveEdits" class="btn-primary">Save</button>
-                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              <div class="section__edit-actions">
+                <button @click="saveEdits" class="btn btn--primary">Save</button>
+                <button @click="cancelEditing" class="btn btn--secondary">Cancel</button>
               </div>
             </div>
-            <ul v-else class="styled-list improvement">
-              <li v-for="(area, i) in consolidation.areasForImprovement" :key="i">
+            <ul v-else class="feedback-list feedback-list--improvement">
+              <li v-for="(area, i) in consolidation.areasForImprovement" :key="i" class="feedback-list__item">
                 {{ area }}
               </li>
             </ul>
@@ -402,110 +402,110 @@ function parseResponses(responsesStr: string): Record<string, string> {
 
           <!-- Actionable Insights -->
           <section class="section">
-            <div class="section-header">
-              <h2>🎯 Actionable Insights</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'insights'" @click="startEditing('insights')" class="edit-btn">
+            <div class="section__header">
+              <h2 class="section__title">🎯 Actionable Insights</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'insights'" @click="startEditing('insights')" class="btn btn--secondary section__edit-btn">
                 ✏️ Edit
               </button>
             </div>
-            <div v-if="editingSection === 'insights'" class="edit-mode">
-              <div class="array-edit">
-                <div v-for="(insight, i) in editForm.actionableInsights" :key="i" class="array-item">
-                  <input v-model="editForm.actionableInsights[i]" placeholder="Enter insight..." class="array-input">
-                  <button @click="removeArrayItem(editForm.actionableInsights, i)" class="remove-btn">×</button>
+            <div v-if="editingSection === 'insights'" class="section__edit">
+              <div class="array-editor">
+                <div v-for="(insight, i) in editForm.actionableInsights" :key="i" class="array-editor__item">
+                  <input v-model="editForm.actionableInsights[i]" placeholder="Enter insight..." class="array-editor__input">
+                  <button @click="removeArrayItem(editForm.actionableInsights, i)" class="array-editor__remove">×</button>
                 </div>
-                <button @click="addArrayItem(editForm.actionableInsights)" class="add-btn">+ Add Insight</button>
+                <button @click="addArrayItem(editForm.actionableInsights)" class="array-editor__add">+ Add Insight</button>
               </div>
-              <div class="edit-actions">
-                <button @click="saveEdits" class="btn-primary">Save</button>
-                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              <div class="section__edit-actions">
+                <button @click="saveEdits" class="btn btn--primary">Save</button>
+                <button @click="cancelEditing" class="btn btn--secondary">Cancel</button>
               </div>
             </div>
-            <ul v-else class="styled-list action">
-              <li v-for="(insight, i) in consolidation.actionableInsights" :key="i">
+            <ul v-else class="feedback-list feedback-list--action">
+              <li v-for="(insight, i) in consolidation.actionableInsights" :key="i" class="feedback-list__item">
                 {{ insight }}
               </li>
             </ul>
           </section>
 
           <!-- Question Summaries -->
-          <section class="section question-summaries">
-            <div class="section-header">
-              <h2>📋 Detailed Question Analysis</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'questions'" @click="startEditing('questions')" class="edit-btn">
+          <section class="section">
+            <div class="section__header">
+              <h2 class="section__title">📋 Detailed Question Analysis</h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'questions'" @click="startEditing('questions')" class="btn btn--secondary section__edit-btn">
                 ✏️ Edit
               </button>
             </div>
-            <div v-if="editingSection === 'questions'" class="edit-mode">
-              <div class="question-edit">
+            <div v-if="editingSection === 'questions'" class="section__edit">
+              <div class="questions-editor">
                 <div class="question-card">
-                  <h4>1. Key Strengths</h4>
-                  <textarea v-model="editForm.questionSummaries.a" placeholder="Summary of strengths..." class="edit-textarea"></textarea>
+                  <h4 class="question-card__title">1. Key Strengths</h4>
+                  <textarea v-model="editForm.questionSummaries.a" placeholder="Summary of strengths..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4>2. Areas to Improve</h4>
-                  <textarea v-model="editForm.questionSummaries.b" placeholder="Summary of improvements..." class="edit-textarea"></textarea>
+                  <h4 class="question-card__title">2. Areas to Improve</h4>
+                  <textarea v-model="editForm.questionSummaries.b" placeholder="Summary of improvements..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4>3. Observed Behaviors</h4>
-                  <textarea v-model="editForm.questionSummaries.c" placeholder="Summary of behaviors..." class="edit-textarea"></textarea>
+                  <h4 class="question-card__title">3. Observed Behaviors</h4>
+                  <textarea v-model="editForm.questionSummaries.c" placeholder="Summary of behaviors..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4>4. Growth Advice</h4>
-                  <textarea v-model="editForm.questionSummaries.d" placeholder="Summary of advice..." class="edit-textarea"></textarea>
+                  <h4 class="question-card__title">4. Growth Advice</h4>
+                  <textarea v-model="editForm.questionSummaries.d" placeholder="Summary of advice..." class="section__textarea"></textarea>
                 </div>
               </div>
-              <div class="edit-actions">
-                <button @click="saveEdits" class="btn-primary">Save</button>
-                <button @click="cancelEditing" class="btn-secondary">Cancel</button>
+              <div class="section__edit-actions">
+                <button @click="saveEdits" class="btn btn--primary">Save</button>
+                <button @click="cancelEditing" class="btn btn--secondary">Cancel</button>
               </div>
             </div>
-            <div v-else class="question-cards">
+            <div v-else class="questions">
               <div class="question-card">
-                <h4>1. Key Strengths</h4>
-                <p>{{ consolidation.questionSummaries?.a }}</p>
+                <h4 class="question-card__title">1. Key Strengths</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.a }}</p>
               </div>
               <div class="question-card">
-                <h4>2. Areas to Improve</h4>
-                <p>{{ consolidation.questionSummaries?.b }}</p>
+                <h4 class="question-card__title">2. Areas to Improve</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.b }}</p>
               </div>
               <div class="question-card">
-                <h4>3. Observed Behaviors</h4>
-                <p>{{ consolidation.questionSummaries?.c }}</p>
+                <h4 class="question-card__title">3. Observed Behaviors</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.c }}</p>
               </div>
               <div class="question-card">
-                <h4>4. Growth Advice</h4>
-                <p>{{ consolidation.questionSummaries?.d }}</p>
+                <h4 class="question-card__title">4. Growth Advice</h4>
+                <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
               </div>
             </div>
           </section>
 
           <!-- Individual Reviews -->
-          <section v-if="submissions.length > 0" class="section individual-reviews">
-            <h2>📝 Individual Reviews ({{ submissions.length }})</h2>
-            <p class="hint">View all individual feedback submissions below</p>
-            <div class="reviews-list">
-              <div v-for="(submission, idx) in submissions" :key="submission.id" class="review-card">
-                <div class="review-header">
-                  <span class="reviewer-label">Reviewer {{ idx + 1 }}</span>
-                  <span class="review-date">{{ formatDate(submission.submittedAt) }}</span>
+          <section v-if="submissions.length > 0" class="section">
+            <h2 class="section__title">📝 Individual Reviews ({{ submissions.length }})</h2>
+            <p class="section__hint">View all individual feedback submissions below</p>
+            <div class="reviews">
+              <div v-for="(submission, idx) in submissions" :key="submission.id" class="review">
+                <div class="review__header">
+                  <span class="review__label">Reviewer {{ idx + 1 }}</span>
+                  <span class="review__date">{{ formatDate(submission.submittedAt) }}</span>
                 </div>
-                <div class="review-content">
-                  <div class="review-question">
-                    <h4>What are this person's key strengths?</h4>
-                    <p>{{ parseResponses(submission.responses).a || 'No response' }}</p>
+                <div class="review__content">
+                  <div class="review__item">
+                    <h4 class="review__question">What are this person's key strengths?</h4>
+                    <p class="review__answer">{{ parseResponses(submission.responses).a || 'No response' }}</p>
                   </div>
-                  <div class="review-question">
-                    <h4>What areas could they improve?</h4>
-                    <p>{{ parseResponses(submission.responses).b || 'No response' }}</p>
+                  <div class="review__item">
+                    <h4 class="review__question">What areas could they improve?</h4>
+                    <p class="review__answer">{{ parseResponses(submission.responses).b || 'No response' }}</p>
                   </div>
-                  <div class="review-question">
-                    <h4>What should they continue doing?</h4>
-                    <p>{{ parseResponses(submission.responses).c || 'No response' }}</p>
+                  <div class="review__item">
+                    <h4 class="review__question">What should they continue doing?</h4>
+                    <p class="review__answer">{{ parseResponses(submission.responses).c || 'No response' }}</p>
                   </div>
-                  <div class="review-question">
-                    <h4>What should they start or stop doing?</h4>
-                    <p>{{ parseResponses(submission.responses).d || 'No response' }}</p>
+                  <div class="review__item">
+                    <h4 class="review__question">What should they start or stop doing?</h4>
+                    <p class="review__answer">{{ parseResponses(submission.responses).d || 'No response' }}</p>
                   </div>
                 </div>
               </div>
@@ -513,478 +513,519 @@ function parseResponses(responsesStr: string): Record<string, string> {
           </section>
 
           <!-- Admin Notes -->
-          <section v-if="!consolidation.sharedAt" class="section admin-notes">
-            <h2>📝 Admin Notes (Optional)</h2>
-            <p class="hint">Add context or guidance for the subject. These notes will be included when shared.</p>
+          <section v-if="!consolidation.sharedAt" class="section">
+            <h2 class="section__title">📝 Admin Notes (Optional)</h2>
+            <p class="section__hint">Add context or guidance for the subject. These notes will be included when shared.</p>
             <textarea
               v-model="adminNotes"
               rows="4"
               placeholder="Add your notes here..."
+              class="section__textarea"
             ></textarea>
-            <button class="btn-secondary" @click="saveNotes">
+            <button class="btn btn--secondary" @click="saveNotes">
               Save Notes
             </button>
           </section>
-          
+
           <section v-else-if="consolidation.adminNotes" class="section">
-            <h2>📝 Admin Notes</h2>
-            <p class="admin-note-display">{{ consolidation.adminNotes }}</p>
+            <h2 class="section__title">📝 Admin Notes</h2>
+            <p class="admin-notes">{{ consolidation.adminNotes }}</p>
           </section>
         </div>
       </div>
     </template>
 
-    <div v-else class="error-state">
-      <p>Round not found.</p>
-      <router-link to="/rounds" class="btn-primary">Back to Rounds</router-link>
+    <div v-else class="consolidation__error">
+      <p class="consolidation__error-text">Round not found.</p>
+      <router-link to="/rounds" class="btn btn--primary">Back to Rounds</router-link>
     </div>
   </div>
 </template>
 
-<style scoped>
-.consolidation-page {
-  padding: 2rem;
+<style scoped lang="scss">
+.consolidation {
+  padding: 1rem;
   max-width: 900px;
   margin: 0 auto;
-}
 
-.loading, .error-state {
-  text-align: center;
-  padding: 3rem;
-}
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 
-.page-header {
-  margin-bottom: 2rem;
-}
+  &__loading,
+  &__error {
+    text-align: center;
+    padding: 2rem 1rem;
 
-.back-link {
-  display: block;
-  margin-bottom: 1rem;
-  color: #667eea;
-  text-decoration: none;
-}
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
+  &__error-text {
+    color: var(--color-error);
+    margin-bottom: 1.5rem;
+  }
 
-.subtitle {
-  color: #666;
-}
+  &__header {
+    margin-bottom: 2rem;
+  }
 
-.subtitle strong {
-  color: #333;
-}
+  &__back {
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
 
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
 
-.status-badge.closed {
-  background: #ffebee;
-  color: #c62828;
-}
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 
-.status-badge.shared {
-  background: #e3f2fd;
-  color: #1976d2;
-}
+  &__title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
 
-.generate-section, .info-section {
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
 
-.generate-section p, .info-section p {
-  color: #666;
-  margin-bottom: 1.5rem;
-}
+  &__subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 
-.consolidation-content {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  overflow: hidden;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 
-.consolidation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-}
+  &__subject {
+    color: var(--text-primary);
+  }
 
-.meta {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  color: #666;
-  font-size: 0.9rem;
-}
+  &__prompt {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
 
-.shared-badge {
-  color: #4caf50;
-  font-weight: 500;
-}
+    @media (min-width: 768px) {
+      padding: 3rem;
+    }
+  }
 
-.consolidation-body {
-  padding: 1.5rem;
+  &__prompt-text {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+  }
+
+  &__content {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+    }
+  }
+
+  &__meta-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+  }
+
+  &__meta-item {
+    &--shared {
+      color: var(--color-success);
+      font-weight: 500;
+    }
+  }
+
+  &__meta-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__body {
+    padding: 1.25rem;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
 }
 
 .section {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  &__title {
+    font-size: 1.125rem;
+    margin: 0;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__edit-btn {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    align-self: flex-start;
+
+    @media (min-width: 768px) {
+      font-size: 0.8rem;
+      align-self: auto;
+    }
+  }
+
+  &__summary {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
+
+  &__hint {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  &__edit {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+  }
+
+  &__textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    margin-bottom: 1rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 80px;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+
+  &__edit-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+  }
 }
 
-.section:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.section h2 {
-  font-size: 1.25rem;
+.array-editor {
   margin-bottom: 1rem;
-  color: #333;
+
+  &__item {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+  }
+
+  &__input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+
+  &__remove {
+    background: var(--color-error);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 44px;
+    min-width: 44px;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  &__add {
+    background: var(--color-success);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
 }
 
-.summary-text {
-  font-size: 1.1rem;
-  line-height: 1.6;
-  color: #444;
-}
-
-.styled-list {
-  list-style: none;
-  padding: 0;
-}
-
-.styled-list li {
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border-radius: 8px;
-  position: relative;
-  padding-left: 2.5rem;
-}
-
-.styled-list li::before {
-  position: absolute;
-  left: 0.75rem;
-  font-size: 1.25rem;
-}
-
-.styled-list.positive li {
-  background: #e8f5e9;
-}
-
-.styled-list.positive li::before {
-  content: '✓';
-  color: #4caf50;
-}
-
-.styled-list.improvement li {
-  background: #fff3e0;
-}
-
-.styled-list.improvement li::before {
-  content: '↑';
-  color: #ff9800;
-}
-
-.styled-list.action li {
-  background: #e3f2fd;
-}
-
-.styled-list.action li::before {
-  content: '→';
-  color: #2196f3;
-}
-
-.question-cards {
+.questions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+.questions-editor {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
 }
 
 .question-card {
-  padding: 1.5rem;
-  background: #f8f9fa;
+  padding: 1.25rem;
+  background: var(--bg-secondary);
   border-radius: 8px;
+  border: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
+
+  &__title {
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    margin: 0 0 0.75rem 0;
+    font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__text {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
 }
 
-.question-card h4 {
-  color: #667eea;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+.reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (min-width: 768px) {
+    gap: 1.5rem;
+  }
 }
 
-.question-card p {
-  color: #666;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.admin-notes .hint {
-  color: #888;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.admin-notes textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
+.review {
+  background: var(--bg-secondary);
   border-radius: 8px;
-  font-family: inherit;
-  font-size: 1rem;
-  resize: vertical;
-  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color);
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  &__label {
+    font-weight: 600;
+    color: var(--color-primary);
+    font-size: 0.95rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__date {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      gap: 1.25rem;
+    }
+  }
+
+  &__item {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 3px solid var(--color-primary);
+  }
+
+  &__question {
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__answer {
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 0.95rem;
+    }
+  }
 }
 
-.admin-note-display {
-  background: #f5f5f5;
+.admin-notes {
+  background: var(--bg-secondary);
   padding: 1rem;
   border-radius: 8px;
   font-style: italic;
-  color: #666;
-}
-
-.btn-primary, .btn-secondary {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  display: inline-block;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #5a6fd6;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: white;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.btn-secondary:hover {
-  background: #f5f5f5;
-}
-
-/* Edit Mode Styles */
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.edit-btn {
-  background: none;
-  border: 1px solid #667eea;
-  color: #667eea;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.edit-btn:hover {
-  background: #667eea;
-  color: white;
-}
-
-.edit-mode {
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  margin-bottom: 1rem;
-}
-
-.edit-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
-  resize: vertical;
-  margin-bottom: 1rem;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.array-edit {
-  margin-bottom: 1rem;
-}
-
-.array-item {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  align-items: center;
-}
-
-.array-input {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.remove-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.remove-btn:hover {
-  background: #d32f2f;
-}
-
-.add-btn {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.add-btn:hover {
-  background: #45a049;
-}
-
-.question-edit {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.question-edit .question-card {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.question-edit .question-card h4 {
-  margin-bottom: 0.5rem;
-  color: #667eea;
-}
-
-.question-edit .edit-textarea {
-  margin: 0;
-  min-height: 80px;
-}
-
-/* Individual Reviews Styles */
-.individual-reviews .hint {
-  color: #888;
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
-}
-
-.reviews-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.review-card {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1.5rem;
-  border: 1px solid #e0e0e0;
-}
-
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.reviewer-label {
-  font-weight: 600;
-  color: #667eea;
-  font-size: 1rem;
-}
-
-.review-date {
-  font-size: 0.85rem;
-  color: #888;
-}
-
-.review-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.review-question {
-  background: white;
-  padding: 1rem;
-  border-radius: 6px;
-  border-left: 3px solid #667eea;
-}
-
-.review-question h4 {
-  color: #667eea;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-}
-
-.review-question p {
-  color: #444;
+  color: var(--text-primary);
   line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
+  border-left: 4px solid var(--color-primary);
 }
 </style>

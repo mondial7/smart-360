@@ -125,118 +125,118 @@ function formatDateTimeLocal(dateStr: string): string {
 </script>
 
 <template>
-  <div class="wizard-page">
-    <header class="page-header">
-      <h1>Create Feedback Round</h1>
-      <p>Step {{ step }} of 4</p>
+  <div class="wizard">
+    <header class="wizard__header">
+      <h1 class="wizard__title">Create Feedback Round</h1>
+      <p class="wizard__subtitle">Step {{ step }} of 4</p>
     </header>
 
     <!-- Progress Bar -->
-    <div class="progress-bar">
-      <div class="progress-step" :class="{ active: step >= 1, complete: step > 1 }">1. Subject</div>
-      <div class="progress-step" :class="{ active: step >= 2, complete: step > 2 }">2. Reviewers</div>
-      <div class="progress-step" :class="{ active: step >= 3, complete: step > 3 }">3. Deadline</div>
-      <div class="progress-step" :class="{ active: step >= 4 }">4. Confirm</div>
+    <div class="wizard__progress">
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 1, 'wizard__progress-step--complete': step > 1 }">1. Subject</div>
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 2, 'wizard__progress-step--complete': step > 2 }">2. Reviewers</div>
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 3, 'wizard__progress-step--complete': step > 3 }">3. Deadline</div>
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 4 }">4. Confirm</div>
     </div>
 
     <!-- Errors -->
-    <div v-if="errors.length" class="errors">
-      <p v-for="error in errors" :key="error">{{ error }}</p>
+    <div v-if="errors.length" class="wizard__errors">
+      <p v-for="error in errors" :key="error" class="wizard__error">{{ error }}</p>
     </div>
 
     <!-- Step 1: Select Subject -->
-    <div v-if="step === 1" class="wizard-step">
-      <h2>Who is receiving feedback?</h2>
-      <p class="hint">Select the team member who will receive feedback from their peers.</p>
-      
+    <div v-if="step === 1" class="wizard__step">
+      <h2 class="wizard__step-title">Who is receiving feedback?</h2>
+      <p class="wizard__step-hint">Select the team member who will receive feedback from their peers.</p>
+
       <div class="user-grid">
-        <div 
-          v-for="user in users.filter(u => u.id !== auth.user?.id)" 
+        <div
+          v-for="user in users.filter(u => u.id !== auth.user?.id)"
           :key="user.id"
           class="user-card"
-          :class="{ selected: subjectId === user.id }"
+          :class="{ 'user-card--selected': subjectId === user.id }"
           @click="subjectId = user.id"
         >
-          <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-photo">
-          <div v-else class="user-photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
-          <span class="user-name">{{ user.name }}</span>
+          <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-card__photo">
+          <div v-else class="user-card__photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
+          <span class="user-card__name">{{ user.name }}</span>
         </div>
       </div>
     </div>
 
     <!-- Step 2: Select Reviewers -->
-    <div v-if="step === 2" class="wizard-step">
-      <h2>Who will provide feedback?</h2>
-      <p class="hint">Select 3-5 peers who will give anonymous feedback. The subject and you (the admin) are automatically excluded.</p>
-      
+    <div v-if="step === 2" class="wizard__step">
+      <h2 class="wizard__step-title">Who will provide feedback?</h2>
+      <p class="wizard__step-hint">Select 3-5 peers who will give anonymous feedback. The subject and you (the admin) are automatically excluded.</p>
+
       <div class="user-grid">
-        <div 
-          v-for="user in availableReviewers()" 
+        <div
+          v-for="user in availableReviewers()"
           :key="user.id"
           class="user-card"
-          :class="{ selected: reviewerIds.includes(user.id) }"
+          :class="{ 'user-card--selected': reviewerIds.includes(user.id) }"
           @click="toggleReviewer(user.id)"
         >
-          <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-photo">
-          <div v-else class="user-photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
-          <span class="user-name">{{ user.name }}</span>
-          <span v-if="reviewerIds.includes(user.id)" class="checkmark">✓</span>
+          <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-card__photo">
+          <div v-else class="user-card__photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
+          <span class="user-card__name">{{ user.name }}</span>
+          <span v-if="reviewerIds.includes(user.id)" class="user-card__check">✓</span>
         </div>
       </div>
-      
-      <p class="selection-count">{{ reviewers().length }} reviewer(s) selected</p>
+
+      <p class="wizard__selection-count">{{ reviewers().length }} reviewer(s) selected</p>
     </div>
 
     <!-- Step 3: Set Deadline -->
-    <div v-if="step === 3" class="wizard-step">
-      <h2>When is the deadline?</h2>
-      <p class="hint">Set a clear deadline so reviewers know when to submit their feedback.</p>
-      
-      <div class="deadline-input">
-        <input 
-          type="datetime-local" 
+    <div v-if="step === 3" class="wizard__step">
+      <h2 class="wizard__step-title">When is the deadline?</h2>
+      <p class="wizard__step-hint">Set a clear deadline so reviewers know when to submit their feedback.</p>
+
+      <div class="wizard__deadline-input">
+        <input
+          type="datetime-local"
           v-model="deadline"
-          class="datetime-picker"
+          class="wizard__datetime-picker"
         >
       </div>
-      
-      <div class="deadline-preview" v-if="deadline">
+
+      <div class="wizard__deadline-preview" v-if="deadline">
         <strong>Selected:</strong> {{ formatDateTimeLocal(deadline) }}
       </div>
     </div>
 
     <!-- Step 4: Review & Confirm -->
-    <div v-if="step === 4" class="wizard-step">
-      <h2>Review and Create</h2>
-      <p class="hint">Review the details before creating the feedback round.</p>
-      
-      <div class="review-card">
+    <div v-if="step === 4" class="wizard__step">
+      <h2 class="wizard__step-title">Review and Create</h2>
+      <p class="wizard__step-hint">Review the details before creating the feedback round.</p>
+
+      <div class="wizard__review">
         <div class="review-section">
-          <h4>Feedback Subject</h4>
-          <div class="review-value">
-            <img v-if="subject()?.photoUrl" :src="subject()!.photoUrl" class="review-photo">
-            <div v-else class="review-photo-placeholder">{{ subject()?.name.charAt(0) }}</div>
+          <h4 class="review-section__title">Feedback Subject</h4>
+          <div class="review-section__value">
+            <img v-if="subject()?.photoUrl" :src="subject()!.photoUrl" class="review-section__photo">
+            <div v-else class="review-section__photo-placeholder">{{ subject()?.name.charAt(0) }}</div>
             {{ subject()?.name }}
           </div>
         </div>
-        
+
         <div class="review-section">
-          <h4>Reviewers ({{ reviewers().length }})</h4>
-          <div class="review-list">
-            <span v-for="reviewer in reviewers()" :key="reviewer.id" class="review-tag">
+          <h4 class="review-section__title">Reviewers ({{ reviewers().length }})</h4>
+          <div class="review-section__list">
+            <span v-for="reviewer in reviewers()" :key="reviewer.id" class="review-section__tag">
               {{ reviewer.name }}
             </span>
           </div>
         </div>
-        
+
         <div class="review-section">
-          <h4>Deadline</h4>
-          <p>{{ formatDateTimeLocal(deadline) }}</p>
+          <h4 class="review-section__title">Deadline</h4>
+          <p class="review-section__text">{{ formatDateTimeLocal(deadline) }}</p>
         </div>
-        
-        <div class="review-section questions">
-          <h4>Feedback Questions</h4>
-          <ol>
+
+        <div class="review-section">
+          <h4 class="review-section__title">Feedback Questions</h4>
+          <ol class="review-section__questions">
             <li>What are this person's key strengths?</li>
             <li>What areas could this person improve?</li>
             <li>What specific behaviors or actions have you observed that stood out?</li>
@@ -247,25 +247,25 @@ function formatDateTimeLocal(dateStr: string): string {
     </div>
 
     <!-- Navigation -->
-    <div class="wizard-nav">
-      <button 
-        v-if="step > 1" 
-        class="btn-secondary" 
+    <div class="wizard__nav">
+      <button
+        v-if="step > 1"
+        class="btn btn--secondary"
         @click="prevStep"
         :disabled="loading"
       >
         Back
       </button>
-      <button 
-        v-if="step < 4" 
-        class="btn-primary" 
+      <button
+        v-if="step < 4"
+        class="btn btn--primary wizard__nav-next"
         @click="nextStep"
       >
         Next
       </button>
-      <button 
-        v-if="step === 4" 
-        class="btn-primary" 
+      <button
+        v-if="step === 4"
+        class="btn btn--primary wizard__nav-next"
         @click="createRound"
         :disabled="loading"
       >
@@ -275,83 +275,220 @@ function formatDateTimeLocal(dateStr: string): string {
   </div>
 </template>
 
-<style scoped>
-.wizard-page {
-  padding: 2rem;
+<style scoped lang="scss">
+.wizard {
+  padding: 1rem;
   max-width: 900px;
   margin: 0 auto;
-}
 
-.page-header {
-  margin-bottom: 2rem;
-}
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
+  &__header {
+    margin-bottom: 1.5rem;
 
-.page-header p {
-  color: #666;
-}
+    @media (min-width: 768px) {
+      margin-bottom: 2rem;
+    }
+  }
 
-.progress-bar {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+  &__title {
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
 
-.progress-step {
-  font-size: 0.85rem;
-  color: #999;
-  font-weight: 500;
-}
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
 
-.progress-step.active {
-  color: #667eea;
-}
+  &__subtitle {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
 
-.progress-step.complete {
-  color: #4caf50;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 
-.errors {
-  background: #ffebee;
-  color: #c62828;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-}
+  &__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
 
-.errors p {
-  margin: 0;
-}
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+  }
 
-.wizard-step {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  margin-bottom: 1.5rem;
-}
+  &__progress-step {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    padding: 0.25rem 0;
 
-.wizard-step h2 {
-  margin-bottom: 0.5rem;
-}
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+      padding: 0;
+    }
 
-.hint {
-  color: #666;
-  margin-bottom: 1.5rem;
+    &--active {
+      color: var(--color-primary);
+    }
+
+    &--complete {
+      color: var(--color-success);
+    }
+  }
+
+  &__errors {
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--color-error);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--color-error);
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__step {
+    background: var(--bg-primary);
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+
+    @media (min-width: 768px) {
+      padding: 2rem;
+    }
+  }
+
+  &__step-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__step-hint {
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem 0;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__selection-count {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-top: 1rem;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__deadline-input {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__datetime-picker {
+    padding: 1rem;
+    font-size: 0.9rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    min-width: 260px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+      min-width: 280px;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+  }
+
+  &__deadline-preview {
+    text-align: center;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__review {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    @media (min-width: 768px) {
+      gap: 1.5rem;
+    }
+  }
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+  }
+
+  &__nav-next {
+    @media (min-width: 768px) {
+      margin-left: auto;
+    }
+  }
 }
 
 .user-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+  }
 }
 
 .user-card {
@@ -360,192 +497,188 @@ function formatDateTimeLocal(dateStr: string): string {
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  min-height: 110px;
+  background: var(--bg-primary);
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+
+  &--selected {
+    border-color: var(--color-primary);
+    background: rgba(102, 126, 234, 0.05);
+  }
+
+  &__photo {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  &__photo-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      width: 48px;
+      height: 48px;
+      font-size: 1.25rem;
+    }
+  }
+
+  &__name {
+    font-size: 0.85rem;
+    text-align: center;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  &__check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--color-primary);
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+
+    @media (min-width: 768px) {
+      width: 20px;
+      height: 20px;
+      font-size: 0.75rem;
+    }
+  }
 }
 
-.user-card:hover {
-  border-color: #667eea;
-}
+.review-section {
+  &__title {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 0.5rem 0;
 
-.user-card.selected {
-  border-color: #667eea;
-  background: #f5f7ff;
-}
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
 
-.user-photo {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+  &__value {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    color: var(--text-primary);
 
-.user-photo-placeholder {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
 
-.user-name {
-  font-size: 0.9rem;
-  text-align: center;
-}
+  &__photo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 
-.checkmark {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: #667eea;
-  color: white;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-}
+    @media (min-width: 768px) {
+      width: 36px;
+      height: 36px;
+    }
+  }
 
-.selection-count {
-  text-align: center;
-  color: #666;
-  margin-top: 1rem;
-}
+  &__photo-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    flex-shrink: 0;
 
-.deadline-input {
-  display: flex;
-  justify-content: center;
-}
+    @media (min-width: 768px) {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
+  }
 
-.datetime-picker {
-  padding: 1rem;
-  font-size: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  min-width: 280px;
-}
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 
-.deadline-preview {
-  text-align: center;
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #f5f7fa;
-  border-radius: 8px;
-}
+  &__tag {
+    background: rgba(33, 150, 243, 0.1);
+    color: var(--color-info);
+    padding: 0.375rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.8rem;
 
-.review-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
 
-.review-section h4 {
-  color: #666;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.5rem;
-}
+  &__text {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.9rem;
 
-.review-value {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 1.1rem;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 
-.review-photo {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+  &__questions {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
 
-.review-photo-placeholder {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 600;
-}
+    @media (min-width: 768px) {
+      padding-left: 1.5rem;
+      font-size: 1rem;
+    }
 
-.review-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.review-tag {
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 0.4rem 0.8rem;
-  border-radius: 16px;
-  font-size: 0.85rem;
-}
-
-.questions ol {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.questions li {
-  margin-bottom: 0.5rem;
-  color: #444;
-}
-
-.wizard-nav {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.btn-primary, .btn-secondary {
-  padding: 0.875rem 2rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-  border: none;
-  margin-left: auto;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #5a6fd6;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: white;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #f5f5f5;
+    li {
+      margin-bottom: 0.5rem;
+    }
+  }
 }
 </style>

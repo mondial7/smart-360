@@ -166,147 +166,147 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <div class="wizard-page">
-    <header class="page-header">
-      <h1>Create Team Round</h1>
-      <p>Step {{ step }} of 4</p>
+  <div class="wizard">
+    <header class="wizard__header">
+      <h1 class="wizard__title">Create Team Round</h1>
+      <p class="wizard__subtitle">Step {{ step }} of 4</p>
     </header>
 
     <!-- Progress Bar -->
-    <div class="progress-bar">
-      <div class="progress-step" :class="{ active: step >= 1, complete: step > 1 }">1. Team</div>
-      <div class="progress-step" :class="{ active: step >= 2, complete: step > 2 }">2. Subjects</div>
-      <div class="progress-step" :class="{ active: step >= 3, complete: step > 3 }">3. Deadlines</div>
-      <div class="progress-step" :class="{ active: step >= 4 }">4. Confirm</div>
+    <div class="wizard__progress">
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 1, 'wizard__progress-step--complete': step > 1 }">1. Team</div>
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 2, 'wizard__progress-step--complete': step > 2 }">2. Subjects</div>
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 3, 'wizard__progress-step--complete': step > 3 }">3. Deadlines</div>
+      <div class="wizard__progress-step" :class="{ 'wizard__progress-step--active': step >= 4 }">4. Confirm</div>
     </div>
 
     <!-- Errors -->
-    <div v-if="errors.length" class="errors">
-      <p v-for="error in errors" :key="error">{{ error }}</p>
+    <div v-if="errors.length" class="wizard__errors">
+      <p v-for="error in errors" :key="error" class="wizard__error">{{ error }}</p>
     </div>
 
     <!-- Step 1: Team Info -->
-    <div v-if="step === 1" class="wizard-step">
-      <h2>Team Round for {{ team?.name }}</h2>
-      <p class="hint">You're creating feedback rounds for your team members. Each member will receive feedback from all other team members (except themselves and you).</p>
+    <div v-if="step === 1" class="wizard__step">
+      <h2 class="wizard__step-title">Team Round for {{ team?.name }}</h2>
+      <p class="wizard__step-hint">You're creating feedback rounds for your team members. Each member will receive feedback from all other team members (except themselves and you).</p>
 
-      <div v-if="team" class="team-info-card">
-        <div class="info-row">
-          <span class="label">Team:</span>
-          <span class="value">{{ team.name }}</span>
+      <div v-if="team" class="team-info">
+        <div class="team-info__row">
+          <span class="team-info__label">Team:</span>
+          <span class="team-info__value">{{ team.name }}</span>
         </div>
-        <div class="info-row">
-          <span class="label">Total Members:</span>
-          <span class="value">{{ team.members.length }}</span>
+        <div class="team-info__row">
+          <span class="team-info__label">Total Members:</span>
+          <span class="team-info__value">{{ team.members.length }}</span>
         </div>
-        <div class="info-row">
-          <span class="label">Available Subjects:</span>
-          <span class="value">{{ availableSubjects.length }} (excluding you)</span>
+        <div class="team-info__row">
+          <span class="team-info__label">Available Subjects:</span>
+          <span class="team-info__value">{{ availableSubjects.length }} (excluding you)</span>
         </div>
-        <div class="info-row">
-          <span class="label">Reviewers per Round:</span>
-          <span class="value">{{ reviewerCount }} (auto-assigned)</span>
+        <div class="team-info__row">
+          <span class="team-info__label">Reviewers per Round:</span>
+          <span class="team-info__value">{{ reviewerCount }} (auto-assigned)</span>
         </div>
       </div>
     </div>
 
     <!-- Step 2: Select Subjects -->
-    <div v-if="step === 2" class="wizard-step">
-      <h2>Who should receive feedback?</h2>
-      <p class="hint">Select team members to create feedback rounds for. Each will receive feedback from all other team members.</p>
+    <div v-if="step === 2" class="wizard__step">
+      <h2 class="wizard__step-title">Who should receive feedback?</h2>
+      <p class="wizard__step-hint">Select team members to create feedback rounds for. Each will receive feedback from all other team members.</p>
 
       <div class="user-grid">
         <div
           v-for="user in availableSubjects"
           :key="user.id"
           class="user-card"
-          :class="{ selected: selectedSubjectIds.includes(user.id) }"
+          :class="{ 'user-card--selected': selectedSubjectIds.includes(user.id) }"
           @click="toggleSubject(user.id)"
         >
-          <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-photo">
-          <div v-else class="user-photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
-          <div class="user-info">
-            <span class="user-name">{{ user.name }}</span>
-            <span class="user-email">{{ user.email }}</span>
+          <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-card__photo">
+          <div v-else class="user-card__photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
+          <div class="user-card__info">
+            <span class="user-card__name">{{ user.name }}</span>
+            <span class="user-card__email">{{ user.email }}</span>
           </div>
-          <span v-if="selectedSubjectIds.includes(user.id)" class="checkmark">✓</span>
+          <span v-if="selectedSubjectIds.includes(user.id)" class="user-card__check">✓</span>
         </div>
       </div>
 
-      <p class="selection-count">{{ selectedSubjects.length }} member(s) selected</p>
+      <p class="wizard__selection-count">{{ selectedSubjects.length }} member(s) selected</p>
     </div>
 
     <!-- Step 3: Set Deadlines -->
-    <div v-if="step === 3" class="wizard-step">
-      <h2>Set Deadlines</h2>
-      <p class="hint">Set individual deadlines for each person's round, or use the same deadline for all.</p>
+    <div v-if="step === 3" class="wizard__step">
+      <h2 class="wizard__step-title">Set Deadlines</h2>
+      <p class="wizard__step-hint">Set individual deadlines for each person's round, or use the same deadline for all.</p>
 
-      <div class="deadline-actions">
-        <label>Set same deadline for all:</label>
+      <div class="wizard__deadline-actions">
+        <label class="wizard__deadline-label">Set same deadline for all:</label>
         <input
           type="datetime-local"
           :value="deadlines[selectedSubjectIds[0]]"
           @change="setAllDeadlines(($event.target as HTMLInputElement).value)"
-          class="datetime-picker"
+          class="wizard__datetime-picker"
         >
       </div>
 
-      <div class="deadline-list">
+      <div class="wizard__deadline-list">
         <div v-for="subject in selectedSubjects" :key="subject.id" class="deadline-item">
-          <div class="subject-info">
-            <img v-if="subject.photoUrl" :src="subject.photoUrl" class="mini-avatar">
-            <div v-else class="mini-avatar-placeholder">{{ subject.name.charAt(0) }}</div>
-            <span>{{ subject.name }}</span>
+          <div class="deadline-item__subject">
+            <img v-if="subject.photoUrl" :src="subject.photoUrl" class="deadline-item__avatar">
+            <div v-else class="deadline-item__avatar-placeholder">{{ subject.name.charAt(0) }}</div>
+            <span class="deadline-item__name">{{ subject.name }}</span>
           </div>
           <input
             type="datetime-local"
             v-model="deadlines[subject.id]"
-            class="datetime-picker-small"
+            class="deadline-item__input"
           >
         </div>
       </div>
     </div>
 
     <!-- Step 4: Review & Confirm -->
-    <div v-if="step === 4" class="wizard-step">
-      <h2>Review and Create</h2>
-      <p class="hint">You're about to create {{ selectedSubjects.length }} feedback rounds.</p>
+    <div v-if="step === 4" class="wizard__step">
+      <h2 class="wizard__step-title">Review and Create</h2>
+      <p class="wizard__step-hint">You're about to create {{ selectedSubjects.length }} feedback rounds.</p>
 
-      <div class="review-card">
+      <div class="wizard__review">
         <div class="review-section">
-          <h4>Team</h4>
-          <p>{{ team?.name }}</p>
+          <h4 class="review-section__title">Team</h4>
+          <p class="review-section__text">{{ team?.name }}</p>
         </div>
 
         <div class="review-section">
-          <h4>Rounds to Create ({{ selectedSubjects.length }})</h4>
-          <div class="rounds-preview">
-            <div v-for="subject in selectedSubjects" :key="subject.id" class="round-preview-item">
-              <div class="subject">
-                <img v-if="subject.photoUrl" :src="subject.photoUrl" class="mini-avatar">
-                <div v-else class="mini-avatar-placeholder">{{ subject.name.charAt(0) }}</div>
-                <strong>{{ subject.name }}</strong>
+          <h4 class="review-section__title">Rounds to Create ({{ selectedSubjects.length }})</h4>
+          <div class="review-section__rounds">
+            <div v-for="subject in selectedSubjects" :key="subject.id" class="round-preview">
+              <div class="round-preview__subject">
+                <img v-if="subject.photoUrl" :src="subject.photoUrl" class="round-preview__avatar">
+                <div v-else class="round-preview__avatar-placeholder">{{ subject.name.charAt(0) }}</div>
+                <strong class="round-preview__name">{{ subject.name }}</strong>
               </div>
-              <div class="details">
-                <span class="deadline">{{ formatDate(deadlines[subject.id]) }}</span>
-                <span class="reviewers">{{ reviewerCount }} reviewers</span>
+              <div class="round-preview__details">
+                <span class="round-preview__deadline">{{ formatDate(deadlines[subject.id]) }}</span>
+                <span class="round-preview__reviewers">{{ reviewerCount }} reviewers</span>
               </div>
             </div>
           </div>
         </div>
 
         <div class="review-section">
-          <h4>Auto-assigned Reviewers</h4>
-          <p>All team members except the subject and you will be assigned as reviewers for each round.</p>
+          <h4 class="review-section__title">Auto-assigned Reviewers</h4>
+          <p class="review-section__text">All team members except the subject and you will be assigned as reviewers for each round.</p>
         </div>
       </div>
     </div>
 
     <!-- Navigation -->
-    <div class="wizard-nav">
+    <div class="wizard__nav">
       <button
         v-if="step > 1"
-        class="btn-secondary"
+        class="btn btn--secondary"
         @click="prevStep"
         :disabled="loading"
       >
@@ -314,7 +314,7 @@ function formatDate(dateStr: string): string {
       </button>
       <button
         v-if="step < 4"
-        class="btn-primary"
+        class="btn btn--primary wizard__nav-next"
         @click="nextStep"
         :disabled="step === 2 && selectedSubjectIds.length === 0"
       >
@@ -322,7 +322,7 @@ function formatDate(dateStr: string): string {
       </button>
       <button
         v-if="step === 4"
-        class="btn-primary"
+        class="btn btn--primary wizard__nav-next"
         @click="createRounds"
         :disabled="loading"
       >
@@ -332,394 +332,614 @@ function formatDate(dateStr: string): string {
   </div>
 </template>
 
-<style scoped>
-.wizard-page {
+<style scoped lang="scss">
+.wizard {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem;
-}
-
-.page-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.page-header p {
-  color: #666;
-  font-size: 0.95rem;
-}
-
-.progress-bar {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 3rem;
-  position: relative;
-}
-
-.progress-bar::before {
-  content: '';
-  position: absolute;
-  top: 15px;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: #e0e0e0;
-  z-index: 0;
-}
-
-.progress-step {
-  flex: 1;
-  text-align: center;
-  padding: 0.5rem;
-  font-size: 0.9rem;
-  color: #999;
-  position: relative;
-  z-index: 1;
-}
-
-.progress-step::before {
-  content: '';
-  display: block;
-  width: 30px;
-  height: 30px;
-  margin: 0 auto 0.5rem;
-  border-radius: 50%;
-  background: white;
-  border: 2px solid #e0e0e0;
-}
-
-.progress-step.active {
-  color: #667eea;
-  font-weight: 500;
-}
-
-.progress-step.active::before {
-  border-color: #667eea;
-  background: white;
-}
-
-.progress-step.complete::before {
-  background: #667eea;
-  border-color: #667eea;
-}
-
-.errors {
-  background: #fee;
-  border: 1px solid #fcc;
-  border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1.5rem;
-  color: #c33;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+
+  &__header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+
+    @media (min-width: 768px) {
+      margin-bottom: 2rem;
+    }
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
+  }
+
+  &__subtitle {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.95rem;
+    }
+  }
+
+  &__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+    }
+
+    &::before {
+      @media (min-width: 768px) {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background: var(--border-color);
+        z-index: 0;
+      }
+    }
+  }
+
+  &__progress-step {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    position: relative;
+    z-index: 1;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+
+    &::before {
+      @media (min-width: 768px) {
+        content: '';
+        display: block;
+        width: 30px;
+        height: 30px;
+        margin: 0 auto 0.5rem;
+        border-radius: 50%;
+        background: var(--bg-primary);
+        border: 2px solid var(--border-color);
+      }
+    }
+
+    &--active {
+      color: var(--color-primary);
+      font-weight: 500;
+
+      &::before {
+        border-color: var(--color-primary);
+        background: var(--bg-primary);
+      }
+    }
+
+    &--complete {
+      &::before {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+      }
+    }
+  }
+
+  &__errors {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid var(--color-error);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-error);
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__step {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+
+    @media (min-width: 768px) {
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+  }
+
+  &__step-title {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+
+  &__step-hint {
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem 0;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__selection-count {
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__deadline-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+  }
+
+  &__deadline-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__datetime-picker {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    min-width: 200px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+      min-width: 220px;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+
+  &__deadline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__review {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1.25rem;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.75rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 1rem;
+    }
+  }
+
+  &__nav-next {
+    @media (min-width: 768px) {
+      margin-left: auto;
+    }
+  }
 }
 
-.wizard-step {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 2rem;
-}
-
-.wizard-step h2 {
-  font-size: 1.5rem;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.hint {
-  color: #666;
-  margin-bottom: 1.5rem;
-}
-
-.team-info-card {
-  background: #f8f9fa;
+.team-info {
+  background: var(--bg-secondary);
   border-radius: 8px;
-  padding: 1.5rem;
-}
+  padding: 1.25rem;
 
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e0e0e0;
-}
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
 
-.info-row:last-child {
-  border-bottom: none;
-}
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
 
-.info-row .label {
-  font-weight: 600;
-  color: #666;
-}
+    &:last-child {
+      border-bottom: none;
+    }
+  }
 
-.info-row .value {
-  color: #333;
+  &__label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__value {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 }
 
 .user-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
 }
 
 .user-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 1rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-}
+  background: var(--bg-primary);
+  min-height: 80px;
 
-.user-card:hover {
-  border-color: #667eea;
-  background: #f5f7ff;
-}
+  @media (min-width: 768px) {
+    gap: 1rem;
+  }
 
-.user-card.selected {
-  border-color: #667eea;
-  background: #f5f7ff;
-}
+  &:hover {
+    border-color: var(--color-primary);
+    background: rgba(102, 126, 234, 0.05);
+  }
 
-.user-photo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+  &--selected {
+    border-color: var(--color-primary);
+    background: rgba(102, 126, 234, 0.05);
+  }
 
-.user-photo-placeholder {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  font-weight: bold;
-}
+  &__photo {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 
-.user-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
+    @media (min-width: 768px) {
+      width: 50px;
+      height: 50px;
+    }
+  }
 
-.user-name {
-  font-weight: 600;
-  color: #333;
-}
+  &__photo-placeholder {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    flex-shrink: 0;
 
-.user-email {
-  font-size: 0.85rem;
-  color: #666;
-}
+    @media (min-width: 768px) {
+      width: 50px;
+      height: 50px;
+      font-size: 1.3rem;
+    }
+  }
 
-.checkmark {
-  color: #667eea;
-  font-size: 1.5rem;
-  font-weight: bold;
-}
+  &__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 
-.selection-count {
-  text-align: center;
-  margin-top: 1rem;
-  color: #666;
-  font-weight: 500;
-}
+  &__name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
 
-.deadline-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 
-.deadline-actions label {
-  font-weight: 600;
-  color: #333;
-}
+  &__email {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 
-.datetime-picker {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  min-width: 220px;
-}
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
 
-.datetime-picker:focus {
-  outline: none;
-  border-color: #667eea;
-}
+  &__check {
+    color: var(--color-primary);
+    font-size: 1.4rem;
+    font-weight: bold;
+    flex-shrink: 0;
 
-.deadline-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
 }
 
 .deadline-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.subject-info {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.75rem;
-}
-
-.mini-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.mini-avatar-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  font-weight: bold;
-}
-
-.datetime-picker-small {
-  padding: 0.5rem;
-  font-size: 0.9rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  min-width: 220px;
-}
-
-.datetime-picker-small:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.review-card {
-  background: #f8f9fa;
+  padding: 1rem;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  padding: 1.5rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__subject {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  &__avatar-placeholder {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: bold;
+    flex-shrink: 0;
+
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+      font-size: 1.1rem;
+    }
+  }
+
+  &__name {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
+
+  &__input {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    min-width: 100%;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 44px;
+
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+      min-width: 220px;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
 }
 
 .review-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+
+  @media (min-width: 768px) {
+    margin-bottom: 1.5rem;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &__title {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 0.75rem 0;
+
+    @media (min-width: 768px) {
+      font-size: 0.85rem;
+    }
+  }
+
+  &__text {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin: 0;
+
+    @media (min-width: 768px) {
+      font-size: 1.1rem;
+    }
+  }
+
+  &__rounds {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 }
 
-.review-section:last-child {
-  margin-bottom: 0;
-}
-
-.review-section h4 {
-  color: #666;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.75rem;
-}
-
-.review-section > p {
-  font-size: 1.1rem;
-  color: #333;
-  font-weight: 600;
-}
-
-.rounds-preview {
+.round-preview {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.round-preview-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 0.75rem;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 6px;
-}
 
-.round-preview-item .subject {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-.round-preview-item .details {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-  color: #666;
-}
+  &__subject {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 
-.wizard-nav {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 
-.btn-primary,
-.btn-secondary {
-  padding: 0.75rem 2rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
 
-.btn-primary {
-  background: #667eea;
-  color: white;
-}
+  &__avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: bold;
+    flex-shrink: 0;
 
-.btn-primary:hover:not(:disabled) {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+      font-size: 1.1rem;
+    }
+  }
 
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  &__name {
+    font-size: 0.9rem;
+    color: var(--text-primary);
 
-.btn-secondary {
-  background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
-}
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 
-.btn-secondary:hover:not(:disabled) {
-  background: #f5f7ff;
+  &__details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+
+    @media (min-width: 768px) {
+      align-items: flex-end;
+      font-size: 0.85rem;
+    }
+  }
+
+  &__deadline,
+  &__reviewers {
+    // Inherit styles from __details
+  }
 }
 </style>

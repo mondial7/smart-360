@@ -21,37 +21,49 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="callback-container">
-    <div class="loading-spinner"></div>
-    <p>Authenticating...</p>
+  <div class="auth-callback">
+    <div class="auth-callback__spinner"></div>
+    <p class="auth-callback__text">Authenticating...</p>
   </div>
 </template>
 
-<style scoped>
-.callback-container {
+<style scoped lang="scss">
+.auth-callback {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-}
+  padding: 1rem;
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+  &__spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+
+    @media (min-width: 768px) {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  &__text {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.95rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+  }
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-p {
-  color: #666;
 }
 </style>
