@@ -1,0 +1,42 @@
+# Environment files (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Database files
+*.db
+*.sqlite*
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Build artifacts
+smart360
+smart360-server
+test-mongodb
+*.test
+*.out
+
+# Logs
+*.log
+
+# Docker files (not needed in build context)
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Documentation (not needed in runtime)
+README_DOCKER.md
+DEV-SEED-README.md
+Makefile
+
+# Scripts (already handled by init.js mount)
+reseed-dev.sh
