@@ -33,8 +33,11 @@ func main() {
 	// Initialize database
 	database.InitDB()
 
-	// Seed development data
-	database.SeedDevData()
+	// Seed development data (only in development mode)
+	if os.Getenv("DEV_MODE") == "true" {
+		log.Println("WARNING: Development mode enabled - seeding test data")
+		database.SeedDevData()
+	}
 
 	// Initialize OAuth
 	handlers.InitOAuthConfig()
@@ -54,7 +57,12 @@ func main() {
 	// Public routes
 	r.GET("/api/auth/google", handlers.GetGoogleAuthURL)
 	r.GET("/api/auth/callback", handlers.GoogleCallback)
-	r.GET("/api/auth/dev-login", handlers.DevLogin) // Development only
+
+	// Dev-login endpoint (only in development mode)
+	if os.Getenv("DEV_MODE") == "true" {
+		r.GET("/api/auth/dev-login", handlers.DevLogin)
+		log.Println("WARNING: Dev-login endpoint enabled - NEVER enable this in production!")
+	}
 
 	// Protected routes
 	authorized := r.Group("/api")
