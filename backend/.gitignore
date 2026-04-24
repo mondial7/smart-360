@@ -1,0 +1,44 @@
+# Go .gitignore
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+
+# Build artifacts
+/bin/
+/dist/
+/build/
+
+# Dependency directories (if using vendor)
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store

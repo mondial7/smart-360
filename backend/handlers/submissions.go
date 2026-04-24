@@ -1,0 +1,254 @@
+package handlers
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"smart360/database"
+	"smart360/models"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// Simple MongoDB-based submission handlers
+func GetRoundSubmissions(c *gin.Context) {
+	roundID := c.Param("roundId")
+	db := database.GetDB()
+	ctx := context.Background()
+
+	fmt.Printf("GetRoundSubmissions called for roundID: %s\n", roundID)
+
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
+	if err != nil {
+		fmt.Printf("Error converting roundID to ObjectID: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	// Get all submissions for this round
+	cursor, err := db.Collection("submissions").Find(ctx, bson.M{"round_id": roundObjID})
+	if err != nil {
+		fmt.Printf("Error finding submissions: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var submissions []models.Submission
+	if err = cursor.All(ctx, &submissions); err != nil {
+		fmt.Printf("Error decoding submissions: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode submissions"})
+		return
+	}
+
+	fmt.Printf("Found %d submissions for round %s\n", len(submissions), roundID)
+	c.JSON(http.StatusOK, submissions)
+}
+
+func GetSubmissionDetails(c *gin.Context) {
+	submissionID := c.Param("submissionId")
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert submissionID string to ObjectID
+	submissionObjID, err := primitive.ObjectIDFromHex(submissionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	var submission models.Submission
+	err = db.Collection("submissions").FindOne(ctx, bson.M{"_id": submissionObjID}).Decode(&submission)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, submission)
+}
+
+func CheckSubmissionStatus(c *gin.Context) {
+	roundID := c.Param("roundId")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	var submission models.Submission
+	err = db.Collection("submissions").FindOne(ctx, bson.M{
+		"round_id":    roundObjID,
+		"reviewer_id": currentUser.ID,
+	}).Decode(&submission)
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"submitted": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"submitted": true, "submittedAt": submission.SubmittedAt})
+}
+
+func SubmitFeedback(c *gin.Context) {
+	var req struct {
+		RoundID   string `json:"roundId" binding:"required"`
+		Responses string `json:"responses" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert roundID string to ObjectID
+	roundObjID, err := primitive.ObjectIDFromHex(req.RoundID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	// Check if submission already exists
+	var existing models.Submission
+	err = db.Collection("submissions").FindOne(ctx, bson.M{
+		"round_id":    roundObjID,
+		"reviewer_id": currentUser.ID,
+	}).Decode(&existing)
+
+	if err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Feedback already submitted"})
+		return
+	}
+
+	// Create submission
+	submission := models.Submission{
+		RoundID:     roundObjID,
+		ReviewerID:  currentUser.ID,
+		Responses:   req.Responses,
+		SubmittedAt: time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	_, err = db.Collection("submissions").InsertOne(ctx, submission)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit feedback"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Feedback submitted successfully"})
+}
+
+func UpdateSubmission(c *gin.Context) {
+	submissionID := c.Param("id")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
+	db := database.GetDB()
+	ctx := context.Background()
+
+	// Convert submissionID string to ObjectID
+	submissionObjID, err := primitive.ObjectIDFromHex(submissionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	var req struct {
+		Responses string `json:"responses" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get existing submission to verify ownership
+	var existingSubmission models.Submission
+	err = db.Collection("submissions").FindOne(ctx, bson.M{"_id": submissionObjID}).Decode(&existingSubmission)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
+		return
+	}
+
+	// Verify user owns this submission
+	if existingSubmission.ReviewerID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to edit this submission"})
+		return
+	}
+
+	// Check if round is still active
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": existingSubmission.RoundID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	if round.Status != models.RoundActive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot edit feedback: round is no longer active"})
+		return
+	}
+
+	// Update submission
+	update := bson.M{"$set": bson.M{
+		"responses":  req.Responses,
+		"updated_at": time.Now(),
+	}}
+
+	_, err = db.Collection("submissions").UpdateOne(ctx, bson.M{"_id": submissionObjID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update submission"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Feedback updated successfully"})
+}
+
+func DebugSubmissions(c *gin.Context) {
+	db := database.GetDB()
+	ctx := context.Background()
+
+	fmt.Printf("DebugSubmissions called\n")
+
+	// Get all submissions
+	cursor, err := db.Collection("submissions").Find(ctx, bson.M{})
+	if err != nil {
+		fmt.Printf("Error finding all submissions: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var submissions []models.Submission
+	if err = cursor.All(ctx, &submissions); err != nil {
+		fmt.Printf("Error decoding all submissions: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode submissions"})
+		return
+	}
+
+	fmt.Printf("Total submissions in database: %d\n", len(submissions))
+
+	// Log each submission details
+	for i, sub := range submissions {
+		fmt.Printf("Submission %d: ID=%s, RoundID=%s, ReviewerID=%s, SubmittedAt=%v\n",
+			i+1, sub.ID.Hex(), sub.RoundID.Hex(), sub.ReviewerID.Hex(), sub.SubmittedAt)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":       len(submissions),
+		"submissions": submissions,
+	})
+}

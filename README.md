@@ -1,348 +1,344 @@
 # Smart 360 Feedback
 
-A serverless web application for collecting, consolidating, and delivering anonymous 360-degree feedback using React + TypeScript + Firebase.
+> AI-powered anonymous peer feedback platform for professional development
 
-## Features
+## What is Smart 360 Feedback?
 
-- 🔐 Google Sign-In authentication (admin + team member roles)
-- 👥 Team member management
-- 📝 Feedback rounds with deadline tracking
-- 🤖 AI-powered feedback consolidation using OpenAI GPT-4o-mini
-- 🔒 Complete anonymity for reviewers
-- 📊 Beautiful dashboard with real-time updates
+Smart 360 Feedback is a web application that enables anonymous peer feedback within organizations, using Google Gemini AI to transform raw feedback into actionable insights. Team members can submit honest, constructive feedback anonymously, and administrators can generate AI-powered consolidated reports that highlight strengths, areas for improvement, and actionable recommendations.
 
-## Tech Stack
+### Key Features
 
-- **Frontend**: React 18 + TypeScript + Vite + Material-UI
-- **Backend**: Firebase (Firestore, Auth, Cloud Functions)
-- **AI**: OpenAI GPT-4o-mini for feedback consolidation
-- **Deployment**: Firebase Hosting
+- **Anonymous Feedback Submission** - 4-question structured format ensures comprehensive feedback
+- **AI-Powered Consolidation** - Google Gemini analyzes and synthesizes feedback into actionable insights
+- **Google OAuth Authentication** - Secure, familiar login experience
+- **Role-Based Access Control** - Admin, Team Admin, and Member roles with appropriate permissions
+- **Automated Round Management** - Create, schedule, and manage feedback rounds with ease
+- **Real-Time Dashboards** - Track feedback status, pending submissions, and received feedback
+- **Team Management** - Organize users into teams with dedicated team administrators
 
-## Prerequisites
+## Technology Stack
 
-- Node.js 18+ (Cloud Functions requirement)
-- Firebase CLI (\`npm install -g firebase-tools\`)
-- Firebase project (create at https://console.firebase.google.com)
+- **Backend:** Go 1.25.1 + Gin framework + MongoDB
+- **Frontend:** Vue.js 3 + TypeScript + Vite
+- **Database:** MongoDB 8.0
+- **AI:** Google Gemini API
+- **Deployment:** Docker + Docker Compose
 
-## Getting Started
+## Quick Start
 
-### 1. Install Dependencies
+### Prerequisites
 
-\`\`\`bash
-# Install root dependencies
-npm install
+Before you begin, ensure you have:
 
-# Install Cloud Functions dependencies
-cd functions
-npm install
-cd ..
-\`\`\`
+- **Docker** and **Docker Compose** installed ([Get Docker](https://docs.docker.com/get-docker/))
+- **Google OAuth credentials** ([Setup Guide](#google-oauth-setup))
+- **Gemini API key** ([Get API Key](#gemini-api-setup))
 
-### 2. Configure Environment Variables
+### Installation
 
-Create \`.env.local\` in the root directory:
+1. **Clone the repository**
 
-\`\`\`env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-\`\`\`
+```bash
+git clone https://github.com/yourusername/smart-360-in-go.git
+cd smart-360-in-go
+```
 
-### 3. Configure OpenAI API Key (for AI Consolidation)
+2. **Configure environment variables**
 
-\`\`\`bash
-# For local development (emulators)
-export OPENAI_API_KEY="sk-..."
+```bash
+cp .env.example .env
+```
 
-# For production deployment
-firebase functions:config:set openai.api_key="sk-..."
-\`\`\`
+Edit `.env` with your favorite editor and fill in the required values:
 
-### 4. Run Development Server
+```bash
+nano .env
+# or
+vim .env
+# or
+code .env
+```
 
-The \`npm dev\` command starts both the frontend (Vite) and Firebase emulators:
+3. **Start the application**
 
-\`\`\`bash
-npm dev
-\`\`\`
+```bash
+docker-compose up -d
+```
 
-This will start:
-- **Frontend**: http://localhost:5173
-- **Firebase Emulator UI**: http://localhost:4000
-- **Firestore Emulator**: localhost:8080
-- **Auth Emulator**: localhost:9099
-- **Functions Emulator**: localhost:5001
+This will start all three services (MongoDB, Backend, Frontend) and initialize the database.
 
-### Individual Development Scripts
+4. **Access the application**
 
-If you need to run services separately:
+- **Frontend:** http://localhost
+- **Backend API:** http://localhost:8080 (internal only, proxied by frontend)
 
-\`\`\`bash
-# Frontend only
-npm run dev:frontend
+### First-Time Setup
 
-# Firebase emulators only
-npm run dev:firebase
+1. Navigate to http://localhost and click "Login with Google"
+2. The first user to log in will automatically become an **administrator**
+3. Admins can promote other users to admin or team admin roles via the Users page
+4. Start creating feedback rounds from the dashboard!
 
-# Cloud Functions build watch mode (auto-rebuild on changes)
-npm run dev:functions
-\`\`\`
+## Configuration
 
-## Local Development
+All configuration is managed via the `.env` file in the root directory. Below is a complete reference:
 
-When you run \`npm dev\`, the Firebase emulators will:
-- Import data from \`./firebase-export\` (if it exists)
-- Export data on exit to preserve your local development data
-- This allows you to maintain local test users and feedback rounds between sessions
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `MONGO_ROOT_USER` | Yes | MongoDB admin username | `admin` |
+| `MONGO_ROOT_PASSWORD` | Yes | MongoDB admin password | `password123` |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID | - |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret | - |
+| `GOOGLE_REDIRECT_URL` | No | OAuth callback URL | `http://localhost:8080/api/auth/callback` |
+| `FRONTEND_URL` | No | Frontend URL for CORS | `http://localhost` |
+| `FRONTEND_PORT` | No | Port to expose frontend | `80` |
+| `JWT_SECRET` | Yes | Secret for JWT token signing | - |
+| `GEMINI_API_KEY` | Yes | Google Gemini API key | - |
 
-**First Time Setup:**
-1. Run \`npm dev\`
-2. Open http://localhost:5173
-3. Sign in with Google (creates your admin user automatically)
-4. Create test team members and feedback rounds
-5. When you stop the dev server (Ctrl+C), data is saved to \`firebase-export/\`
-6. Next time you run \`npm dev\`, your data will be restored
+### Security Notes
 
-## Building for Production
+- **Change default passwords** - Update `MONGO_ROOT_PASSWORD` and `JWT_SECRET` before deploying
+- **Generate strong JWT secret** - Use `openssl rand -base64 32` to generate a random secret
+- **Protect your .env file** - Never commit `.env` to version control
 
-\`\`\`bash
-# Build frontend
-npm run build
+## Google OAuth Setup
 
-# Build Cloud Functions
-npm run build:functions
+To enable Google authentication, you'll need to create OAuth credentials:
 
-# Preview production build locally
-npm run preview
-\`\`\`
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new project or select an existing one
+3. Click **"Create Credentials"** → **"OAuth client ID"**
+4. Choose **"Web application"**
+5. Add **Authorized redirect URI**: `http://localhost:8080/api/auth/callback`
+6. For production, add your domain: `https://yourdomain.com/api/auth/callback`
+7. Copy the **Client ID** and **Client Secret** to your `.env` file
 
-## Deployment
+For detailed setup instructions, see the [Google OAuth documentation](https://developers.google.com/identity/protocols/oauth2).
 
-### Deploy Everything
+## Gemini API Setup
 
-\`\`\`bash
-firebase deploy
-\`\`\`
+The AI consolidation feature requires a Gemini API key:
 
-### Deploy Specific Services
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **"Create API Key"**
+4. Copy the key to your `.env` file as `GEMINI_API_KEY`
 
-\`\`\`bash
-# Deploy only Firestore rules
-firebase deploy --only firestore:rules
+**Note:** The Gemini API has usage limits. Monitor your usage in the [Google Cloud Console](https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas).
 
-# Deploy only Cloud Functions
-firebase deploy --only functions
+## Docker Commands
 
-# Deploy only hosting (frontend)
-firebase deploy --only hosting
-\`\`\`
+### Basic Operations
 
-## Available Scripts
+```bash
+# Start all services
+docker-compose up -d
 
-- \`npm dev\` - Run frontend + Firebase emulators concurrently
-- \`npm run dev:frontend\` - Run Vite development server only
-- \`npm run dev:firebase\` - Run Firebase emulators only
-- \`npm run dev:functions\` - Watch mode for Cloud Functions
-- \`npm run build\` - Build frontend for production
-- \`npm run build:functions\` - Build Cloud Functions
-- \`npm run lint\` - Run ESLint
-- \`npm run preview\` - Preview production build locally
+# View logs (all services)
+docker-compose logs -f
 
-## Firebase Emulators
+# View logs (specific service)
+docker-compose logs -f backend
 
-The project uses Firebase Local Emulator Suite for development:
+# Stop all services
+docker-compose down
 
-- **Auth Emulator** (port 9099): Test Google Sign-In locally
-- **Firestore Emulator** (port 8080): Local database
-- **Functions Emulator** (port 5001): Test Cloud Functions
-- **Emulator UI** (port 4000): Visual interface for all emulators
+# Stop and remove all data (WARNING: deletes database!)
+docker-compose down -v
+```
 
-## Security
+### Rebuilding After Code Changes
 
-- Firestore security rules enforce role-based access
-- Only admins can read feedback submissions (ensures anonymity)
-- Subjects can only read their own consolidated feedback
-- Cloud Functions validate permissions server-side
+```bash
+# Rebuild and restart
+docker-compose up -d --build
 
-## Phases Completed
+# Rebuild specific service
+docker-compose up -d --build backend
+```
 
-✅ **Phase 1**: Project Foundation & Authentication
-✅ **Phase 2**: User Role Management
-✅ **Phase 3**: Feedback Rounds - Creation & Management
-✅ **Phase 4**: Feedback Submission
-✅ **Phase 5**: AI-Powered Feedback Consolidation
-✅ **Phase 6**: Feedback Delivery to Subject
-✅ **Phase 7**: Polish & Production Readiness
+### Service Management
 
-## Production Deployment Checklist
+```bash
+# View service status
+docker-compose ps
 
-### 1. Firebase Project Setup
+# Restart a specific service
+docker-compose restart backend
 
-Ensure your Firebase project is on the **Blaze (Pay-as-you-go) plan** for Cloud Functions.
+# View resource usage
+docker stats
+```
 
-### 2. Configure Environment Variables
+## Development
 
-Set production environment variables:
+For development setup, building from source, and contributing guidelines, see:
 
-\`\`\`bash
-# Set OpenAI API key for Cloud Functions
-firebase functions:config:set openai.api_key="sk-your-production-key"
-
-# Set app URL for email links
-firebase functions:config:set app.url="https://your-domain.com"
-
-# Optional: Configure email service (SendGrid, AWS SES, etc.)
-firebase functions:config:set sendgrid.api_key="your-sendgrid-key"
-\`\`\`
-
-### 3. Deploy Firestore Indexes
-
-Deploy indexes before deploying functions to avoid query errors:
-
-\`\`\`bash
-firebase deploy --only firestore:indexes
-\`\`\`
-
-### 4. Deploy Security Rules
-
-\`\`\`bash
-firebase deploy --only firestore:rules
-\`\`\`
-
-### 5. Build and Deploy Cloud Functions
-
-\`\`\`bash
-npm run build:functions
-firebase deploy --only functions
-\`\`\`
-
-### 6. Build and Deploy Frontend
-
-\`\`\`bash
-npm run build
-firebase deploy --only hosting
-\`\`\`
-
-### 7. Deploy Everything
-
-Or deploy everything at once:
-
-\`\`\`bash
-npm run build
-npm run build:functions
-firebase deploy
-\`\`\`
-
-### 8. Post-Deployment Configuration
-
-#### Enable Email Notifications (Optional)
-
-To enable email notifications, integrate with an email service:
-
-**Option A: SendGrid**
-\`\`\`bash
-cd functions
-npm install @sendgrid/mail
-firebase functions:config:set sendgrid.api_key="your-key"
-\`\`\`
-
-Then uncomment the SendGrid code in \`functions/src/services/emailService.ts\`
-
-**Option B: Gmail SMTP**
-Use nodemailer with Gmail App Password (not recommended for production)
-
-**Option C: AWS SES**
-Use AWS SES for reliable email delivery
-
-#### Configure Custom Domain (Optional)
-
-1. Go to Firebase Console → Hosting
-2. Add custom domain
-3. Follow DNS configuration instructions
-4. Update \`app.url\` config: \`firebase functions:config:set app.url="https://your-domain.com"\`
-
-#### Set Up Monitoring
-
-1. Enable Firebase Performance Monitoring
-2. Set up Cloud Function alerts in Firebase Console
-3. Configure budget alerts in Google Cloud Console
-4. Monitor Firestore usage and quotas
-
-### 9. Testing in Production
-
-1. Sign in with your Google account (first user becomes admin)
-2. Test complete feedback flow:
-   - Create team members
-   - Create feedback round
-   - Submit feedback as reviewer
-   - Consolidate with AI
-   - Share with subject
-3. Verify email notifications (if enabled)
-4. Check Cloud Function logs for errors
-
-## Email Notifications
-
-The app includes email notification triggers for:
-
-- **Feedback Request**: When reviewers are assigned to a feedback round
-- **Deadline Reminders**: Automated reminders 3 days and 1 day before deadline (runs daily at 9 AM)
-- **Feedback Shared**: When admin shares consolidated feedback with subject
-
-Email notifications are logged by default. To enable actual sending:
-1. Configure an email service (SendGrid, AWS SES, etc.)
-2. Update \`functions/src/services/emailService.ts\` with your provider
-3. Redeploy Cloud Functions
-
-## Performance & Scalability
-
-- **Firestore Indexes**: All necessary composite indexes are defined in \`firestore.indexes.json\`
-- **Cloud Functions**: Use Node.js 18, optimized for cold starts
-- **Frontend**: Vite build with code splitting and lazy loading ready
-- **Caching**: Client-side caching via Firebase SDK
-- **Real-time Updates**: Firestore listeners for live data sync
-
-## Cost Optimization
-
-- **Firestore**: ~$0.06 per 100K reads, $0.18 per 100K writes
-- **Cloud Functions**: Free tier: 2M invocations/month, 400K GB-seconds/month
-- **OpenAI**: GPT-4o-mini is ~$0.15 per 1M input tokens (~$0.005 per consolidation)
-- **Hosting**: Free for most use cases (10 GB transfer/month)
-
-**Estimated monthly cost for small team (20 users, 10 rounds/month):**
-- Firestore: ~$1-2
-- Cloud Functions: Free tier
-- OpenAI: ~$0.05
-- **Total: ~$1-2/month**
+- **Development Guide:** [.claude/CLAUDE.md](.claude/CLAUDE.md)
+- **Contributing:** We welcome contributions! Please open an issue to discuss before submitting PRs.
 
 ## Troubleshooting
 
-### Cloud Functions not triggering
+### Frontend shows connection error
 
-\`\`\`bash
-# Check function logs
-firebase functions:log
+**Symptoms:** Frontend loads but shows "Unable to connect to server" or API errors
 
-# Verify function deployment
-firebase functions:list
-\`\`\`
+**Solutions:**
+1. Check backend is running: `docker-compose ps`
+2. View backend logs: `docker-compose logs backend`
+3. Ensure MongoDB is healthy: `docker-compose ps mongodb`
+4. Verify environment variables in `.env`
 
-### Firestore permission denied
+### OAuth login fails
 
-1. Verify you're signed in
-2. Check Firestore rules are deployed: \`firebase deploy --only firestore:rules\`
-3. Verify user role in Firestore console
+**Symptoms:** Redirected to Google but error after authorization
 
-### Email notifications not sending
+**Solutions:**
+1. Verify `GOOGLE_REDIRECT_URL` in `.env` matches OAuth credentials
+2. Check `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are correct
+3. Ensure frontend URL is added to "Authorized JavaScript origins" in Google Console
+4. Check backend logs for detailed error: `docker-compose logs backend`
 
-1. Check Cloud Function logs: \`firebase functions:log --only sendDeadlineReminders\`
-2. Verify email service configuration
-3. Check \`functions:config\` settings: \`firebase functions:config:get\`
+### AI consolidation fails
 
-### OpenAI API errors
+**Symptoms:** "Failed to generate consolidation" error
 
-1. Verify API key: \`firebase functions:config:get openai\`
-2. Check API key has sufficient credits
-3. Review function logs for specific error messages
+**Solutions:**
+1. Verify `GEMINI_API_KEY` is set correctly in `.env`
+2. Check Gemini API quota: [Google Cloud Console](https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas)
+3. View backend logs for detailed error: `docker-compose logs backend`
+4. Ensure internet connectivity from Docker containers
+
+### Port 80 already in use
+
+**Symptoms:** `docker-compose up` fails with "port 80 is already in use"
+
+**Solutions:**
+1. Change `FRONTEND_PORT` in `.env` to another port (e.g., `3000`)
+2. Access frontend at `http://localhost:3000`
+3. Or, stop the service using port 80 (e.g., Apache, nginx)
+
+### Database connection fails
+
+**Symptoms:** Backend logs show MongoDB connection errors
+
+**Solutions:**
+1. Ensure MongoDB container is running: `docker-compose ps mongodb`
+2. Check MongoDB logs: `docker-compose logs mongodb`
+3. Verify MongoDB credentials in `.env`
+4. Wait for MongoDB health check to pass (can take 20-30 seconds on first start)
+
+### Services start in wrong order
+
+**Symptoms:** Backend fails because MongoDB isn't ready
+
+**Solutions:**
+1. Docker Compose uses health checks to ensure proper startup order
+2. If issues persist, restart: `docker-compose restart backend`
+3. Check health check status: `docker-compose ps`
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│          Frontend (nginx:80)            │
+│      Vue.js 3 + TypeScript + Vite       │
+│         Serves static files             │
+└──────────────────┬──────────────────────┘
+                   │
+          /api requests proxied to backend
+                   │
+┌──────────────────▼──────────────────────┐
+│         Backend (:8080)                 │
+│       Go + Gin Framework                │
+│   REST API + OAuth + JWT + Gemini AI    │
+└──────────────────┬──────────────────────┘
+                   │
+            mongodb://mongodb:27017
+                   │
+┌──────────────────▼──────────────────────┐
+│         MongoDB (:27017)                │
+│        Document Database                │
+│   Collections: users, rounds,           │
+│   submissions, consolidations           │
+└─────────────────────────────────────────┘
+```
+
+## User Roles
+
+| Role | Capabilities |
+|------|-------------|
+| **Admin** | Full access: Create rounds, assign reviewers, consolidate feedback, manage users, manage teams |
+| **Team Admin** | Manage team members, create rounds for team, view team feedback |
+| **Member** | Submit feedback, view received feedback, participate in rounds |
+
+## How It Works
+
+### 1. Create a Feedback Round
+
+Admins create a feedback round for a subject (the person receiving feedback):
+- Select the subject
+- Choose reviewers (peers who will submit feedback)
+- Set a deadline
+- Start the round
+
+### 2. Submit Feedback
+
+Reviewers receive 4 questions about the subject:
+- What does this person do well?
+- What could they improve?
+- What specific actions would help their growth?
+- Additional comments
+
+Submissions are **anonymous** - the subject won't know who wrote what.
+
+### 3. AI Consolidation
+
+Once all feedback is submitted (or the deadline passes), admins trigger AI consolidation:
+- Google Gemini analyzes all responses
+- Identifies common themes and patterns
+- Generates executive summary
+- Lists key strengths
+- Highlights areas for improvement
+- Provides actionable insights
+
+### 4. Share Feedback
+
+Admins review the consolidation, optionally add notes, and share it with the subject. The subject can then view their comprehensive feedback report in the dashboard.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- **Documentation:** [PRD.md](PRD.md) | [PRODUCT-OVERVIEW.md](PRODUCT-OVERVIEW.md)
+- **Issues:** [GitHub Issues](https://github.com/yourusername/smart-360-in-go/issues)
+- **Development Guide:** [.claude/CLAUDE.md](.claude/CLAUDE.md)
+
+## Roadmap
+
+See [NEXT_STEPS.md](NEXT_STEPS.md) for planned features and improvements, including:
+
+- Email notifications
+- PDF export for feedback
+- Custom question templates
+- Analytics dashboard
+- Multi-language support
+- And much more!
+
+## Contributing
+
+Contributions are welcome! To contribute:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+Please read [.claude/CLAUDE.md](.claude/CLAUDE.md) for development setup and coding guidelines.
+
+---
+
+**Built with ❤️ using Go, Vue.js, and Google Gemini AI**
