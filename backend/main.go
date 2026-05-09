@@ -107,9 +107,13 @@ func main() {
 		// Consolidations (admin only for generation)
 		authorized.POST("/rounds/:id/consolidate", middleware.AdminOnly(), handlers.ConsolidateFeedback)
 		authorized.GET("/consolidations/:roundId", handlers.GetConsolidation)
+		authorized.GET("/consolidations/:roundId/pdf", handlers.DownloadConsolidationPDF)
 		authorized.PUT("/consolidations/:id", middleware.AdminOnly(), handlers.UpdateConsolidation)
 		authorized.PUT("/consolidations/:id/notes", middleware.AdminOnly(), handlers.UpdateConsolidationNotes)
 		authorized.POST("/consolidations/:id/share", middleware.AdminOnly(), handlers.ShareConsolidation)
+
+		// Analytics
+		authorized.GET("/analytics/me", handlers.GetMyAnalytics)
 
 		// Audit logs (admin only)
 		authorized.GET("/audit-logs", middleware.AdminOnly(), handlers.GetAuditLogs)
