@@ -1,762 +1,285 @@
 # Smart 360 Feedback - Next Steps & Future Improvements
 
-This document outlines potential enhancements, features, and technical improvements for Smart 360 Feedback. The roadmap is organized by priority and includes implementation approaches and effort estimates.
+This document outlines potential enhancements, features, and technical improvements for Smart 360 Feedback.
+
+> **Already shipped** — see [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) for the full list. Highlights: AI consolidation, role-based access, anonymous submissions, PDF export of consolidated feedback, and personal analytics with a feedback radar on the user dashboard.
 
 ---
 
-## High Priority Features
+## High Priority
 
-### 1. Email Notifications
+### 1. Feedback Analytics — Admin View
 
-**Current State:** No email system implemented
-
-**Proposal:**
-- Send email when reviewer is assigned to a feedback round
-- Deadline reminders (3 days before, 1 day before, on deadline day)
-- Notification when consolidated feedback is shared with subject
-- Weekly digest of pending feedback requests
-- Customizable email preferences per user
-
-**Implementation Approach:**
-- Use SendGrid or AWS SES for email delivery
-- Create HTML + plain text email templates
-- Add email queue system (Redis + background worker) for reliability
-- Store email preferences in user model (notifications_enabled, reminder_frequency)
-- Add email service in `backend/services/email.go`
-- Create email templates in `backend/templates/emails/`
-
-**Estimated Effort:** Medium (2-3 days)
-
-**Benefits:**
-- Increases engagement and response rates
-- Reduces administrative burden of manual reminders
-- Improves user experience with timely notifications
-
----
-
-### 2. PDF Export for Consolidated Feedback
-
-**Current State:** Feedback only viewable in web UI
+**Current State:** Personal analytics shipped on the user dashboard (received counts, latest-round radar, strengths/improvements/insights trend bars). No org-level analytics yet.
 
 **Proposal:**
-- Export consolidated feedback as professionally formatted PDF
-- Include company logo and branding
-- Downloadable from "My Feedback" page
-- Option to email PDF directly to user
-- Print-friendly layout for offline review
-
-**Implementation Approach:**
-- Use Go library: `github.com/jung-kurt/gofpdf` or `github.com/johnfercher/maroto`
-- Create PDF template service in `backend/services/pdf.go`
-- Add download endpoint: `GET /api/consolidations/:id/pdf`
-- Frontend download button triggers blob download
-- Include charts/visualizations if applicable
-
-**Estimated Effort:** Small-Medium (1-2 days)
-
-**Benefits:**
-- Enables offline review and sharing
-- Professional presentation for HR records
-- Better accessibility for non-tech users
-
----
-
-### 3. Custom Question Templates
-
-**Current State:** Fixed 4-question format for all feedback rounds
-
-**Proposal:**
-- Admins can create custom question templates
-- Select template when creating feedback round
-- Pre-defined templates (leadership skills, technical skills, collaboration, project-specific)
-- Custom templates with 3-10 configurable questions
-- Question types: text, rating scale, multiple choice
-
-**Implementation Approach:**
-- New collection: `question_templates`
-  - Fields: name, description, questions (array), created_by, is_default
-- Add `template_id` field to `feedback_rounds`
-- Update frontend round creation wizard with template selector
-- Modify consolidation prompt to handle variable questions
-- Seed default templates for common use cases
-- Update submissions model to store template-specific responses
-
-**Estimated Effort:** Medium-Large (3-4 days)
-
-**Benefits:**
-- Flexibility for different feedback scenarios
-- Targeted feedback for specific skills or projects
-- Reusable templates save time
-
----
-
-### 4. Feedback Analytics Dashboard
-
-**Current State:** No trend analysis or historical insights
-
-**Proposal:**
-
-**Admin Dashboard:**
 - Average submission rate over time (chart)
-- Most common strengths/improvements (word cloud)
+- Most common strengths/improvements (themes / word cloud)
 - Feedback frequency per user (table)
-- Response time metrics (time to submit after assignment)
+- Response time metrics (assignment → submission)
 - Completion rates by team
 
-**User Dashboard:**
-- Personal trend over multiple rounds (strengths/improvements over time)
-- Strengths/improvements comparison (current vs previous rounds)
-- Growth tracking visualization
-- Actionable insights progress (check off completed items)
-
 **Implementation Approach:**
-- Create aggregation pipelines in MongoDB for analytics
-- Use Chart.js or ApexCharts for visualization
-- Cache results for performance (Redis or in-memory)
-- Add `/api/analytics` endpoints for various metrics
-- Create `AnalyticsView.vue` for admin
-- Add personal analytics section to user dashboard
+- Aggregation pipelines in MongoDB
+- New `/api/analytics/admin` endpoint
+- Reuse the existing `RadarChart` / bar primitives in a new `AnalyticsView.vue`
+- Cache results in-memory with short TTL
 
-**Estimated Effort:** Large (5-7 days)
-
-**Benefits:**
-- Data-driven insights into team performance
-- Identify trends and patterns across organization
-- Track individual growth over time
-- Improve feedback culture visibility
+**Estimated Effort:** Medium-Large (3-5 days)
 
 ---
 
-### 5. Automated Testing
+### 2. Frontend Type-Safety Cleanup
 
-**Current State:** Manual testing only
+**Current State:** `npm run build` (which runs `vue-tsc`) reports ~29 TypeScript errors across 7 view files. Vite dev server still works because it skips type-checking; production build is blocked.
+
+**Hot spots:**
+- `CreateRoundView.vue` — `number | null` vs `string` mismatch on numeric inputs.
+- `RoundDetailsView.vue` — null-safety on `round` and missing `.value` accesses.
+- Several views have unused imports (`User`, `auth`, `router`, `getStatusColor`, `consRes`, `formatDateTime`, etc.).
+- `ConsolidationView.vue` — unused destructured names in `v-for`.
+
+**Estimated Effort:** Small (1 day)
+
+---
+
+### 3. Automated Testing — Frontend
+
+**Current State:** Backend has a three-phase test pyramid (unit, in-memory fakes, real-MongoDB gateway). Frontend has none.
 
 **Proposal:**
-
-**Backend Testing:**
-- Unit tests with Go `testing` package
-- Integration tests with test database
-- API endpoint tests
-- Auth middleware tests
-- Database query tests
-- Minimum 70% code coverage
-
-**Frontend Testing:**
-- Unit tests with Vitest
-- Component tests for Vue components
+- Vitest + Vue Test Utils for component tests
 - Integration tests for stores and API client
-- E2E tests with Playwright or Cypress
-- Accessibility tests
+- Playwright or Cypress for end-to-end happy paths
+- Add a CI workflow that runs both backend and frontend test suites on PR
 
-**CI/CD Integration:**
-- GitHub Actions workflow to run tests on PR
-- Block merge if tests fail
-- Code coverage reporting
-- Automated deployment to staging on merge to main
-
-**Implementation Approach:**
-```
-backend/
-  handlers/
-    auth_test.go
-    consolidation_test.go
-    rounds_test.go
-  database/
-    db_test.go
-    seed_test.go
-
-frontend/
-  src/
-    components/
-      __tests__/
-        NavBar.spec.ts
-        FeedbackForm.spec.ts
-    stores/
-      __tests__/
-        auth.spec.ts
-
-.github/
-  workflows/
-    ci.yml
-    deploy.yml
-```
-
-**Estimated Effort:** Large (5-7 days)
-
-**Benefits:**
-- Catch bugs before production
-- Confidence in refactoring
-- Faster development with regression testing
-- Professional development practices
+**Estimated Effort:** Medium-Large (4-6 days)
 
 ---
 
-## Medium Priority Features
+## Medium Priority
 
-### 6. Multi-Language Support (i18n)
+### 4. 360 Comparison Across Rounds
 
-**Implementation:**
-- Use `vue-i18n` for frontend internationalization
-- Store user language preference in database
-- Translate UI strings, emails, AI prompts
-- Support languages: English, Spanish, French, German, Portuguese
-- RTL support for Arabic/Hebrew (future)
-- Locale-specific date/time formatting
-
-**Estimated Effort:** Medium (3-4 days)
-
-**Benefits:**
-- Expand global reach
-- Better user experience for non-English speakers
-- Compliance with localization requirements
-
----
-
-### 7. Slack/Teams Integration
-
-**Implementation:**
-- Webhook notifications for round assignments
-- Slack bot commands for submitting feedback
-- Daily reminders in Slack channels
-- OAuth integration for user mapping
-- Slash commands: `/feedback list`, `/feedback submit`
-- Interactive message components for quick actions
+Show feedback evolution over time:
+- Side-by-side comparison of multiple consolidated rounds
+- Trend arrows (improving / declining themes)
+- Highlight persistent areas
+- Personal growth tracking dashboard
 
 **Estimated Effort:** Medium-Large (4-5 days)
 
-**Benefits:**
-- Meet users where they work
-- Reduce friction in feedback submission
-- Increase engagement through familiar tools
+---
+
+### 5. Slack / Teams Integration
+
+- Webhook notifications for round assignments
+- Slack slash commands: `/feedback list`, `/feedback submit`
+- Daily reminders posted to channels
+- OAuth-based user mapping
+
+**Estimated Effort:** Medium-Large (4-5 days)
 
 ---
 
-### 8. Anonymous Comments on Shared Feedback
+### 6. Anonymous Comments on Shared Feedback
 
-**Implementation:**
-- Allow subject to request clarification on feedback
-- Reviewers can optionally respond anonymously
-- Threaded discussion view in UI
-- Notifications for new comments
-- Admin moderation capabilities
-- Time limit for comment threads (e.g., 2 weeks after sharing)
+- Subjects can request clarification on consolidated feedback
+- Reviewers can respond anonymously (threaded)
+- Time-bound (e.g., 2 weeks after sharing)
+- Admin moderation tools
 
 **Estimated Effort:** Medium (3-4 days)
-
-**Benefits:**
-- Deeper understanding of feedback
-- Ongoing dialogue while maintaining anonymity
-- Clarification without revealing identities
-
----
-
-### 9. Feedback Templates & AI Suggestions
-
-**Implementation:**
-- AI-powered suggestions as user types feedback
-- Example responses for each question
-- "Common strengths" auto-complete
-- Tone checker (ensure constructive feedback)
-- Grammar and spelling suggestions
-- Template responses for common scenarios
-
-**Estimated Effort:** Medium (2-3 days)
-
-**Benefits:**
-- Help users write better feedback
-- Reduce blank responses
-- Ensure constructive, actionable feedback
-
----
-
-### 10. Mobile App (PWA or Native)
-
-**Implementation:**
-
-**Progressive Web App (PWA):**
-- Convert frontend to PWA with service worker
-- Offline support for reading feedback
-- Push notifications for deadlines
-- Add to home screen capability
-- Responsive design improvements
-
-**Native App (Alternative):**
-- React Native app for iOS/Android
-- Native push notifications
-- Biometric authentication
-- Offline-first architecture
-
-**Estimated Effort:** Large (PWA: 2-3 days, Native: 10-15 days)
-
-**Benefits:**
-- Better mobile experience
-- Push notifications increase engagement
-- Offline access to feedback
 
 ---
 
 ## Technical Improvements
 
-### 11. Enhanced Security
+### 7. Enhanced Security
 
-**Proposals:**
-
-**a) Rate Limiting:**
-- Prevent brute force attacks
-- Use `golang.org/x/time/rate` or Redis
-- Limits: 100 req/min per IP for public endpoints, 1000 req/min for authenticated
-- Configurable per endpoint
-
-**b) CSRF Protection:**
-- Add CSRF tokens for state-changing operations
-- Use `github.com/utrack/gin-csrf`
-- Double-submit cookie pattern
-
-**c) Content Security Policy:**
-- Add CSP headers to nginx config
-- Prevent XSS attacks
-- Restrict inline scripts and styles
-
-**d) Input Validation:**
-- Sanitize all user inputs
-- Use `github.com/go-playground/validator/v10` (already imported)
-- Whitelist approach for allowed characters
-
-**e) Secrets Management:**
-- Use Docker secrets instead of .env in production
-- HashiCorp Vault integration for enterprise
-- Rotate secrets regularly
+- Rate limiting (`golang.org/x/time/rate` or Redis) on public + auth endpoints
+- CSRF protection for state-changing operations
+- Content Security Policy headers via nginx
+- Input sanitization with `go-playground/validator`
+- Production secrets management (Docker secrets / Vault)
 
 **Estimated Effort:** Medium (3-4 days)
 
-**Benefits:**
-- Protect against common vulnerabilities
-- Compliance with security standards
-- User trust and data protection
-
 ---
 
-### 12. Performance Optimization
+### 8. Performance Optimization
 
-**Database:**
-- Add compound indexes for complex queries
-- Implement query result caching (Redis)
-- Connection pooling optimization
-- Regular index analysis with MongoDB profiler
-- Sharding strategy for scale
-
-**Backend:**
-- Gzip compression for API responses
-- Response caching for read-heavy endpoints
-- Lazy loading for large datasets
-- Pagination for all list endpoints
-- Database query optimization
-
-**Frontend:**
-- Code splitting with dynamic imports
-- Lazy load components (route-based)
-- Image optimization (WebP format, lazy loading)
-- Service worker for caching API responses
-- Reduce bundle size (tree-shaking, minimize dependencies)
+- Compound MongoDB indexes for the heaviest queries
+- Result caching for read-heavy endpoints (Redis)
+- Pagination on every list endpoint
+- Frontend code splitting + image optimization
+- Bundle-size review (tree-shaking)
 
 **Estimated Effort:** Medium (2-3 days)
 
-**Benefits:**
-- Faster page loads
-- Better user experience
-- Reduced server costs
-- Handle larger scale
-
 ---
 
-### 13. Observability & Monitoring
+### 9. Observability & Monitoring
 
-**Logging:**
-- Structured logging with `zap` or `logrus`
-- Log levels (debug, info, warn, error)
-- Request ID tracking across services
-- Log aggregation (ELK stack or Datadog)
-- Searchable logs with context
-
-**Metrics:**
-- Prometheus metrics endpoint
-- Grafana dashboards
-- Track: response times, error rates, DB query times, active users
-- Alerting on anomalies (PagerDuty, Slack)
-
-**Tracing:**
-- Distributed tracing with OpenTelemetry
-- Trace requests from frontend → backend → DB → external APIs
-- Visualize latency bottlenecks
+- Structured logging (`zap` or `logrus`) with request IDs
+- Prometheus metrics + Grafana dashboards
+- OpenTelemetry distributed tracing
+- Alerting on error rate / latency anomalies
 
 **Estimated Effort:** Medium-Large (4-5 days)
 
-**Benefits:**
-- Proactive issue detection
-- Faster troubleshooting
-- Performance insights
-- Production visibility
-
 ---
 
-### 14. Database Backups & Disaster Recovery
+### 10. Database Backups & Disaster Recovery
 
-**Implementation:**
-- Automated MongoDB backups (daily incremental, weekly full)
-- Backup to S3 or cloud storage with versioning
-- Point-in-time recovery capability
-- Automated restore testing (monthly)
-- Backup encryption
-- Documentation for restore procedures
-- Retention policy (30 days incremental, 1 year full)
+- Automated MongoDB backups (daily incremental, weekly full) to cloud storage
+- Point-in-time recovery
+- Monthly automated restore tests
+- Documented restore runbook
 
 **Estimated Effort:** Small-Medium (1-2 days)
 
-**Benefits:**
-- Data protection and compliance
-- Business continuity
-- Peace of mind
-
 ---
 
-### 15. CI/CD Pipeline
+### 11. CI/CD Pipeline
 
-**Implementation:**
-
-**GitHub Actions Workflow:**
-- On push to main:
-  - Run linters (gofmt, eslint)
-  - Run tests (backend + frontend)
-  - Build Docker images
-  - Push to Docker Hub or GitHub Container Registry
-  - Deploy to staging environment
-- On tag/release:
-  - Deploy to production
-  - Create GitHub release with changelog
-- Automated rollback on failure
-
-**Files:**
-```
-.github/
-  workflows/
-    ci.yml           # Test and build
-    deploy-staging.yml
-    deploy-prod.yml
-```
+GitHub Actions workflow:
+- On PR: lint + run backend & frontend tests
+- On merge to `main`: build Docker images, push to registry, deploy to staging
+- On tag: deploy to production with auto-rollback on failure
 
 **Estimated Effort:** Medium (2-3 days)
-
-**Benefits:**
-- Automated quality checks
-- Faster deployments
-- Consistent release process
-- Reduced human error
 
 ---
 
 ## DevOps & Infrastructure
 
-### 16. Kubernetes Deployment
+### 12. Kubernetes Deployment
 
-**Implementation:**
-- Create Kubernetes manifests (Deployment, Service, Ingress)
-- Helm chart for easy deployment
-- ConfigMaps and Secrets for configuration
-- Horizontal Pod Autoscaler (HPA) for auto-scaling
+- Helm chart with Deployment / Service / Ingress manifests
+- Horizontal Pod Autoscaler
 - Persistent Volumes for MongoDB
-- Rolling updates with zero downtime
-- Health checks and readiness probes
-
-**Files:**
-```
-k8s/
-  deployments/
-    backend.yaml
-    frontend.yaml
-    mongodb.yaml
-  services/
-    backend-svc.yaml
-    frontend-svc.yaml
-  ingress.yaml
-  configmap.yaml
-  secrets.yaml
-
-helm/
-  smart360/
-    Chart.yaml
-    values.yaml
-    templates/
-```
+- Rolling updates with health/readiness probes
 
 **Estimated Effort:** Large (5-7 days)
 
-**Benefits:**
-- Enterprise-grade orchestration
-- Auto-scaling for high traffic
-- High availability
-- Simplified updates
-
 ---
 
-### 17. HTTPS & Domain Setup
+### 13. HTTPS & Domain Setup
 
-**Implementation:**
-- Reverse proxy with Caddy (automatic HTTPS) or nginx + Let's Encrypt
-- Domain configuration guide
-- Automatic certificate renewal
-- HTTP → HTTPS redirect
-- HSTS headers
-- SSL/TLS best practices
+Reverse proxy (Caddy or nginx + Let's Encrypt) with auto-renewal, HSTS, and HTTP→HTTPS redirect. Required for OAuth in production.
 
 **Estimated Effort:** Small (1 day)
 
-**Benefits:**
-- Secure communication
-- Required for OAuth in production
-- SEO benefits
-- User trust
-
 ---
 
-### 18. Multi-Tenancy Support
+### 14. Multi-Tenancy Support
 
-**Implementation:**
-- Isolate data by organization/tenant
-- Subdomain routing (org1.smart360.com, org2.smart360.com)
-- Tenant-specific configuration (branding, email templates)
-- Tenant management dashboard
-- Billing and usage tracking per tenant
-- Data migration tools
-- Tenant-aware indexes
+Isolate data by organization, subdomain routing, per-tenant configuration, billing/usage tracking. Significant scope — only attempt if pursuing a SaaS model.
 
 **Estimated Effort:** Very Large (10-15 days)
 
-**Benefits:**
-- SaaS model readiness
-- Serve multiple organizations
-- Revenue potential
-- Scalable business model
-
 ---
 
-## Documentation Improvements
+## Documentation
 
-### 19. Contributing Guidelines
+### 15. Contributing Guidelines
 
-**Create:** `CONTRIBUTING.md`
-
-**Contents:**
-- How to set up development environment
-- Code style guidelines
-- Pull request process
-- Issue templates (bug report, feature request)
-- Code of conduct
-- Testing requirements
-- Commit message conventions
+Create `CONTRIBUTING.md` covering setup, code style, PR process, issue templates, code of conduct, commit conventions.
 
 **Estimated Effort:** Small (1 day)
 
-**Benefits:**
-- Easier onboarding for contributors
-- Consistent code quality
-- Community engagement
-
 ---
 
-### 20. API Documentation
+### 16. API Documentation
 
-**Implementation:**
-- Swagger/OpenAPI spec
-- Auto-generated from Go code using `swaggo/swag`
-- Interactive API explorer (Swagger UI)
-- Authentication examples
-- Request/response examples
-- Error code reference
-- Host at `/api/docs`
+Auto-generated OpenAPI spec via `swaggo/swag`, served at `/api/docs` with interactive Swagger UI.
 
 **Estimated Effort:** Medium (2-3 days)
-
-**Benefits:**
-- Developer experience for API consumers
-- Self-documenting code
-- Easier frontend development
-- Third-party integrations
-
----
-
-### 21. Video Tutorials
-
-**Content:**
-- Installation walkthrough (5 min)
-- Admin workflow: Creating feedback rounds (10 min)
-- Reviewer workflow: Submitting feedback (5 min)
-- Viewing consolidated feedback (5 min)
-- Troubleshooting common issues (10 min)
-- Development setup (15 min)
-
-**Estimated Effort:** Medium (2-3 days)
-
-**Benefits:**
-- Faster user onboarding
-- Reduced support burden
-- Better user experience
 
 ---
 
 ## Advanced Features
 
-### 22. Self-Nomination for Feedback
+### 17. Self-Nomination for Feedback
 
-**Implementation:**
-- Members can request feedback on themselves
-- Choose specific reviewers or let admin assign
-- Admin approval required before round activation
-- Quota system (e.g., 2 self-requests per quarter)
-- Self-nomination dashboard
+Members can request feedback on themselves (admin approval, quota system).
 
 **Estimated Effort:** Medium (3-4 days)
 
-**Benefits:**
-- Employee-driven development
-- Proactive growth mindset
-- Flexibility in feedback timing
-
 ---
 
-### 23. Peer Recognition System
+### 18. Peer Recognition System
 
-**Implementation:**
-- "Kudos" or "Shoutouts" separate from formal feedback
-- Public recognition on team dashboard
-- Badges or points system
-- Integration with consolidated feedback
-- Weekly/monthly recognition reports
-- Slack/Teams integration for public kudos
+"Kudos" / "shoutouts" separate from formal feedback. Public recognition, optional Slack/Teams broadcast.
 
 **Estimated Effort:** Medium (3-4 days)
 
-**Benefits:**
-- Positive reinforcement culture
-- Balance constructive feedback with recognition
-- Boost morale and engagement
-
 ---
 
-### 24. Manager-Specific Workflows
+### 19. Manager-Specific Workflows
 
-**Implementation:**
-- Manager role separate from admin
-- Manager can view team's consolidated feedback (with permissions)
-- Manager notes on consolidations (private, not shared with subject)
-- Manager-employee 1:1 feedback mode
-- Aggregated team insights for managers
-- Development plan tracking
+Manager role separate from admin: view team's consolidated feedback (with permissions), private manager notes, 1:1 feedback mode, development plan tracking.
 
 **Estimated Effort:** Large (5-6 days)
-
-**Benefits:**
-- Support manager coaching conversations
-- Better team development visibility
-- Structured performance management
-
----
-
-### 25. 360 Comparison Across Rounds
-
-**Implementation:**
-- Show feedback evolution over time
-- Side-by-side comparison of multiple rounds
-- Trend arrows (improving/declining areas)
-- Progress tracking dashboard
-- Highlight persistent themes
-- Growth metrics and scoring
-
-**Estimated Effort:** Large (5-7 days)
-
-**Benefits:**
-- Track long-term growth
-- Identify patterns and trends
-- Motivate continuous improvement
-- Data-driven development plans
 
 ---
 
 ## Prioritization Matrix
 
-| Priority | Feature | Impact | Effort | ROI | Dependencies |
-|----------|---------|--------|--------|-----|--------------|
-| 🔴 High | Email Notifications | High | Medium | ⭐⭐⭐ | None |
-| 🔴 High | PDF Export | Medium | Small | ⭐⭐⭐ | None |
-| 🔴 High | Automated Testing | High | Large | ⭐⭐⭐ | None |
-| 🔴 High | Custom Question Templates | High | Medium | ⭐⭐⭐ | None |
-| 🟡 Medium | Analytics Dashboard | High | Large | ⭐⭐ | None |
-| 🟡 Medium | Enhanced Security | High | Medium | ⭐⭐⭐ | None |
-| 🟡 Medium | Performance Optimization | Medium | Medium | ⭐⭐ | Monitoring |
-| 🟡 Medium | CI/CD Pipeline | High | Medium | ⭐⭐⭐ | Testing |
-| 🟢 Low | Multi-Language Support | Medium | Medium | ⭐ | None |
-| 🟢 Low | Slack Integration | Medium | Medium | ⭐ | None |
-| 🟢 Low | Multi-Tenancy | High | Very Large | ⭐ | Many |
-| 🟢 Low | Mobile App (PWA) | Medium | Medium | ⭐⭐ | None |
-| 🟢 Low | Kubernetes | Medium | Large | ⭐ | Docker |
+| Priority | Feature | Impact | Effort |
+|----------|---------|--------|--------|
+| 🔴 High | Admin Analytics Dashboard | High | Medium-Large |
+| 🔴 High | Frontend Type-Safety | Medium | Small |
+| 🔴 High | Frontend Automated Testing | High | Medium-Large |
+| 🟡 Medium | 360 Comparison | Medium | Medium-Large |
+| 🟡 Medium | Enhanced Security | High | Medium |
+| 🟡 Medium | CI/CD Pipeline | High | Medium |
+| 🟡 Medium | Slack Integration | Medium | Medium-Large |
+| 🟡 Medium | Anonymous Comments | Medium | Medium |
+| 🟢 Low | Performance Optimization | Medium | Medium |
+| 🟢 Low | Observability & Monitoring | Medium | Medium-Large |
+| 🟢 Low | DB Backups & DR | Medium | Small-Medium |
+| 🟢 Low | Kubernetes | Medium | Large |
+| 🟢 Low | Multi-Tenancy | High | Very Large |
 
 ---
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (Weeks 1-2)
-- Automated Testing
-- CI/CD Pipeline
-- Enhanced Security
+### Phase 1: Quality (Weeks 1-2)
+- Frontend type-safety cleanup
+- Frontend automated testing
+- CI/CD pipeline
+- Enhanced security
 
-### Phase 2: User Experience (Weeks 3-4)
-- Email Notifications
-- PDF Export
-- Custom Question Templates
+### Phase 2: Insights (Weeks 3-4)
+- Admin analytics dashboard
+- 360 comparison across rounds
 
-### Phase 3: Insights (Weeks 5-6)
-- Analytics Dashboard
-- 360 Comparison Across Rounds
+### Phase 3: Reach (Weeks 5-6)
+- Slack / Teams integration
+- Anonymous comments on shared feedback
 
-### Phase 4: Scale (Weeks 7-8)
-- Performance Optimization
-- Observability & Monitoring
-- Database Backups
-
-### Phase 5: Expansion (Weeks 9-12)
-- Multi-Language Support
-- Slack Integration
-- Mobile PWA
-- Advanced Features
+### Phase 4: Scale (Weeks 7-9)
+- Performance optimization
+- Observability & monitoring
+- DB backups & disaster recovery
+- HTTPS / domain hardening
 
 ---
 
 ## How to Contribute
 
-Interested in implementing any of these features? We'd love your help!
-
-1. **Check existing issues** to see if someone is already working on it
-2. **Open an issue** to discuss your approach before coding
-3. **Fork the repository** and create a feature branch
-4. **Follow the development guide** in `.claude/CLAUDE.md`
-5. **Write tests** for your changes
-6. **Submit a pull request** with a clear description
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) (to be created) for detailed guidelines.
+1. Check existing issues to see if someone is already working on it
+2. Open an issue to discuss your approach before coding
+3. Fork the repository and create a feature branch
+4. Follow [`CLAUDE.md`](CLAUDE.md) for project conventions
+5. Write tests for your changes
+6. Submit a PR with a clear description
 
 ---
 
-## Feedback Welcome
-
-This roadmap is a living document. If you have ideas for improvements or want to suggest priorities, please:
-
-- Open an issue on GitHub
-- Start a discussion
-- Submit a PR to update this document
-
----
-
-**Last Updated:** April 2026
-**Maintainer:** Smart 360 Engineering Team
-
-**Project Status:** Production-ready MVP
-**Current Version:** 1.0.0
+**Last Updated:** May 2026
+**Project Status:** Production-ready
+**Current Version:** 1.1.0

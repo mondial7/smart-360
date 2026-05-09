@@ -10,11 +10,14 @@ Smart 360 Feedback is a web application that enables anonymous peer feedback wit
 
 - **Anonymous Feedback Submission** - 4-question structured format ensures comprehensive feedback
 - **AI-Powered Consolidation** - Google Gemini analyzes and synthesizes feedback into actionable insights
+- **PDF Export** - Download a branded, print-ready PDF of any consolidated feedback shared with you
+- **Personal Analytics** - Radar chart of your latest round and a strengths/improvements/insights trend across rounds, on the user dashboard
 - **Google OAuth Authentication** - Secure, familiar login experience
 - **Role-Based Access Control** - Admin, Team Admin, and Member roles with appropriate permissions
 - **Automated Round Management** - Create, schedule, and manage feedback rounds with ease
 - **Real-Time Dashboards** - Track feedback status, pending submissions, and received feedback
 - **Team Management** - Organize users into teams with dedicated team administrators
+- **Audit Logging** - Track every status transition with the actor, timestamp, and round context
 
 ## Technology Stack
 
@@ -174,7 +177,7 @@ docker stats
 
 For development setup, building from source, and contributing guidelines, see:
 
-- **Development Guide:** [.claude/CLAUDE.md](.claude/CLAUDE.md)
+- **Project Guide:** [CLAUDE.md](CLAUDE.md) — architecture, conventions, and key tasks
 - **Contributing:** We welcome contributions! Please open an issue to discuss before submitting PRs.
 
 ## Troubleshooting
@@ -314,18 +317,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation:** [PRD.md](PRD.md) | [PRODUCT-OVERVIEW.md](PRODUCT-OVERVIEW.md)
 - **Issues:** [GitHub Issues](https://github.com/yourusername/smart-360-in-go/issues)
-- **Development Guide:** [.claude/CLAUDE.md](.claude/CLAUDE.md)
+- **Project Guide:** [CLAUDE.md](CLAUDE.md)
 
 ## Roadmap
 
 See [NEXT_STEPS.md](NEXT_STEPS.md) for planned features and improvements, including:
 
-- Email notifications
-- PDF export for feedback
-- Custom question templates
-- Analytics dashboard
-- Multi-language support
-- And much more!
+- Admin-level analytics dashboard
+- 360 comparison across rounds
+- Anonymous comments on shared feedback
+- Slack / Teams integrations
+- And more
 
 ## Contributing
 
@@ -337,7 +339,7 @@ Contributions are welcome! To contribute:
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-Please read [.claude/CLAUDE.md](.claude/CLAUDE.md) for development setup and coding guidelines.
+Please read [CLAUDE.md](CLAUDE.md) for development setup and coding guidelines.
 
 ---
 

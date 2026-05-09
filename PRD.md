@@ -24,16 +24,23 @@ Traditional 360-degree feedback processes are often:
 
 ### Administrator
 Organization leaders or HR professionals who:
-- Manage team member roster
+- Manage team member roster and team definitions
 - Initiate and coordinate feedback rounds
 - Review and consolidate feedback
 - Share results with feedback subjects
 
+### Team Administrator
+Team leads who:
+- Manage members within their team
+- Create and coordinate feedback rounds for their team
+- View consolidated feedback for their team
+
 ### Team Member
 Individual contributors who:
 - Provide feedback on peers when requested
-- Receive consolidated feedback for their own development
+- Receive consolidated feedback for their own development (in-app and as a downloadable PDF)
 - Track pending feedback requests
+- Track personal feedback insights through analytics on the dashboard
 
 ## Core Features
 
@@ -160,29 +167,52 @@ Individual contributors who:
 - Sharing: Administrator only
 - Viewing: Subject and administrators
 
-### 7. Email Notifications
+### 7. PDF Export
 
-**Capability**: Automated reminders to ensure timely feedback submission
+**Capability**: Download a branded, print-ready PDF of any consolidated feedback
 
-**Notification Types**:
+**Behavior**:
+- Available from the "My Feedback" view on each shared consolidation card
+- Endpoint: `GET /api/consolidations/:roundId/pdf`
+- Authorization rules:
+  - Admins: any consolidation
+  - Round subject: their own consolidation, only after it has been shared
+  - Round creator: consolidations for rounds they created
+- Filename pattern: `smart360-<subject-slug>-<round-date>.pdf`
 
-**Feedback Request**:
-- Sent when reviewer assigned to new round
-- Includes subject name and deadline
-- Direct link to submission form
+**Content sections** (included when populated):
+- Header with subject, round date, and shared date
+- Executive summary
+- Key strengths (bulleted)
+- Areas for improvement (bulleted)
+- Actionable insights (bulleted)
+- Question-by-question summary (4 sections)
+- Admin notes (if present)
+- Confidentiality footer
 
-**Deadline Reminders**:
-- Sent 3 days before deadline (if feedback pending)
-- Sent 1 day before deadline (if feedback pending)
-- Only sent to reviewers who haven't submitted
-- Daily check runs automatically
+**Access Control**: Subject (after sharing), round creator, admin
 
-**Feedback Shared**:
-- Sent when admin shares consolidated feedback
-- Notifies subject that feedback is available
-- Direct link to view results
+### 8. Personal Analytics
 
-### 8. Real-Time Dashboards
+**Capability**: Self-service insights on the user dashboard
+
+**Endpoint**: `GET /api/analytics/me`
+
+**Returned data**:
+- Number of consolidations shared with the user
+- Number of submissions the user has made as a reviewer
+- Pending review count
+- Per-round breakdown: round id, shared date, strengths count, improvements count, insights count, presence of behaviors/growth summaries
+- Latest-round radar axes: strengths, improvements, behaviors, growth
+
+**Visualization**:
+- Three at-a-glance counters (received / submitted / pending)
+- SVG radar chart of the latest shared round (4 axes)
+- Bar trend (strengths / improvements / insights) per shared round, ordered chronologically
+
+**Access Control**: Each user sees only their own analytics
+
+### 9. Real-Time Dashboards
 
 **Capability**: At-a-glance overview of system status and pending actions
 
@@ -214,10 +244,9 @@ Individual contributors who:
    - Sets deadline (e.g., 2 weeks)
    - Confirms and activates round
 
-2. **Reviewers receive notification**
-   - Email notification sent to all selected reviewers
-   - Includes subject name and deadline
-   - Provides direct link to submission form
+2. **Reviewers see assignment in dashboard**
+   - Pending feedback requests appear on the dashboard with deadline
+   - Direct link to submission form
 
 3. **Reviewers submit feedback**
    - Access pending feedback from dashboard
@@ -225,31 +254,27 @@ Individual contributors who:
    - Submit anonymously before deadline
    - Receive confirmation
 
-4. **Automated deadline reminders**
-   - System sends reminder 3 days before deadline
-   - Final reminder sent 1 day before deadline
-   - Only sent to reviewers who haven't submitted
-
-5. **Round closes at deadline**
-   - Status automatically changes to "closed"
+4. **Round closes at deadline**
+   - Status changes to "closed"
    - No further submissions accepted
    - Ready for consolidation
 
-6. **Administrator consolidates feedback**
+5. **Administrator consolidates feedback**
    - Reviews submission count (not individual responses)
    - Triggers AI consolidation
    - Reviews generated insights
    - Adds optional admin notes
 
-7. **Administrator shares with subject**
+6. **Administrator shares with subject**
    - Finalizes consolidated feedback
    - Marks as "shared"
-   - Subject receives notification
+   - Subject sees the new consolidation in their "My Feedback" view
 
-8. **Subject reviews feedback**
+7. **Subject reviews feedback**
    - Accesses "My Feedback" section
    - Reads consolidated insights
-   - Reviews admin notes
+   - Optionally downloads as PDF
+   - Reviews dashboard analytics (radar + trends across rounds)
    - Uses insights for development planning
 
 ### Secondary Workflow: Team Management
@@ -335,14 +360,11 @@ Estimated monthly operational cost for small team (20 users, 10 rounds/month):
 
 ## Future Enhancements (Not Currently Implemented)
 
-Potential features for future releases:
-- Custom question sets per feedback round
-- Anonymous comments on consolidated feedback
-- Multi-language support
-- Integration with HRIS systems
-- Feedback analytics and trends over time
-- Export to PDF functionality
-- Custom email templates
-- Slack/Teams integrations for notifications
-- Manager-specific feedback flows
+Potential features for future releases (see [`NEXT_STEPS.md`](NEXT_STEPS.md) for full details):
+- Admin-level analytics dashboard (org-wide trends, themes, completion rates)
 - 360 comparison across multiple rounds
+- Anonymous comments on shared consolidated feedback
+- Slack / Teams integrations
+- Self-nomination for feedback
+- Peer recognition system
+- Manager-specific workflows

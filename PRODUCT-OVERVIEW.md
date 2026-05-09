@@ -9,14 +9,18 @@
 
 ### For Administrators
 - **Feedback Round Management** - Create and coordinate feedback cycles with customizable deadlines
-- **Team Roster** - Centralized user management with role-based access control
+- **Team Roster** - Centralized user management with role-based access control (Admin / Team Admin / Member)
+- **Team-Scoped Rounds** - Team admins manage feedback within their team
 - **AI-Powered Consolidation** - Google Gemini synthesizes feedback into structured insights automatically
 - **Feedback Distribution** - Control when and how consolidated feedback is shared with team members
 - **Real-Time Tracking** - Monitor submission status and engagement across active rounds
+- **Audit Logging** - Track every status transition with the actor, timestamp, and round context
 
 ### For Team Members
 - **Anonymous Feedback Submission** - Provide honest, structured responses through 4-question format
 - **Personal Dashboard** - Track pending reviews and received feedback in one place
+- **Personal Analytics** - Radar chart of your latest round and a strengths/improvements/insights trend over time
+- **PDF Export** - Download a branded PDF of any consolidated feedback shared with you
 - **Consolidated Insights** - Receive AI-generated summaries highlighting strengths, areas for improvement, and actionable next steps
 - **Google OAuth Sign-In** - Secure, one-click authentication
 
@@ -43,18 +47,24 @@
 ## Current Status
 
 ### Recently Completed
-✅ **AI Integration** - Migrated from OpenAI to Google Gemini (latest)
-✅ **Member Dashboard** - Self-service view for team members
-✅ **Feedback Consolidation Flow** - End-to-end workflow complete
-✅ **MongoDB Migration** - Scalable database architecture
+✅ **Personal Analytics** - Radar chart + strengths/improvements/insights trend on the user dashboard
+✅ **PDF Export** - Branded download of consolidated feedback
+✅ **Backend Test Pyramid** - Unit, in-memory integration, and real-MongoDB gateway tests
+✅ **Security Hardening** - Dev-login + debug endpoints gated by `DEV_MODE` / `AdminOnly`
+✅ **Dockerized Stack** - One-command setup via `docker-compose`
+✅ **Teams Feature** - Team admins manage feedback within their team
+✅ **Audit Logging** - Status transitions tracked end-to-end
+✅ **AI Integration** - Google Gemini for consolidation
 ✅ **Anonymous Feedback System** - Core rounds and submission flow
 
 ### Production Ready
 - Google OAuth authentication
-- Role-based access control (Admin/Member)
+- Role-based access control (Admin / Team Admin / Member)
 - Full CRUD operations for rounds and feedback
 - Real-time dashboard updates
 - AI-generated consolidated feedback
+- PDF export of shared consolidations
+- Personal analytics for users
 
 ---
 
@@ -71,8 +81,9 @@
 
 | Role | Capabilities |
 |------|-------------|
-| **Admin** | Create rounds, assign reviewers, view all feedback, generate consolidations, manage users, share feedback |
-| **Member** | Submit feedback, view assigned reviews, access received feedback |
+| **Admin** | Create rounds, assign reviewers, view all feedback, generate consolidations, manage users, manage teams, share feedback |
+| **Team Admin** | Manage members within their team, create team rounds, view team feedback |
+| **Member** | Submit feedback, view assigned reviews, access received feedback (with PDF export and personal analytics) |
 
 ---
 
@@ -97,21 +108,17 @@
 
 ## Next Steps (Suggested)
 
-**Near-term Enhancements:**
-- Email notifications for round assignments and deadlines
-- Export consolidations to PDF
-- Multi-language support
-- Custom question templates
+See [`NEXT_STEPS.md`](NEXT_STEPS.md) for the full roadmap. High-priority items currently include:
 
-**Future Roadmap:**
-- Analytics dashboard (trends over time)
-- Peer comparison benchmarks
-- Integration with HRIS systems
-- Mobile app
+- Admin-level analytics dashboard (org-wide trends, themes, completion rates)
+- Frontend type-safety cleanup (unblock production `vue-tsc` build)
+- Frontend automated testing (Vitest + Playwright)
+- 360 comparison across rounds
+- Slack / Teams integration
 
 ---
 
-**Project Status:** ✅ Production-ready MVP
-**Last Updated:** March 2026
+**Project Status:** ✅ Production-ready
+**Last Updated:** May 2026
 **Tech Lead:** Smart 360 Engineering Team
 

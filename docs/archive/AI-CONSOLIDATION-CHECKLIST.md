@@ -1,4 +1,10 @@
-# AI Consolidation Feature - Setup Checklist
+# AI Consolidation Feature - Setup Checklist (Archived)
+
+> **Status: Archived — May 2026.** AI consolidation has been GA for some time and the setup steps
+> now live in [`README.md`](../../README.md) and [`CLAUDE.md`](../../CLAUDE.md). Kept for
+> historical reference only — round IDs and file paths in this document may be stale.
+
+---
 
 ## ✅ What's Ready
 
