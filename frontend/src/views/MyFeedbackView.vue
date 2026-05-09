@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
-
-const auth = useAuthStore()
 
 const consolidations = ref<any[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const expandedIds = ref<Set<string>>(new Set())
+const downloadingIds = ref<Set<string>>(new Set())
 
 onMounted(async () => {
   await loadConsolidations()
@@ -70,6 +68,38 @@ function formatDate(dateStr: string | null): string {
     year: 'numeric'
   })
 }
+
+async function downloadPDF(consolidation: any) {
+  const roundId = consolidation.roundId
+  if (!roundId || downloadingIds.value.has(roundId)) return
+  downloadingIds.value.add(roundId)
+  try {
+    const response = await apiClient.get(`/consolidations/${roundId}/pdf`, {
+      responseType: 'blob'
+    })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const disposition = response.headers['content-disposition'] as string | undefined
+    link.download = parseFilename(disposition) || `feedback-${roundId}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('PDF download failed:', err)
+    error.value = 'Could not download PDF. Please try again.'
+  } finally {
+    downloadingIds.value.delete(roundId)
+  }
+}
+
+function parseFilename(disposition: string | undefined): string | null {
+  if (!disposition) return null
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  return match ? match[1] : null
+}
 </script>
 
 <template>
@@ -105,9 +135,20 @@ function formatDate(dateStr: string | null): string {
             <h2 class="feedback-card__title">Feedback Received</h2>
             <p class="feedback-card__date">Shared {{ formatDate(consolidation.sharedAt) }}</p>
           </div>
-          <button class="feedback-card__toggle" :class="{ 'feedback-card__toggle--expanded': isExpanded(consolidation.id) }">
-            {{ isExpanded(consolidation.id) ? '−' : '+' }}
-          </button>
+          <div class="feedback-card__header-actions">
+            <button
+              class="feedback-card__pdf"
+              :disabled="downloadingIds.has(consolidation.roundId)"
+              @click.stop="downloadPDF(consolidation)"
+              type="button"
+              title="Download as PDF"
+            >
+              {{ downloadingIds.has(consolidation.roundId) ? 'Preparing…' : '⬇ PDF' }}
+            </button>
+            <button class="feedback-card__toggle" :class="{ 'feedback-card__toggle--expanded': isExpanded(consolidation.id) }">
+              {{ isExpanded(consolidation.id) ? '−' : '+' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="isExpanded(consolidation.id)" class="feedback-card__body">
@@ -343,6 +384,33 @@ function formatDate(dateStr: string | null): string {
 
     @media (min-width: 768px) {
       font-size: 0.9rem;
+    }
+  }
+
+  &__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  &__pdf {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
   }
 

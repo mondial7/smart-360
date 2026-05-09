@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { DashboardStats } from '@/types/dashboard'
 import type { FeedbackRound } from '@/types/round'
+import MyAnalyticsCard from '@/components/MyAnalyticsCard.vue'
 
 const auth = useAuthStore()
 const stats = ref<DashboardStats | null>(null)
@@ -183,6 +184,8 @@ function getRoundStatusText(round: FeedbackRound): string {
             <router-link to="/my-feedback" class="stat-card__link">View →</router-link>
           </div>
         </div>
+
+        <MyAnalyticsCard />
 
         <div v-if="myRounds.length > 0" class="feedback-section">
           <h2 class="dashboard__section-title">Feedback Requests</h2>
