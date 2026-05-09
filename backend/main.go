@@ -30,6 +30,12 @@ func main() {
 		log.Println("No .env file found, using system environment variables")
 	}
 
+	// JWT_SECRET is required: without it, attackers could forge tokens with
+	// the previously hardcoded fallback constant.
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("JWT_SECRET environment variable is required")
+	}
+
 	// Initialize database
 	database.InitDB()
 
@@ -85,15 +91,15 @@ func main() {
 		authorized.DELETE("/teams/:id/members/:userId", middleware.TeamAdminOrGlobalAdmin(), handlers.RemoveTeamMember)
 		authorized.POST("/teams/:id/rounds/create-batch", middleware.TeamAdminOrGlobalAdmin(), handlers.CreateTeamRounds)
 
-		// Rounds - admin and team admin can create
-		authorized.POST("/rounds", handlers.CreateFeedbackRound)
+		// Rounds - admin and team admin can create / manage
+		authorized.POST("/rounds", middleware.AdminOrTeamAdminRole(), handlers.CreateFeedbackRound)
 		authorized.GET("/rounds", middleware.AdminOnly(), handlers.GetAllRounds)
 		authorized.GET("/rounds/:id", handlers.GetRoundDetails)
-		authorized.PUT("/rounds/:id", handlers.UpdateFeedbackRound)
-		authorized.POST("/rounds/:id/reviewers", handlers.AddReviewersToRound)
-		authorized.DELETE("/rounds/:id/reviewers/:reviewerId", handlers.RemoveReviewerFromRound)
-		authorized.POST("/rounds/:id/start", handlers.StartFeedbackRound)
-		authorized.POST("/rounds/:id/close", handlers.CloseFeedbackRound)
+		authorized.PUT("/rounds/:id", middleware.AdminOrTeamAdminRole(), handlers.UpdateFeedbackRound)
+		authorized.POST("/rounds/:id/reviewers", middleware.AdminOrTeamAdminRole(), handlers.AddReviewersToRound)
+		authorized.DELETE("/rounds/:id/reviewers/:reviewerId", middleware.AdminOrTeamAdminRole(), handlers.RemoveReviewerFromRound)
+		authorized.POST("/rounds/:id/start", middleware.AdminOrTeamAdminRole(), handlers.StartFeedbackRound)
+		authorized.POST("/rounds/:id/close", middleware.AdminOrTeamAdminRole(), handlers.CloseFeedbackRound)
 		authorized.GET("/rounds-for-me", handlers.GetRoundsForMe)
 		authorized.GET("/my-rounds", handlers.GetMyRounds)
 

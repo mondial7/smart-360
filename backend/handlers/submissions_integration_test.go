@@ -48,14 +48,31 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		return
 	}
 
-	// Check if round exists
-	_, err = h.roundRepo.FindByID(ctx, roundObjID)
+	round, err := h.roundRepo.FindByID(ctx, roundObjID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
 		return
 	}
+	if round.Status != models.RoundActive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Round is not accepting submissions"})
+		return
+	}
+	if round.SubjectID == currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Subjects cannot submit feedback on their own round"})
+		return
+	}
+	isReviewer := false
+	for _, r := range round.Reviewers {
+		if r.ReviewerID == currentUser.ID {
+			isReviewer = true
+			break
+		}
+	}
+	if !isReviewer {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
+		return
+	}
 
-	// Check if submission already exists
 	count, err := h.submissionRepo.CountByRoundAndReviewer(ctx, roundObjID, currentUser.ID)
 	if err == nil && count > 0 {
 		c.JSON(http.StatusConflict, gin.H{"error": "Feedback already submitted"})
@@ -103,14 +120,62 @@ func (h *testSubmissionHandler) CheckSubmissionStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"submitted": true, "submittedAt": submission.SubmittedAt})
 }
 
-func (h *testSubmissionHandler) GetRoundSubmissions(c *gin.Context) {
-	roundID := c.Param("roundId")
+func (h *testSubmissionHandler) GetSubmissionDetails(c *gin.Context) {
+	submissionID := c.Param("submissionId")
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	currentUser := user.(models.User)
 	ctx := context.Background()
 
-	// Convert roundID string to ObjectID
+	submissionObjID, err := primitive.ObjectIDFromHex(submissionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	submission, err := h.submissionRepo.FindByID(ctx, submissionObjID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
+		return
+	}
+
+	if currentUser.Role != models.RoleAdmin && submission.ReviewerID != currentUser.ID {
+		round, err := h.roundRepo.FindByID(ctx, submission.RoundID)
+		if err != nil || round.CreatedByID != currentUser.ID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to view this submission"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, submission)
+}
+
+func (h *testSubmissionHandler) GetRoundSubmissions(c *gin.Context) {
+	roundID := c.Param("roundId")
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	currentUser := user.(models.User)
+	ctx := context.Background()
+
 	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	round, err := h.roundRepo.FindByID(ctx, roundObjID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+	if currentUser.Role != models.RoleAdmin && round.CreatedByID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to view submissions for this round"})
 		return
 	}
 
@@ -134,15 +199,23 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 		roundRepo:      roundRepo,
 	}
 
+	enlistReviewer := func(t *testing.T, round *models.FeedbackRound, reviewerID primitive.ObjectID) {
+		t.Helper()
+		require.NoError(t, roundRepo.AddReviewer(context.Background(), round.ID, models.RoundReviewer{
+			ID:         primitive.NewObjectID(),
+			RoundID:    round.ID,
+			ReviewerID: reviewerID,
+			CreatedAt:  time.Now(),
+		}))
+	}
+
 	t.Run("successful_submission", func(t *testing.T) {
-		// Setup test data
+		testUser := testutil.NewTestUser("reviewer@example.com", models.RoleMember)
 		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
 		err := roundRepo.Create(context.Background(), testRound)
 		require.NoError(t, err)
+		enlistReviewer(t, testRound, testUser.ID)
 
-		testUser := testutil.NewTestUser("reviewer@example.com", models.RoleMember)
-
-		// Create test context
 		c, w := testutil.NewTestGinContext(testUser)
 
 		responses := map[string]string{
@@ -160,13 +233,10 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 		err = testutil.SetJSONBody(c, body)
 		require.NoError(t, err)
 
-		// Execute handler
 		handler.SubmitFeedback(c)
 
-		// Assertions
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		// Verify submission was stored
 		submissions, err := submissionRepo.FindByRoundID(context.Background(), testRound.ID)
 		require.NoError(t, err)
 		assert.Len(t, submissions, 1)
@@ -176,21 +246,18 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 	})
 
 	t.Run("duplicate_submission_returns_conflict", func(t *testing.T) {
-		// Setup test data
+		testUser := testutil.NewTestUser("reviewer2@example.com", models.RoleMember)
 		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
 		err := roundRepo.Create(context.Background(), testRound)
 		require.NoError(t, err)
+		enlistReviewer(t, testRound, testUser.ID)
 
-		testUser := testutil.NewTestUser("reviewer2@example.com", models.RoleMember)
-
-		// Create first submission
 		responses := map[string]string{"a": "Good work"}
 		responsesJSON, _ := json.Marshal(responses)
 		firstSubmission := testutil.NewTestSubmission(testRound.ID, testUser.ID, string(responsesJSON))
 		err = submissionRepo.Create(context.Background(), firstSubmission)
 		require.NoError(t, err)
 
-		// Try to submit again
 		c, w := testutil.NewTestGinContext(testUser)
 		body := map[string]interface{}{
 			"roundId":   testRound.ID.Hex(),
@@ -201,13 +268,65 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 
 		handler.SubmitFeedback(c)
 
-		// Should return 409 Conflict
 		assert.Equal(t, http.StatusConflict, w.Code)
 
 		var response map[string]interface{}
 		err = testutil.ParseJSONResponse(w, &response)
 		require.NoError(t, err)
 		assert.Equal(t, "Feedback already submitted", response["error"])
+	})
+
+	t.Run("non_reviewer_is_forbidden", func(t *testing.T) {
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
+		err := roundRepo.Create(context.Background(), testRound)
+		require.NoError(t, err)
+
+		intruder := testutil.NewTestUser("phantom@example.com", models.RoleMember)
+		c, w := testutil.NewTestGinContext(intruder)
+		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
+			"roundId":   testRound.ID.Hex(),
+			"responses": "{}",
+		}))
+
+		handler.SubmitFeedback(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("subject_cannot_submit_on_own_round", func(t *testing.T) {
+		subject := testutil.NewTestUser("subject@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(subject.ID, primitive.NewObjectID(), models.RoundActive)
+		err := roundRepo.Create(context.Background(), testRound)
+		require.NoError(t, err)
+		enlistReviewer(t, testRound, subject.ID)
+
+		c, w := testutil.NewTestGinContext(subject)
+		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
+			"roundId":   testRound.ID.Hex(),
+			"responses": "{}",
+		}))
+
+		handler.SubmitFeedback(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("inactive_round_is_rejected", func(t *testing.T) {
+		reviewer := testutil.NewTestUser("late-reviewer@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundClosed)
+		err := roundRepo.Create(context.Background(), testRound)
+		require.NoError(t, err)
+		enlistReviewer(t, testRound, reviewer.ID)
+
+		c, w := testutil.NewTestGinContext(reviewer)
+		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
+			"roundId":   testRound.ID.Hex(),
+			"responses": "{}",
+		}))
+
+		handler.SubmitFeedback(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("invalid_round_id_returns_bad_request", func(t *testing.T) {
@@ -318,6 +437,96 @@ func TestCheckSubmissionStatus_Integration(t *testing.T) {
 	})
 }
 
+func TestGetSubmissionDetails_Integration(t *testing.T) {
+	submissionRepo := repositories.NewFakeSubmissionRepository()
+	roundRepo := repositories.NewFakeRoundRepository()
+
+	handler := &testSubmissionHandler{
+		submissionRepo: submissionRepo,
+		roundRepo:      roundRepo,
+	}
+
+	t.Run("reviewer_can_read_own_submission", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator-d1@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+
+		reviewer := testutil.NewTestUser("reviewer-d1@example.com", models.RoleMember)
+		submission := testutil.NewTestSubmission(round.ID, reviewer.ID, `{"a":"x"}`)
+		require.NoError(t, submissionRepo.Create(context.Background(), submission))
+
+		c, w := testutil.NewTestGinContext(reviewer)
+		testutil.SetParam(c, "submissionId", submission.ID.Hex())
+
+		handler.GetSubmissionDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("round_creator_can_read_any_submission_for_their_round", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator-d2@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+
+		reviewer := testutil.NewTestUser("reviewer-d2@example.com", models.RoleMember)
+		submission := testutil.NewTestSubmission(round.ID, reviewer.ID, `{"a":"x"}`)
+		require.NoError(t, submissionRepo.Create(context.Background(), submission))
+
+		c, w := testutil.NewTestGinContext(creator)
+		testutil.SetParam(c, "submissionId", submission.ID.Hex())
+
+		handler.GetSubmissionDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("admin_can_read_any_submission", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator-d3@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+
+		reviewer := testutil.NewTestUser("reviewer-d3@example.com", models.RoleMember)
+		submission := testutil.NewTestSubmission(round.ID, reviewer.ID, `{"a":"x"}`)
+		require.NoError(t, submissionRepo.Create(context.Background(), submission))
+
+		admin := testutil.NewTestUser("admin-d3@example.com", models.RoleAdmin)
+		c, w := testutil.NewTestGinContext(admin)
+		testutil.SetParam(c, "submissionId", submission.ID.Hex())
+
+		handler.GetSubmissionDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("non_owner_non_creator_non_admin_is_forbidden", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator-d4@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+
+		reviewer := testutil.NewTestUser("reviewer-d4@example.com", models.RoleMember)
+		submission := testutil.NewTestSubmission(round.ID, reviewer.ID, `{"a":"x"}`)
+		require.NoError(t, submissionRepo.Create(context.Background(), submission))
+
+		intruder := testutil.NewTestUser("intruder-d4@example.com", models.RoleMember)
+		c, w := testutil.NewTestGinContext(intruder)
+		testutil.SetParam(c, "submissionId", submission.ID.Hex())
+
+		handler.GetSubmissionDetails(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("nonexistent_submission_returns_not_found", func(t *testing.T) {
+		admin := testutil.NewTestUser("admin-d5@example.com", models.RoleAdmin)
+		c, w := testutil.NewTestGinContext(admin)
+		testutil.SetParam(c, "submissionId", primitive.NewObjectID().Hex())
+
+		handler.GetSubmissionDetails(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
+
 func TestGetRoundSubmissions_Integration(t *testing.T) {
 	submissionRepo := repositories.NewFakeSubmissionRepository()
 	roundRepo := repositories.NewFakeRoundRepository()
@@ -327,20 +536,19 @@ func TestGetRoundSubmissions_Integration(t *testing.T) {
 		roundRepo:      roundRepo,
 	}
 
-	t.Run("returns_all_submissions_for_round", func(t *testing.T) {
-		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
+	t.Run("creator_can_read_all_submissions_for_round", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
 		err := roundRepo.Create(context.Background(), testRound)
 		require.NoError(t, err)
 
-		// Create multiple submissions
 		for i := 0; i < 3; i++ {
 			submission := testutil.NewTestSubmission(testRound.ID, primitive.NewObjectID(), "{}")
 			err = submissionRepo.Create(context.Background(), submission)
 			require.NoError(t, err)
 		}
 
-		// Get submissions
-		c, w := testutil.NewTestGinContext(nil)
+		c, w := testutil.NewTestGinContext(creator)
 		testutil.SetParam(c, "roundId", testRound.ID.Hex())
 
 		handler.GetRoundSubmissions(c)
@@ -353,12 +561,68 @@ func TestGetRoundSubmissions_Integration(t *testing.T) {
 		assert.Len(t, submissions, 3)
 	})
 
-	t.Run("returns_empty_array_for_round_without_submissions", func(t *testing.T) {
-		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
+	t.Run("admin_can_read_all_submissions_for_round", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator2@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
 		err := roundRepo.Create(context.Background(), testRound)
 		require.NoError(t, err)
 
-		c, w := testutil.NewTestGinContext(nil)
+		admin := testutil.NewTestUser("admin@example.com", models.RoleAdmin)
+		c, w := testutil.NewTestGinContext(admin)
+		testutil.SetParam(c, "roundId", testRound.ID.Hex())
+
+		handler.GetRoundSubmissions(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("non_creator_non_admin_is_forbidden", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator3@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		err := roundRepo.Create(context.Background(), testRound)
+		require.NoError(t, err)
+
+		intruder := testutil.NewTestUser("intruder@example.com", models.RoleMember)
+		c, w := testutil.NewTestGinContext(intruder)
+		testutil.SetParam(c, "roundId", testRound.ID.Hex())
+
+		handler.GetRoundSubmissions(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("team_admin_who_is_not_creator_is_forbidden", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator4@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		err := roundRepo.Create(context.Background(), testRound)
+		require.NoError(t, err)
+
+		teamAdmin := testutil.NewTestUser("teamadmin@example.com", models.RoleTeamAdmin)
+		c, w := testutil.NewTestGinContext(teamAdmin)
+		testutil.SetParam(c, "roundId", testRound.ID.Hex())
+
+		handler.GetRoundSubmissions(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("nonexistent_round_returns_not_found", func(t *testing.T) {
+		admin := testutil.NewTestUser("admin2@example.com", models.RoleAdmin)
+		c, w := testutil.NewTestGinContext(admin)
+		testutil.SetParam(c, "roundId", primitive.NewObjectID().Hex())
+
+		handler.GetRoundSubmissions(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns_empty_array_for_round_without_submissions", func(t *testing.T) {
+		creator := testutil.NewTestUser("creator5@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		err := roundRepo.Create(context.Background(), testRound)
+		require.NoError(t, err)
+
+		c, w := testutil.NewTestGinContext(creator)
 		testutil.SetParam(c, "roundId", testRound.ID.Hex())
 
 		handler.GetRoundSubmissions(c)

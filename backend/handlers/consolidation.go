@@ -97,13 +97,29 @@ func ConsolidateFeedback(c *gin.Context) {
 
 func GetConsolidation(c *gin.Context) {
 	roundID := c.Param("roundId")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
 	db := database.GetDB()
 	ctx := context.Background()
 
-	// Convert roundID string to ObjectID
 	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	var round models.FeedbackRound
+	if err := db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	// Authorization mirrors DownloadConsolidationPDF: admin, round creator, or
+	// the round subject (only after the consolidation has been shared).
+	if currentUser.Role != models.RoleAdmin &&
+		currentUser.ID != round.SubjectID &&
+		currentUser.ID != round.CreatedByID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to access this consolidation"})
 		return
 	}
 
@@ -111,6 +127,11 @@ func GetConsolidation(c *gin.Context) {
 	err = db.Collection("consolidations").FindOne(ctx, bson.M{"round_id": roundObjID}).Decode(&consolidation)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Consolidation not found"})
+		return
+	}
+
+	if currentUser.Role != models.RoleAdmin && currentUser.ID == round.SubjectID && consolidation.SharedAt == nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Consolidation has not been shared yet"})
 		return
 	}
 

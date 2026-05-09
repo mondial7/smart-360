@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,6 +21,9 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
+
+const oauthStateCookieName = "oauth_state"
+const oauthStateMaxAgeSeconds = 600
 
 var googleOAuthConfig *oauth2.Config
 
@@ -43,7 +49,21 @@ func GetGoogleAuthURL(c *gin.Context) {
 	if googleOAuthConfig == nil {
 		InitOAuthConfig()
 	}
-	url := googleOAuthConfig.AuthCodeURL("state")
+
+	state, err := generateOAuthState()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize login"})
+		return
+	}
+
+	// Bind the state to the user's browser via an HttpOnly cookie. The
+	// callback compares the cookie to the state echoed back by Google;
+	// without this, login-CSRF lets an attacker force a victim into the
+	// attacker's account.
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(oauthStateCookieName, state, oauthStateMaxAgeSeconds, "/", "", isSecureCookie(), true)
+
+	url := googleOAuthConfig.AuthCodeURL(state)
 	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 
@@ -55,6 +75,16 @@ func GoogleCallback(c *gin.Context) {
 	code := c.Query("code")
 	if code == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Code not provided"})
+		return
+	}
+
+	state := c.Query("state")
+	cookieState, err := c.Cookie(oauthStateCookieName)
+	// Always clear the state cookie, regardless of outcome.
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(oauthStateCookieName, "", -1, "/", "", isSecureCookie(), true)
+	if err != nil || state == "" || subtle.ConstantTimeCompare([]byte(state), []byte(cookieState)) != 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid OAuth state"})
 		return
 	}
 
@@ -156,10 +186,22 @@ func GoogleCallback(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/auth/callback?token=%s", frontendURL, jwtToken))
 }
 
+func generateOAuthState() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func isSecureCookie() bool {
+	return os.Getenv("DEV_MODE") != "true"
+}
+
 func generateJWT(user models.User) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "your-secret-key-change-in-production"
+		return "", fmt.Errorf("JWT_SECRET not configured")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
