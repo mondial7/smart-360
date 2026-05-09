@@ -70,6 +70,12 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true }
     },
     {
+      path: '/analytics',
+      name: 'analytics',
+      component: () => import('@/views/AnalyticsView.vue'),
+      meta: { requiresAuth: true, adminOnly: true }
+    },
+    {
       path: '/my-feedback',
       name: 'my-feedback',
       component: () => import('@/views/MyFeedbackView.vue'),

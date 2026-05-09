@@ -114,6 +114,7 @@ func main() {
 
 		// Analytics
 		authorized.GET("/analytics/me", handlers.GetMyAnalytics)
+		authorized.GET("/analytics/admin", middleware.AdminOnly(), handlers.GetAdminAnalytics)
 
 		// Audit logs (admin only)
 		authorized.GET("/audit-logs", middleware.AdminOnly(), handlers.GetAuditLogs)

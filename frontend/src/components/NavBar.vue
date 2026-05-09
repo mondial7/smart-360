@@ -5,6 +5,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useRouter } from 'vue-router'
 import {
   PhChartBar,
+  PhChartPieSlice,
   PhUsers,
   PhBuildings,
   PhArrowsClockwise,
@@ -92,6 +93,10 @@ router.afterEach(() => {
             <PhArrowsClockwise class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Rounds</span>
           </router-link>
+          <router-link v-if="auth.isAdmin" to="/analytics" class="nav-link">
+            <PhChartPieSlice class="nav-link__icon" :size="20" weight="regular" />
+            <span class="nav-link__text">Analytics</span>
+          </router-link>
           <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
             <PhClipboardText class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Audit Log</span>
@@ -136,6 +141,10 @@ router.afterEach(() => {
         <router-link to="/rounds" class="nav-link">
           <PhArrowsClockwise class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">Rounds</span>
+        </router-link>
+        <router-link v-if="auth.isAdmin" to="/analytics" class="nav-link">
+          <PhChartPieSlice class="nav-link__icon" :size="20" weight="regular" />
+          <span class="nav-link__text">Analytics</span>
         </router-link>
         <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
           <PhClipboardText class="nav-link__icon" :size="20" weight="regular" />

@@ -47,6 +47,8 @@
 ## Current Status
 
 ### Recently Completed
+✅ **Admin Analytics** - Org-wide dashboard: counters, status donut, completion-rate trend, per-team activity, top theme extraction
+✅ **Phosphor Icon System** - Consistent icons across the app
 ✅ **Personal Analytics** - Radar chart + strengths/improvements/insights trend on the user dashboard
 ✅ **PDF Export** - Branded download of consolidated feedback
 ✅ **Backend Test Pyramid** - Unit, in-memory integration, and real-MongoDB gateway tests

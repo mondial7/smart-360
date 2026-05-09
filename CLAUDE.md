@@ -153,6 +153,7 @@ The first user to sign up automatically becomes admin (see `handlers/auth.go`).
 | `GET /api/me` | Current user |
 | `GET /api/dashboard/stats` | Per-user dashboard counters |
 | `GET /api/analytics/me` | Personal analytics (radar + per-round trend) |
+| `GET /api/analytics/admin` | Admin analytics (counters, status breakdown, completion trend, team activity, top themes) |
 | `GET /api/rounds-for-me` | Rounds the user must review |
 | `POST /api/submissions` | Submit feedback |
 | `POST /api/rounds/:id/consolidate` | Generate AI consolidation (admin) |

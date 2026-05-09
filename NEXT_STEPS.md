@@ -2,34 +2,13 @@
 
 This document outlines potential enhancements, features, and technical improvements for Smart 360 Feedback.
 
-> **Already shipped** — see [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) for the full list. Highlights: AI consolidation, role-based access, anonymous submissions, PDF export of consolidated feedback, and personal analytics with a feedback radar on the user dashboard.
+> **Already shipped** — see [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) for the full list. Highlights: AI consolidation, role-based access, anonymous submissions, PDF export of consolidated feedback, personal analytics on the user dashboard, an admin analytics dashboard with completion trends + theme extraction, and a Phosphor-based icon system.
 
 ---
 
 ## High Priority
 
-### 1. Feedback Analytics — Admin View
-
-**Current State:** Personal analytics shipped on the user dashboard (received counts, latest-round radar, strengths/improvements/insights trend bars). No org-level analytics yet.
-
-**Proposal:**
-- Average submission rate over time (chart)
-- Most common strengths/improvements (themes / word cloud)
-- Feedback frequency per user (table)
-- Response time metrics (assignment → submission)
-- Completion rates by team
-
-**Implementation Approach:**
-- Aggregation pipelines in MongoDB
-- New `/api/analytics/admin` endpoint
-- Reuse the existing `RadarChart` / bar primitives in a new `AnalyticsView.vue`
-- Cache results in-memory with short TTL
-
-**Estimated Effort:** Medium-Large (3-5 days)
-
----
-
-### 2. Frontend Type-Safety Cleanup
+### 1. Frontend Type-Safety Cleanup
 
 **Current State:** `npm run build` (which runs `vue-tsc`) reports ~29 TypeScript errors across 7 view files. Vite dev server still works because it skips type-checking; production build is blocked.
 
@@ -43,7 +22,7 @@ This document outlines potential enhancements, features, and technical improveme
 
 ---
 
-### 3. Automated Testing — Frontend
+### 2. Automated Testing — Frontend
 
 **Current State:** Backend has a three-phase test pyramid (unit, in-memory fakes, real-MongoDB gateway). Frontend has none.
 
@@ -59,7 +38,7 @@ This document outlines potential enhancements, features, and technical improveme
 
 ## Medium Priority
 
-### 4. 360 Comparison Across Rounds
+### 3. 360 Comparison Across Rounds
 
 Show feedback evolution over time:
 - Side-by-side comparison of multiple consolidated rounds
@@ -71,7 +50,7 @@ Show feedback evolution over time:
 
 ---
 
-### 5. Slack / Teams Integration
+### 4. Slack / Teams Integration
 
 - Webhook notifications for round assignments
 - Slack slash commands: `/feedback list`, `/feedback submit`
@@ -82,7 +61,7 @@ Show feedback evolution over time:
 
 ---
 
-### 6. Anonymous Comments on Shared Feedback
+### 5. Anonymous Comments on Shared Feedback
 
 - Subjects can request clarification on consolidated feedback
 - Reviewers can respond anonymously (threaded)
@@ -229,7 +208,6 @@ Manager role separate from admin: view team's consolidated feedback (with permis
 
 | Priority | Feature | Impact | Effort |
 |----------|---------|--------|--------|
-| 🔴 High | Admin Analytics Dashboard | High | Medium-Large |
 | 🔴 High | Frontend Type-Safety | Medium | Small |
 | 🔴 High | Frontend Automated Testing | High | Medium-Large |
 | 🟡 Medium | 360 Comparison | Medium | Medium-Large |
@@ -254,7 +232,6 @@ Manager role separate from admin: view team's consolidated feedback (with permis
 - Enhanced security
 
 ### Phase 2: Insights (Weeks 3-4)
-- Admin analytics dashboard
 - 360 comparison across rounds
 
 ### Phase 3: Reach (Weeks 5-6)
