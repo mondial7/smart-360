@@ -30,6 +30,9 @@ go.work
 /bin/
 /dist/
 /build/
+/smart360
+/smart360-server
+/test-mongodb
 
 # Dependency directories (if using vendor)
 /vendor/
