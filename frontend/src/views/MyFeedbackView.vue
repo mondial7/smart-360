@@ -1,6 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import apiClient from '@/api/client'
+import {
+  PhDownloadSimple,
+  PhFileText,
+  PhTrophy,
+  PhTrendUp,
+  PhTarget,
+  PhClipboardText,
+  PhNotePencil,
+  PhPlus,
+  PhMinus,
+  PhCheck,
+  PhArrowUp,
+  PhArrowRight
+} from '@phosphor-icons/vue'
 
 const consolidations = ref<any[]>([])
 const loading = ref(true)
@@ -143,10 +157,12 @@ function parseFilename(disposition: string | undefined): string | null {
               type="button"
               title="Download as PDF"
             >
-              {{ downloadingIds.has(consolidation.roundId) ? 'Preparing…' : '⬇ PDF' }}
+              <PhDownloadSimple :size="16" weight="bold" />
+              <span>{{ downloadingIds.has(consolidation.roundId) ? 'Preparing…' : 'PDF' }}</span>
             </button>
             <button class="feedback-card__toggle" :class="{ 'feedback-card__toggle--expanded': isExpanded(consolidation.id) }">
-              {{ isExpanded(consolidation.id) ? '−' : '+' }}
+              <PhMinus v-if="isExpanded(consolidation.id)" :size="18" weight="bold" />
+              <PhPlus v-else :size="18" weight="bold" />
             </button>
           </div>
         </div>
@@ -154,43 +170,61 @@ function parseFilename(disposition: string | undefined): string | null {
         <div v-if="isExpanded(consolidation.id)" class="feedback-card__body">
           <!-- Executive Summary -->
           <section class="feedback-section">
-            <h3 class="feedback-section__title">📄 Executive Summary</h3>
+            <h3 class="feedback-section__title">
+              <PhFileText :size="20" weight="duotone" />
+              <span>Executive Summary</span>
+            </h3>
             <p class="feedback-section__summary">{{ consolidation.executiveSummary }}</p>
           </section>
 
           <!-- Strengths -->
           <section class="feedback-section">
-            <h3 class="feedback-section__title">💪 Key Strengths</h3>
+            <h3 class="feedback-section__title">
+              <PhTrophy :size="20" weight="duotone" />
+              <span>Key Strengths</span>
+            </h3>
             <ul class="feedback-list feedback-list--positive">
               <li v-for="(strength, i) in consolidation.strengths" :key="i" class="feedback-list__item">
-                {{ strength }}
+                <PhCheck class="feedback-list__icon" :size="18" weight="bold" />
+                <span>{{ strength }}</span>
               </li>
             </ul>
           </section>
 
           <!-- Areas for Improvement -->
           <section class="feedback-section">
-            <h3 class="feedback-section__title">📈 Areas for Improvement</h3>
+            <h3 class="feedback-section__title">
+              <PhTrendUp :size="20" weight="duotone" />
+              <span>Areas for Improvement</span>
+            </h3>
             <ul class="feedback-list feedback-list--improvement">
               <li v-for="(area, i) in consolidation.areasForImprovement" :key="i" class="feedback-list__item">
-                {{ area }}
+                <PhArrowUp class="feedback-list__icon" :size="18" weight="bold" />
+                <span>{{ area }}</span>
               </li>
             </ul>
           </section>
 
           <!-- Actionable Insights -->
           <section class="feedback-section">
-            <h3 class="feedback-section__title">🎯 Actionable Insights</h3>
+            <h3 class="feedback-section__title">
+              <PhTarget :size="20" weight="duotone" />
+              <span>Actionable Insights</span>
+            </h3>
             <ul class="feedback-list feedback-list--action">
               <li v-for="(insight, i) in consolidation.actionableInsights" :key="i" class="feedback-list__item">
-                {{ insight }}
+                <PhArrowRight class="feedback-list__icon" :size="18" weight="bold" />
+                <span>{{ insight }}</span>
               </li>
             </ul>
           </section>
 
           <!-- Question Summaries -->
           <section class="feedback-section">
-            <h3 class="feedback-section__title">📋 Detailed Question Analysis</h3>
+            <h3 class="feedback-section__title">
+              <PhClipboardText :size="20" weight="duotone" />
+              <span>Detailed Question Analysis</span>
+            </h3>
             <div class="questions">
               <div class="question-card">
                 <h4 class="question-card__title">1. Key Strengths</h4>
@@ -213,7 +247,10 @@ function parseFilename(disposition: string | undefined): string | null {
 
           <!-- Admin Notes -->
           <section v-if="consolidation.adminNotes" class="feedback-section">
-            <h3 class="feedback-section__title feedback-section__title--admin">📝 Additional Notes</h3>
+            <h3 class="feedback-section__title feedback-section__title--admin">
+              <PhNotePencil :size="20" weight="duotone" />
+              <span>Additional Notes</span>
+            </h3>
             <div class="admin-notes">{{ consolidation.adminNotes }}</div>
           </section>
         </div>
@@ -395,6 +432,9 @@ function parseFilename(disposition: string | undefined): string | null {
   }
 
   &__pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     background: rgba(255, 255, 255, 0.18);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.4);
@@ -472,6 +512,9 @@ function parseFilename(disposition: string | undefined): string | null {
   }
 
   &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 1rem;
     margin-bottom: 1rem;
     color: var(--text-primary);
@@ -502,56 +545,50 @@ function parseFilename(disposition: string | undefined): string | null {
   margin: 0;
 
   &__item {
-    padding: 0.875rem 0.875rem 0.875rem 2.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.875rem 1rem;
     margin-bottom: 0.75rem;
     border-radius: 8px;
-    position: relative;
     line-height: 1.5;
     color: var(--text-primary);
 
     @media (min-width: 768px) {
-      padding: 1rem 1rem 1rem 2.5rem;
+      padding: 1rem;
     }
+  }
 
-    &::before {
-      position: absolute;
-      left: 0.75rem;
-      font-size: 1.125rem;
-
-      @media (min-width: 768px) {
-        font-size: 1.25rem;
-      }
-    }
+  &__icon {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
   }
 
   &--positive &__item {
     background: rgba(76, 175, 80, 0.1);
     border-left: 3px solid var(--color-success);
+  }
 
-    &::before {
-      content: '✓';
-      color: var(--color-success);
-    }
+  &--positive &__icon {
+    color: var(--color-success);
   }
 
   &--improvement &__item {
     background: rgba(255, 152, 0, 0.1);
     border-left: 3px solid var(--color-warning);
+  }
 
-    &::before {
-      content: '↑';
-      color: var(--color-warning);
-    }
+  &--improvement &__icon {
+    color: var(--color-warning);
   }
 
   &--action &__item {
     background: rgba(33, 150, 243, 0.1);
     border-left: 3px solid #2196f3;
+  }
 
-    &::before {
-      content: '→';
-      color: #2196f3;
-    }
+  &--action &__icon {
+    color: #2196f3;
   }
 }
 

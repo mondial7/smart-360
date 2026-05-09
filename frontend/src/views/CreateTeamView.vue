@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import apiClient from '@/api/client'
 import type { User } from '@/types/user'
 import type { CreateTeamRequest } from '@/types/team'
+import { PhCheck } from '@phosphor-icons/vue'
 
 const router = useRouter()
 
@@ -173,7 +174,7 @@ async function createTeam() {
             <span class="user-card__name">{{ user.name }}</span>
             <span class="user-card__email">{{ user.email }}</span>
           </div>
-          <span v-if="teamAdminId === user.id" class="user-card__check">✓</span>
+          <PhCheck v-if="teamAdminId === user.id" class="user-card__check" :size="16" weight="bold" />
         </div>
       </div>
     </div>
@@ -198,7 +199,7 @@ async function createTeam() {
             <span class="user-card__email">{{ user.email }}</span>
             <span v-if="user.id === teamAdminId" class="user-card__badge">Team Admin</span>
           </div>
-          <span v-if="memberIds.includes(user.id) || user.id === teamAdminId" class="user-card__check">✓</span>
+          <PhCheck v-if="memberIds.includes(user.id) || user.id === teamAdminId" class="user-card__check" :size="16" weight="bold" />
         </div>
       </div>
 

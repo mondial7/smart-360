@@ -140,6 +140,7 @@ The first user to sign up automatically becomes admin (see `handlers/auth.go`).
 - **State** in Pinia stores (`src/stores/`).
 - **Styles** scoped SASS (`<style scoped lang="scss">`) using CSS variables (`--color-primary`, `--bg-secondary`, etc.).
 - **Charts** are pure SVG (see `RadarChart.vue`) — no chart libraries currently. Keep it that way unless requirements force otherwise.
+- **Icons** are Phosphor (`@phosphor-icons/vue`). Import the components you need (`import { PhCheck, PhUsers } from '@phosphor-icons/vue'`) and pass `:size` (px) and `weight` (`regular` / `bold` / `duotone` / `fill`). Convention in this codebase: `regular` for nav/inline text, `duotone` for section titles and empty-state hero icons, `bold` for list bullets and small CTAs, `fill` for warning/sparkle accents. Don't add emoji as a UI element — use a Phosphor component.
 
 > The production build (`npm run build`) currently fails because `vue-tsc` reports ~29 pre-existing TS errors. The dev server (`npm run dev`) is unaffected. Cleanup is tracked in `NEXT_STEPS.md`.
 

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { FeedbackRound } from '@/types/round'
+import { PhCheck, PhEye, PhNotePencil } from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const rounds = ref<FeedbackRound[]>([])
@@ -195,7 +196,10 @@ async function closeRound(id: string) {  // Changed from number to string
         </div>
 
         <div v-else-if="hasSubmitted(round.id)" class="round-card__actions round-card__actions--column">
-          <span class="round-card__submitted">✓ Feedback Submitted</span>
+          <span class="round-card__submitted">
+            <PhCheck :size="14" weight="bold" />
+            <span>Feedback Submitted</span>
+          </span>
           <router-link :to="`/rounds/${round.id}/submission`" class="btn btn--secondary round-card__btn">
             View My Submission
           </router-link>
@@ -205,14 +209,16 @@ async function closeRound(id: string) {  // Changed from number to string
           <router-link v-if="!consolidationStatus[round.id]" :to="`/rounds/${round.id}/consolidation`" class="btn btn--primary round-card__btn">
             Consolidate Feedback
           </router-link>
-          <router-link v-else :to="`/rounds/${round.id}#consolidation`" class="btn btn--success round-card__btn">
-            👁️ View Feedback
+          <router-link v-else :to="`/rounds/${round.id}#consolidation`" class="btn btn--success btn--with-icon round-card__btn">
+            <PhEye :size="16" weight="regular" />
+            <span>View Feedback</span>
           </router-link>
         </div>
 
         <div v-else-if="auth.isAdmin && round.status === 'active'" class="round-card__actions round-card__actions--split">
-          <router-link :to="`/rounds/${round.id}`" class="btn btn--primary round-card__btn">
-            ✏️ Edit
+          <router-link :to="`/rounds/${round.id}`" class="btn btn--primary btn--with-icon round-card__btn">
+            <PhNotePencil :size="16" weight="regular" />
+            <span>Edit</span>
           </router-link>
           <button class="btn btn--danger round-card__btn" @click="closeRound(round.id)">
             Close Round
@@ -220,8 +226,9 @@ async function closeRound(id: string) {  // Changed from number to string
         </div>
 
         <div v-else-if="auth.isAdmin" class="round-card__actions">
-          <router-link :to="`/rounds/${round.id}`" class="btn btn--primary round-card__btn">
-            ✏️ Edit
+          <router-link :to="`/rounds/${round.id}`" class="btn btn--primary btn--with-icon round-card__btn">
+            <PhNotePencil :size="16" weight="regular" />
+            <span>Edit</span>
           </router-link>
         </div>
       </div>
@@ -534,6 +541,9 @@ async function closeRound(id: string) {  // Changed from number to string
   }
 
   &__submitted {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     color: var(--color-success);
     font-size: 0.85rem;
     font-weight: 500;

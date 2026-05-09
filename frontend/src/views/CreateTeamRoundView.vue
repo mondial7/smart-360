@@ -4,8 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { Team } from '@/types/team'
-import type { User } from '@/types/user'
 import type { CreateTeamRoundsRequest } from '@/types/team'
+import { PhCheck } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -229,7 +229,7 @@ function formatDate(dateStr: string): string {
             <span class="user-card__name">{{ user.name }}</span>
             <span class="user-card__email">{{ user.email }}</span>
           </div>
-          <span v-if="selectedSubjectIds.includes(user.id)" class="user-card__check">✓</span>
+          <PhCheck v-if="selectedSubjectIds.includes(user.id)" class="user-card__check" :size="16" weight="bold" />
         </div>
       </div>
 

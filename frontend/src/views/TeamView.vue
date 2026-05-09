@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { UserWithFeedbackStats } from '@/types/user'
 import type { Team } from '@/types/team'
+import { PhArrowUp, PhArrowDown } from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const teamMembers = ref<UserWithFeedbackStats[]>([])
@@ -181,7 +182,8 @@ function getRelativeTime(dateStr: string | null): string {
               <div class="team-table__th-content">
                 Team Member
                 <span class="team-table__sort" v-if="sortColumn === 'name'">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  <PhArrowUp v-if="sortDirection === 'asc'" :size="14" weight="bold" />
+                  <PhArrowDown v-else :size="14" weight="bold" />
                 </span>
               </div>
             </th>
@@ -189,7 +191,8 @@ function getRelativeTime(dateStr: string | null): string {
               <div class="team-table__th-content">
                 Role
                 <span class="team-table__sort" v-if="sortColumn === 'role'">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  <PhArrowUp v-if="sortDirection === 'asc'" :size="14" weight="bold" />
+                  <PhArrowDown v-else :size="14" weight="bold" />
                 </span>
               </div>
             </th>
@@ -200,7 +203,8 @@ function getRelativeTime(dateStr: string | null): string {
               <div class="team-table__th-content">
                 Last Feedback
                 <span class="team-table__sort" v-if="sortColumn === 'lastFeedbackReceived'">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  <PhArrowUp v-if="sortDirection === 'asc'" :size="14" weight="bold" />
+                  <PhArrowDown v-else :size="14" weight="bold" />
                 </span>
               </div>
             </th>
@@ -208,7 +212,8 @@ function getRelativeTime(dateStr: string | null): string {
               <div class="team-table__th-content">
                 Active Rounds
                 <span class="team-table__sort" v-if="sortColumn === 'activeRoundsAsSubject'">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  <PhArrowUp v-if="sortDirection === 'asc'" :size="14" weight="bold" />
+                  <PhArrowDown v-else :size="14" weight="bold" />
                 </span>
               </div>
             </th>
@@ -216,7 +221,8 @@ function getRelativeTime(dateStr: string | null): string {
               <div class="team-table__th-content">
                 Pending Reviews
                 <span class="team-table__sort" v-if="sortColumn === 'pendingReviews'">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  <PhArrowUp v-if="sortDirection === 'asc'" :size="14" weight="bold" />
+                  <PhArrowDown v-else :size="14" weight="bold" />
                 </span>
               </div>
             </th>
@@ -224,7 +230,8 @@ function getRelativeTime(dateStr: string | null): string {
               <div class="team-table__th-content">
                 Total Feedback
                 <span class="team-table__sort" v-if="sortColumn === 'totalFeedbackReceived'">
-                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  <PhArrowUp v-if="sortDirection === 'asc'" :size="14" weight="bold" />
+                  <PhArrowDown v-else :size="14" weight="bold" />
                 </span>
               </div>
             </th>

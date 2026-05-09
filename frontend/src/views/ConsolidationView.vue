@@ -1,13 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { FeedbackRound } from '@/types/round'
+import {
+  PhSparkle,
+  PhEye,
+  PhCheck,
+  PhPaperPlaneTilt,
+  PhNotePencil,
+  PhTrophy,
+  PhTrendUp,
+  PhTarget,
+  PhClipboardText,
+  PhX,
+  PhPlus,
+  PhArrowUp,
+  PhArrowRight
+} from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
 
 const roundId = route.params.roundId as string  // Changed from parseInt to string
 const round = ref<FeedbackRound | null>(null)
@@ -265,11 +278,12 @@ function parseResponses(responsesStr: string): Record<string, string> {
       <div v-if="!consolidation && round.status === 'closed' && submissions.length > 0" class="consolidation__prompt">
         <p class="consolidation__prompt-text">This round is closed and ready for feedback consolidation.</p>
         <button
-          class="btn btn--primary"
+          class="btn btn--primary btn--with-icon"
           @click="generateConsolidation"
           :disabled="generating"
         >
-          {{ generating ? 'Generating...' : '🤖 Generate Consolidation' }}
+          <PhSparkle :size="18" weight="fill" />
+          <span>{{ generating ? 'Generating...' : 'Generate Consolidation' }}</span>
         </button>
       </div>
 
@@ -291,10 +305,11 @@ function parseResponses(responsesStr: string): Record<string, string> {
       <div v-else-if="consolidation && !showConsolidationContent" class="consolidation__prompt">
         <p class="consolidation__prompt-text">Feedback consolidation has been generated for this round.</p>
         <button
-          class="btn btn--primary"
+          class="btn btn--primary btn--with-icon"
           @click="showConsolidationContent = true"
         >
-          👁️ View Consolidated Feedback
+          <PhEye :size="18" weight="regular" />
+          <span>View Consolidated Feedback</span>
         </button>
       </div>
 
@@ -304,18 +319,20 @@ function parseResponses(responsesStr: string): Record<string, string> {
           <div class="consolidation__meta-info">
             <span class="consolidation__meta-item">Generated {{ formatDate(consolidation.createdAt) }}</span>
             <span v-if="consolidation.sharedAt" class="consolidation__meta-item consolidation__meta-item--shared">
-              ✓ Shared {{ formatDate(consolidation.sharedAt) }}
+              <PhCheck :size="14" weight="bold" />
+              <span>Shared {{ formatDate(consolidation.sharedAt) }}</span>
             </span>
             <span class="consolidation__meta-item">Round Status: <span class="badge" :class="[`badge--${round.status}`]">{{ round.status }}</span></span>
           </div>
 
           <div v-if="!consolidation.sharedAt" class="consolidation__meta-actions">
             <button
-              class="btn btn--primary"
+              class="btn btn--primary btn--with-icon"
               @click="shareConsolidation"
               :disabled="sharing"
             >
-              {{ sharing ? 'Sharing...' : '📤 Share with Subject' }}
+              <PhPaperPlaneTilt :size="18" weight="regular" />
+              <span>{{ sharing ? 'Sharing...' : 'Share with Subject' }}</span>
             </button>
           </div>
         </div>
@@ -325,8 +342,9 @@ function parseResponses(responsesStr: string): Record<string, string> {
           <section class="section">
             <div class="section__header">
               <h2 class="section__title">Executive Summary</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'executive'" @click="startEditing('executive')" class="btn btn--secondary section__edit-btn">
-                ✏️ Edit
+              <button v-if="!consolidation.sharedAt && editingSection !== 'executive'" @click="startEditing('executive')" class="btn btn--secondary btn--with-icon section__edit-btn">
+                <PhNotePencil :size="14" weight="regular" />
+                <span>Edit</span>
               </button>
             </div>
             <div v-if="editingSection === 'executive'" class="section__edit">
@@ -347,18 +365,27 @@ function parseResponses(responsesStr: string): Record<string, string> {
           <!-- Strengths -->
           <section class="section">
             <div class="section__header">
-              <h2 class="section__title">💪 Key Strengths</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'strengths'" @click="startEditing('strengths')" class="btn btn--secondary section__edit-btn">
-                ✏️ Edit
+              <h2 class="section__title">
+                <PhTrophy :size="20" weight="duotone" />
+                <span>Key Strengths</span>
+              </h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'strengths'" @click="startEditing('strengths')" class="btn btn--secondary btn--with-icon section__edit-btn">
+                <PhNotePencil :size="14" weight="regular" />
+                <span>Edit</span>
               </button>
             </div>
             <div v-if="editingSection === 'strengths'" class="section__edit">
               <div class="array-editor">
-                <div v-for="(strength, i) in editForm.strengths" :key="i" class="array-editor__item">
+                <div v-for="(_, i) in editForm.strengths" :key="i" class="array-editor__item">
                   <input v-model="editForm.strengths[i]" placeholder="Enter strength..." class="array-editor__input">
-                  <button @click="removeArrayItem(editForm.strengths, i)" class="array-editor__remove">×</button>
+                  <button @click="removeArrayItem(editForm.strengths, i)" class="array-editor__remove" aria-label="Remove">
+                    <PhX :size="14" weight="bold" />
+                  </button>
                 </div>
-                <button @click="addArrayItem(editForm.strengths)" class="array-editor__add">+ Add Strength</button>
+                <button @click="addArrayItem(editForm.strengths)" class="array-editor__add btn--with-icon">
+                  <PhPlus :size="14" weight="bold" />
+                  <span>Add Strength</span>
+                </button>
               </div>
               <div class="section__edit-actions">
                 <button @click="saveEdits" class="btn btn--primary">Save</button>
@@ -367,7 +394,8 @@ function parseResponses(responsesStr: string): Record<string, string> {
             </div>
             <ul v-else class="feedback-list feedback-list--positive">
               <li v-for="(strength, i) in consolidation.strengths" :key="i" class="feedback-list__item">
-                {{ strength }}
+                <PhCheck class="feedback-list__icon" :size="18" weight="bold" />
+                <span>{{ strength }}</span>
               </li>
             </ul>
           </section>
@@ -375,18 +403,27 @@ function parseResponses(responsesStr: string): Record<string, string> {
           <!-- Areas for Improvement -->
           <section class="section">
             <div class="section__header">
-              <h2 class="section__title">📈 Areas for Improvement</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'improvements'" @click="startEditing('improvements')" class="btn btn--secondary section__edit-btn">
-                ✏️ Edit
+              <h2 class="section__title">
+                <PhTrendUp :size="20" weight="duotone" />
+                <span>Areas for Improvement</span>
+              </h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'improvements'" @click="startEditing('improvements')" class="btn btn--secondary btn--with-icon section__edit-btn">
+                <PhNotePencil :size="14" weight="regular" />
+                <span>Edit</span>
               </button>
             </div>
             <div v-if="editingSection === 'improvements'" class="section__edit">
               <div class="array-editor">
-                <div v-for="(improvement, i) in editForm.areasForImprovement" :key="i" class="array-editor__item">
+                <div v-for="(_, i) in editForm.areasForImprovement" :key="i" class="array-editor__item">
                   <input v-model="editForm.areasForImprovement[i]" placeholder="Enter improvement..." class="array-editor__input">
-                  <button @click="removeArrayItem(editForm.areasForImprovement, i)" class="array-editor__remove">×</button>
+                  <button @click="removeArrayItem(editForm.areasForImprovement, i)" class="array-editor__remove" aria-label="Remove">
+                    <PhX :size="14" weight="bold" />
+                  </button>
                 </div>
-                <button @click="addArrayItem(editForm.areasForImprovement)" class="array-editor__add">+ Add Improvement</button>
+                <button @click="addArrayItem(editForm.areasForImprovement)" class="array-editor__add btn--with-icon">
+                  <PhPlus :size="14" weight="bold" />
+                  <span>Add Improvement</span>
+                </button>
               </div>
               <div class="section__edit-actions">
                 <button @click="saveEdits" class="btn btn--primary">Save</button>
@@ -395,7 +432,8 @@ function parseResponses(responsesStr: string): Record<string, string> {
             </div>
             <ul v-else class="feedback-list feedback-list--improvement">
               <li v-for="(area, i) in consolidation.areasForImprovement" :key="i" class="feedback-list__item">
-                {{ area }}
+                <PhArrowUp class="feedback-list__icon" :size="18" weight="bold" />
+                <span>{{ area }}</span>
               </li>
             </ul>
           </section>
@@ -403,18 +441,27 @@ function parseResponses(responsesStr: string): Record<string, string> {
           <!-- Actionable Insights -->
           <section class="section">
             <div class="section__header">
-              <h2 class="section__title">🎯 Actionable Insights</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'insights'" @click="startEditing('insights')" class="btn btn--secondary section__edit-btn">
-                ✏️ Edit
+              <h2 class="section__title">
+                <PhTarget :size="20" weight="duotone" />
+                <span>Actionable Insights</span>
+              </h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'insights'" @click="startEditing('insights')" class="btn btn--secondary btn--with-icon section__edit-btn">
+                <PhNotePencil :size="14" weight="regular" />
+                <span>Edit</span>
               </button>
             </div>
             <div v-if="editingSection === 'insights'" class="section__edit">
               <div class="array-editor">
-                <div v-for="(insight, i) in editForm.actionableInsights" :key="i" class="array-editor__item">
+                <div v-for="(_, i) in editForm.actionableInsights" :key="i" class="array-editor__item">
                   <input v-model="editForm.actionableInsights[i]" placeholder="Enter insight..." class="array-editor__input">
-                  <button @click="removeArrayItem(editForm.actionableInsights, i)" class="array-editor__remove">×</button>
+                  <button @click="removeArrayItem(editForm.actionableInsights, i)" class="array-editor__remove" aria-label="Remove">
+                    <PhX :size="14" weight="bold" />
+                  </button>
                 </div>
-                <button @click="addArrayItem(editForm.actionableInsights)" class="array-editor__add">+ Add Insight</button>
+                <button @click="addArrayItem(editForm.actionableInsights)" class="array-editor__add btn--with-icon">
+                  <PhPlus :size="14" weight="bold" />
+                  <span>Add Insight</span>
+                </button>
               </div>
               <div class="section__edit-actions">
                 <button @click="saveEdits" class="btn btn--primary">Save</button>
@@ -423,7 +470,8 @@ function parseResponses(responsesStr: string): Record<string, string> {
             </div>
             <ul v-else class="feedback-list feedback-list--action">
               <li v-for="(insight, i) in consolidation.actionableInsights" :key="i" class="feedback-list__item">
-                {{ insight }}
+                <PhArrowRight class="feedback-list__icon" :size="18" weight="bold" />
+                <span>{{ insight }}</span>
               </li>
             </ul>
           </section>
@@ -431,9 +479,13 @@ function parseResponses(responsesStr: string): Record<string, string> {
           <!-- Question Summaries -->
           <section class="section">
             <div class="section__header">
-              <h2 class="section__title">📋 Detailed Question Analysis</h2>
-              <button v-if="!consolidation.sharedAt && editingSection !== 'questions'" @click="startEditing('questions')" class="btn btn--secondary section__edit-btn">
-                ✏️ Edit
+              <h2 class="section__title">
+                <PhClipboardText :size="20" weight="duotone" />
+                <span>Detailed Question Analysis</span>
+              </h2>
+              <button v-if="!consolidation.sharedAt && editingSection !== 'questions'" @click="startEditing('questions')" class="btn btn--secondary btn--with-icon section__edit-btn">
+                <PhNotePencil :size="14" weight="regular" />
+                <span>Edit</span>
               </button>
             </div>
             <div v-if="editingSection === 'questions'" class="section__edit">
@@ -482,7 +534,10 @@ function parseResponses(responsesStr: string): Record<string, string> {
 
           <!-- Individual Reviews -->
           <section v-if="submissions.length > 0" class="section">
-            <h2 class="section__title">📝 Individual Reviews ({{ submissions.length }})</h2>
+            <h2 class="section__title">
+              <PhNotePencil :size="20" weight="duotone" />
+              <span>Individual Reviews ({{ submissions.length }})</span>
+            </h2>
             <p class="section__hint">View all individual feedback submissions below</p>
             <div class="reviews">
               <div v-for="(submission, idx) in submissions" :key="submission.id" class="review">
@@ -514,7 +569,10 @@ function parseResponses(responsesStr: string): Record<string, string> {
 
           <!-- Admin Notes -->
           <section v-if="!consolidation.sharedAt" class="section">
-            <h2 class="section__title">📝 Admin Notes (Optional)</h2>
+            <h2 class="section__title">
+              <PhNotePencil :size="20" weight="duotone" />
+              <span>Admin Notes (Optional)</span>
+            </h2>
             <p class="section__hint">Add context or guidance for the subject. These notes will be included when shared.</p>
             <textarea
               v-model="adminNotes"
@@ -528,7 +586,10 @@ function parseResponses(responsesStr: string): Record<string, string> {
           </section>
 
           <section v-else-if="consolidation.adminNotes" class="section">
-            <h2 class="section__title">📝 Admin Notes</h2>
+            <h2 class="section__title">
+              <PhNotePencil :size="20" weight="duotone" />
+              <span>Admin Notes</span>
+            </h2>
             <p class="admin-notes">{{ consolidation.adminNotes }}</p>
           </section>
         </div>
@@ -716,6 +777,9 @@ function parseResponses(responsesStr: string): Record<string, string> {
   }
 
   &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 1.125rem;
     margin: 0;
     color: var(--text-primary);
@@ -851,6 +915,9 @@ function parseResponses(responsesStr: string): Record<string, string> {
   }
 
   &__add {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     background: var(--color-success);
     color: white;
     border: none;
@@ -1027,5 +1094,60 @@ function parseResponses(responsesStr: string): Record<string, string> {
   color: var(--text-primary);
   line-height: 1.6;
   border-left: 4px solid var(--color-primary);
+}
+
+.feedback-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  &__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.875rem 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+
+  &--positive &__item {
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 3px solid var(--color-success);
+  }
+
+  &--positive &__icon {
+    color: var(--color-success);
+  }
+
+  &--improvement &__item {
+    background: rgba(255, 152, 0, 0.1);
+    border-left: 3px solid var(--color-warning);
+  }
+
+  &--improvement &__icon {
+    color: var(--color-warning);
+  }
+
+  &--action &__item {
+    background: rgba(33, 150, 243, 0.1);
+    border-left: 3px solid #2196f3;
+  }
+
+  &--action &__icon {
+    color: #2196f3;
+  }
+}
+
+.consolidation__meta-item--shared {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 </style>

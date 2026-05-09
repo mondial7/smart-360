@@ -53,8 +53,9 @@
         :class="`log-card--${getActionColor(log.action)}`"
       >
         <div class="log-card__header">
-          <span class="badge" :class="`badge--${getActionColor(log.action)}`">
-            {{ getActionIcon(log.action) }} {{ formatAction(log.action) }}
+          <span class="badge badge--with-icon" :class="`badge--${getActionColor(log.action)}`">
+            <component :is="getActionIcon(log.action)" :size="14" weight="bold" />
+            <span>{{ formatAction(log.action) }}</span>
           </span>
           <span class="log-card__timestamp">{{ formatDate(log.createdAt) }}</span>
         </div>
@@ -75,7 +76,7 @@
               <span class="log-card__label">Change:</span>
               <span class="log-card__value">
                 <span v-if="log.oldValue" class="log-card__old-value">{{ log.oldValue }}</span>
-                <span v-if="log.oldValue && log.newValue" class="log-card__arrow">→</span>
+                <PhArrowRight v-if="log.oldValue && log.newValue" class="log-card__arrow" :size="14" weight="bold" />
                 <span v-if="log.newValue" class="log-card__new-value">{{ log.newValue }}</span>
               </span>
             </div>
@@ -110,8 +111,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, markRaw, type Component } from 'vue'
 import apiClient from '@/api/client'
+import {
+  PhSparkle,
+  PhArrowsClockwise,
+  PhUser,
+  PhCalendar,
+  PhPlus,
+  PhMinus,
+  PhPaperPlaneTilt,
+  PhNotePencil,
+  PhArrowRight
+} from '@phosphor-icons/vue'
 
 interface AuditLog {
   id: string
@@ -193,15 +205,15 @@ function getActionColor(action: string): string {
   return 'gray'
 }
 
-function getActionIcon(action: string): string {
-  if (action.includes('created')) return '✨'
-  if (action.includes('status_changed')) return '🔄'
-  if (action.includes('subject_changed')) return '👤'
-  if (action.includes('deadline_changed')) return '📅'
-  if (action.includes('added')) return '➕'
-  if (action.includes('removed')) return '➖'
-  if (action.includes('shared')) return '📤'
-  return '📝'
+function getActionIcon(action: string): Component {
+  if (action.includes('created')) return markRaw(PhSparkle)
+  if (action.includes('status_changed')) return markRaw(PhArrowsClockwise)
+  if (action.includes('subject_changed')) return markRaw(PhUser)
+  if (action.includes('deadline_changed')) return markRaw(PhCalendar)
+  if (action.includes('added')) return markRaw(PhPlus)
+  if (action.includes('removed')) return markRaw(PhMinus)
+  if (action.includes('shared')) return markRaw(PhPaperPlaneTilt)
+  return markRaw(PhNotePencil)
 }
 
 function formatAction(action: string): string {

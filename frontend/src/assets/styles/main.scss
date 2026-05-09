@@ -135,6 +135,10 @@ html {
     }
   }
 
+  &--with-icon {
+    gap: 0.4rem;
+  }
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -200,6 +204,10 @@ html {
       background: rgba(33, 150, 243, 0.2);
       color: #64b5f6;
     }
+  }
+
+  &--with-icon {
+    gap: 0.3rem;
   }
 }
 
