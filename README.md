@@ -115,7 +115,14 @@ accept the redirect URI you publish).
 ### Option 2 — Docker Compose (full stack, recommended for a server)
 
 This brings up MongoDB, the Go API, and an nginx-served frontend in one
-command. Use this for a dedicated server or VM.
+command. The repo ships **two compose files** — pick the one that fits:
+
+| File | Image source | When to use |
+|------|--------------|-------------|
+| `docker-compose.yml` | `build:` from local source | Active development on the stack; you have a clone of the repo and want to iterate on the code. |
+| `docker-compose.prod.yml` | `image:` from `ghcr.io/mondial7/smart-360-*` | Production / staging / "pull and run" — no source checkout needed beyond the compose file and an `.env`. |
+
+#### Development (`docker-compose.yml`)
 
 ```bash
 git clone https://github.com/mondial7/smart-360.git
@@ -124,18 +131,34 @@ cd smart-360
 cp .env.example .env
 $EDITOR .env            # see "Configuration reference" below
 
-docker compose up -d
+docker compose up -d --build
+```
+
+#### Production (`docker-compose.prod.yml`)
+
+You only need two files on the host: the compose file and your `.env`.
+
+```bash
+mkdir smart360 && cd smart360
+curl -O https://raw.githubusercontent.com/mondial7/smart-360/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/mondial7/smart-360/main/.env.example
+mv .env.example .env
+$EDITOR .env
+
+# Pin to a released version. `latest` works but should be avoided in prod.
+SMART360_VERSION=v1.0.0 docker compose -f docker-compose.prod.yml up -d
 ```
 
 Open <http://localhost> (or whatever you set as `FRONTEND_PORT`).
 
-Common commands:
+#### Common commands (same for both files — add `-f docker-compose.prod.yml` for the prod variant)
 
 ```bash
 docker compose ps                  # service status
 docker compose logs -f backend     # tail backend logs
 docker compose restart backend     # restart one service
-docker compose up -d --build       # rebuild after code changes
+docker compose up -d --build       # rebuild (dev only)
+docker compose pull                # pull newer images (prod only)
 docker compose down                # stop everything (data preserved)
 docker compose down -v             # ⚠️  also drops the MongoDB volume
 ```
