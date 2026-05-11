@@ -1,5 +1,10 @@
 # Smart 360 Feedback
 
+[![CI](https://github.com/mondial7/smart-360/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mondial7/smart-360/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/mondial7/smart-360?display_name=tag&sort=semver)](https://github.com/mondial7/smart-360/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Showcase](https://img.shields.io/badge/site-mondial7.github.io%2Fsmart--360-4f46e5)](https://mondial7.github.io/smart-360)
+
 > AI-powered anonymous 360° peer feedback for professional development.
 
 Smart 360 collects structured anonymous feedback from your team and uses
@@ -7,8 +12,9 @@ Google Gemini to consolidate it into clear strengths, growth areas, and
 concrete next steps. It runs as a single self-hosted binary, in Docker,
 or from source — pick whichever fits your environment.
 
-**Live showcase:** <https://mondial7.github.io/smart-360> (once GitHub Pages is enabled)
-**Source:** <https://github.com/mondial7/smart-360>
+- **Showcase:** <https://mondial7.github.io/smart-360>
+- **Source:** <https://github.com/mondial7/smart-360>
+- **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
 
 ---
 
