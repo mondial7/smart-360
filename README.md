@@ -66,6 +66,11 @@ See [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) and [`PRD.md`](PRD.md) for prod
 
 For OAuth and Gemini setup steps see [Google OAuth setup](#google-oauth-setup) and [Gemini API setup](#gemini-api-setup) below.
 
+**Production deployment** — once you've picked an install path, the
+[Production deployment guide](docs/deployment-production.md) walks you
+from "I have a domain and a server" to a public HTTPS install with
+Caddy (or nginx) and a systemd unit.
+
 ---
 
 ## Install — choose one path
