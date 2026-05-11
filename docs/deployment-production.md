@@ -273,7 +273,9 @@ Certbot installs a renewal timer automatically.
 ## What this guide does NOT cover
 
 These are tracked separately and recommended for any production install,
-but they are out of scope here:
+but they are out of scope here. The companion [`SECURITY.md`](../SECURITY.md)
+spells out the privacy model, the AI data flow, and the full hardening
+checklist.
 
 - **Rate limiting & CSRF** — tracked in
   [#26](https://github.com/mondial7/smart-360/issues/26) (rate limiting)

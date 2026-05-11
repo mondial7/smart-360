@@ -36,6 +36,7 @@ or from source — pick whichever fits your environment.
 - [Releasing a new version](#releasing-a-new-version)
 - [Troubleshooting](#troubleshooting)
 - [Architecture](#architecture)
+- [Security & privacy](#security--privacy)
 - [Contributing & license](#contributing--license)
 
 ---
@@ -424,6 +425,16 @@ serve the UI.
 Backend lives in `backend/`, frontend in `frontend/`, the GitHub Pages
 showcase in `docs/`, and the Homebrew formula in `Formula/`. See
 [`CLAUDE.md`](CLAUDE.md) for repository conventions and the test pyramid.
+
+---
+
+## Security & privacy
+
+The product handles sensitive workplace feedback, so the way that data
+is stored, who can see it, and what gets sent to Google Gemini are
+documented separately in [`SECURITY.md`](SECURITY.md). It also explains
+how to report a vulnerability (please don't open a public issue for
+exploitable findings — use the private form linked from there).
 
 ---
 
