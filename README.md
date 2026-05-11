@@ -20,7 +20,9 @@ or from source — pick whichever fits your environment.
 
 ## Table of Contents
 
-- [Highlights](#highlights)
+- [What it does](#what-it-does)
+- [How a round works](#how-a-round-works)
+- [Who can do what](#who-can-do-what)
 - [Tech stack](#tech-stack)
 - [Requirements](#requirements)
 - [Install — choose one path](#install--choose-one-path)
@@ -38,16 +40,63 @@ or from source — pick whichever fits your environment.
 
 ---
 
-## Highlights
+## What it does
 
-- **Anonymous, structured feedback** — four prompts per reviewer, identities never exposed to the subject.
-- **AI consolidation** — Google Gemini turns raw answers into executive summary + strengths + growth areas + action items.
+Smart 360 runs anonymous, structured peer-feedback rounds and uses
+Google Gemini to turn the raw answers into something a person can
+actually act on.
+
+- **Anonymous, structured feedback** — four prompts per reviewer,
+  identity never linked to a submission, never exposed to the subject.
+- **AI consolidation** — Gemini produces an executive summary, key
+  strengths, growth areas, and concrete next steps from the raw answers.
 - **PDF export** — branded, print-ready PDF of any shared consolidation.
-- **Personal & admin analytics** — radar charts per round, completion trends, theme extraction.
-- **Role-based access** — Admin, Team Admin, Member; every status change recorded in an audit log.
-- **Single-binary deploy option** — the SPA is embedded into the Go binary, so Homebrew installs the entire app from one file.
+- **Personal & admin analytics** — per-user radar charts and trend
+  bars, plus an org-wide dashboard with completion rates, theme
+  extraction, and per-team activity.
+- **Role-based access + audit log** — Admin, Team Admin, Member; every
+  status transition (`draft → active → closed → shared`) is recorded.
+- **Single-binary deploy option** — the Vue SPA is embedded in the Go
+  server, so Homebrew installs the whole app as one ~30 MB file.
 
-See [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) and [`PRD.md`](PRD.md) for product context. The roadmap lives in [GitHub Issues](https://github.com/mondial7/smart-360/issues).
+## How a round works
+
+1. **Admin (or Team Admin) creates a round** — picks the subject,
+   assigns 3–8 reviewers, sets a deadline. The subject and the creator
+   are automatically excluded from the reviewer list.
+2. **Reviewers submit anonymously** — each sees the four standard
+   questions, one submission per reviewer per round, anonymous to both
+   admin and subject.
+3. **Round closes at the deadline** — no further submissions; the admin
+   can now trigger consolidation.
+4. **AI consolidates** — Gemini reads the aggregated submissions and
+   emits an executive summary + strengths + growth areas + actionable
+   insights + a per-question summary.
+5. **Admin reviews, optionally adds notes, shares** — sharing flips the
+   round to `shared` and unlocks the consolidation (in-app + PDF) for
+   the subject.
+6. **Subject reads, tracks progress** — sees the consolidation in
+   "My Feedback" and a radar/trend chart of every round they've
+   received so far.
+
+**The four standard questions:**
+
+1. What are this person's key strengths?
+2. What areas could they improve?
+3. What specific behaviors or actions have you observed that stood out?
+4. What advice would you give to help them grow?
+
+## Who can do what
+
+| Role | Can do |
+|------|--------|
+| **Admin** | Everything — manage users + teams, create any round, view all rounds, generate and share any consolidation. First user to sign in is auto-promoted. |
+| **Team Admin** | Manage their team's members, create and consolidate rounds **within their team**. |
+| **Member** | Submit feedback when assigned as reviewer, read consolidations shared with them (in-app + PDF), see their personal analytics. |
+
+Roadmap and known gaps live in
+[GitHub Issues](https://github.com/mondial7/smart-360/issues) — anything
+labelled `good first issue` is a friendly entry point.
 
 ---
 
@@ -207,8 +256,8 @@ separately with hot reload — see [`CLAUDE.md`](CLAUDE.md) "Quick Start (develo
 3. From the **Users** page, promote others to Admin or Team Admin as needed.
 4. From the dashboard, create your first feedback round.
 
-See "How it works" in the [showcase page](docs/index.html) or
-[`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) for the full round lifecycle.
+See [How a round works](#how-a-round-works) above for the full lifecycle, or the
+[showcase page](docs/index.html) for the visual version.
 
 ---
 

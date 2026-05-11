@@ -187,7 +187,7 @@ This is useful for:
 ## 📚 Additional Resources
 
 - **Development seed README**: `backend/DEV-SEED-README.md`
-- **Product overview**: `PRODUCT-OVERVIEW.md`
+- **Product overview**: `README.md`
 - **Consolidation handler code**: `backend/handlers/consolidation.go`
 - **Gemini API docs**: https://ai.google.dev/docs
 

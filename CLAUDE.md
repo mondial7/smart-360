@@ -2,7 +2,7 @@
 
 This guide is the entry point for anyone (humans or AI assistants) working on the codebase. It covers architecture, conventions, and common tasks.
 
-> Product context: see [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) and [`PRD.md`](PRD.md).
+> Product context: see [`README.md`](README.md) ("What it does", "How a round works", "Who can do what").
 > Roadmap: tracked in [GitHub Issues](https://github.com/mondial7/smart-360/issues).
 
 ---
