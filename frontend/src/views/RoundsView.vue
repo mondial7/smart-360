@@ -38,7 +38,7 @@ async function loadRounds() {
       
       // Check if consolidation exists
       try {
-        const consRes = await apiClient.get(`/consolidations/${round.id}`)
+        await apiClient.get(`/consolidations/${round.id}`)
         consolidationStatus.value[round.id] = true
       } catch {
         consolidationStatus.value[round.id] = false
@@ -62,16 +62,6 @@ function formatDate(dateStr: string | null): string {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-function getStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    draft: '#ff9800',
-    active: '#4caf50',
-    closed: '#f44336',
-    shared: '#2196f3'
-  }
-  return colors[status] || '#666'
 }
 
 function isAssignedReviewer(round: FeedbackRound): boolean {

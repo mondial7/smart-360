@@ -478,8 +478,8 @@ function getUserById(userId: string) {
             <label class="modal__label">Reviewers</label>
             <div class="reviewer-mgmt">
               <!-- Show warning if subject was previously assigned as reviewer -->
-              <div v-if="round.value?.reviewers?.some(r => r.reviewerId === round.value?.subjectId)" class="reviewer-mgmt__warning">
-                ⚠️ The subject ({{ getUserById(round.value?.subjectId || '')?.name }}) was previously assigned as a reviewer and has been removed.
+              <div v-if="round?.reviewers?.some(r => r.reviewerId === round?.subjectId)" class="reviewer-mgmt__warning">
+                ⚠️ The subject ({{ getUserById(round?.subjectId || '')?.name }}) was previously assigned as a reviewer and has been removed.
               </div>
 
               <!-- Current reviewers -->

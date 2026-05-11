@@ -14,9 +14,9 @@ const step = ref(1)
 const loading = ref(false)
 const users = ref<User[]>([])
 
-// Form data
-const subjectId = ref<number | null>(null)
-const reviewerIds = ref<number[]>([])
+// Form data — User.id is a string (Mongo ObjectID hex).
+const subjectId = ref<string | null>(null)
+const reviewerIds = ref<string[]>([])
 const deadline = ref('')
 
 // Validation errors
@@ -43,7 +43,7 @@ const subject = () => users.value.find(u => u.id === subjectId.value)
 const reviewers = () => users.value.filter(u => reviewerIds.value.includes(u.id) && u.id !== subjectId.value)
 const availableReviewers = () => users.value.filter(u => u.id !== subjectId.value && u.id !== auth.user?.id)
 
-function toggleReviewer(id: number) {
+function toggleReviewer(id: string) {
   const index = reviewerIds.value.indexOf(id)
   if (index > -1) {
     reviewerIds.value.splice(index, 1)

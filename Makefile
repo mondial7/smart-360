@@ -50,7 +50,7 @@ print-version:
 frontend:
 	@echo "==> Building frontend"
 	cd $(FRONTEND_DIR) && npm ci --include=dev
-	cd $(FRONTEND_DIR) && npm run build:docker
+	cd $(FRONTEND_DIR) && npm run build
 
 # Sync built SPA into the Go embed folder so `go build` picks it up.
 # We keep .gitkeep around so fresh clones (with no built frontend) can still

@@ -13,10 +13,8 @@ RUN npm ci --include=dev
 # Copy source code
 COPY . .
 
-# Build the application. We skip `vue-tsc` (run via `npm run build`) here because
-# type-check belongs in CI; the production image only needs the bundle. See
-# NEXT_STEPS.md "Frontend Type-Safety Cleanup" for the deferred fix.
-RUN npm run build:docker
+# Build the application (type-check + bundle)
+RUN npm run build
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine
