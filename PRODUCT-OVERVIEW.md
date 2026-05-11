@@ -110,13 +110,14 @@
 
 ## Next Steps (Suggested)
 
-See [`NEXT_STEPS.md`](NEXT_STEPS.md) for the full roadmap. High-priority items currently include:
+The roadmap lives in [GitHub Issues](https://github.com/mondial7/smart-360/issues).
+A few of the highest-priority items currently open:
 
-- Admin-level analytics dashboard (org-wide trends, themes, completion rates)
-- Frontend type-safety cleanup (unblock production `vue-tsc` build)
-- Frontend automated testing (Vitest + Playwright)
-- 360 comparison across rounds
-- Slack / Teams integration
+- [Frontend automated testing (Vitest + Playwright)](https://github.com/mondial7/smart-360/issues/28)
+- [360 comparison across rounds](https://github.com/mondial7/smart-360/issues/29)
+- [Slack / Teams integration](https://github.com/mondial7/smart-360/issues/30)
+- [Anonymous comments on shared feedback](https://github.com/mondial7/smart-360/issues/31)
+- [Security hardening (CSRF, CSP, input validation)](https://github.com/mondial7/smart-360/issues/32)
 
 ---
 

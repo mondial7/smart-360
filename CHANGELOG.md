@@ -62,16 +62,17 @@ stack, or from source.
 
 ### Known limitations (deferred to post-1.0)
 
-See [`NEXT_STEPS.md`](NEXT_STEPS.md) for the full list. The most notable
-gaps for self-hosters:
+See [open issues](https://github.com/mondial7/smart-360/issues) for the
+full list. The most notable gaps for self-hosters:
 
 - **No built-in rate limiting or CSRF protection** — mitigate at the
-  reverse proxy (Caddy `rate_limit`, nginx `limit_req`) until the
-  enhancements in `NEXT_STEPS.md` §7 land.
+  reverse proxy (Caddy `rate_limit`, nginx `limit_req`) until [#26](https://github.com/mondial7/smart-360/issues/26)
+  (rate-limiting) and [#32](https://github.com/mondial7/smart-360/issues/32)
+  (broader security hardening) land.
 - **No automated MongoDB backups** — schedule a nightly `mongodump`
-  yourself. Tracked in `NEXT_STEPS.md` §10.
+  yourself. Tracked in [#35](https://github.com/mondial7/smart-360/issues/35).
 - **No structured logging / metrics / tracing** — the process logs to
-  stdout only. Tracked in `NEXT_STEPS.md` §9.
+  stdout only. Tracked in [#34](https://github.com/mondial7/smart-360/issues/34).
 
 [Unreleased]: https://github.com/mondial7/smart-360/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/mondial7/smart-360/releases/tag/v1.0.0

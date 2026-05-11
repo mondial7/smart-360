@@ -3,7 +3,7 @@
 This guide is the entry point for anyone (humans or AI assistants) working on the codebase. It covers architecture, conventions, and common tasks.
 
 > Product context: see [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) and [`PRD.md`](PRD.md).
-> Roadmap: see [`NEXT_STEPS.md`](NEXT_STEPS.md).
+> Roadmap: tracked in [GitHub Issues](https://github.com/mondial7/smart-360/issues).
 
 ---
 
@@ -62,7 +62,7 @@ Run all of them with:
 cd backend && go test ./...
 ```
 
-The frontend currently has no automated test suite — see `NEXT_STEPS.md`.
+The frontend currently has no automated test suite — tracked in [#28](https://github.com/mondial7/smart-360/issues/28).
 
 ---
 
@@ -141,8 +141,6 @@ The first user to sign up automatically becomes admin (see `handlers/auth.go`).
 - **Styles** scoped SASS (`<style scoped lang="scss">`) using CSS variables (`--color-primary`, `--bg-secondary`, etc.).
 - **Charts** are pure SVG (see `RadarChart.vue`) — no chart libraries currently. Keep it that way unless requirements force otherwise.
 - **Icons** are Phosphor (`@phosphor-icons/vue`). Import the components you need (`import { PhCheck, PhUsers } from '@phosphor-icons/vue'`) and pass `:size` (px) and `weight` (`regular` / `bold` / `duotone` / `fill`). Convention in this codebase: `regular` for nav/inline text, `duotone` for section titles and empty-state hero icons, `bold` for list bullets and small CTAs, `fill` for warning/sparkle accents. Don't add emoji as a UI element — use a Phosphor component.
-
-> The production build (`npm run build`) currently fails because `vue-tsc` reports ~29 pre-existing TS errors. The dev server (`npm run dev`) is unaffected. Cleanup is tracked in `NEXT_STEPS.md`.
 
 ---
 
@@ -229,8 +227,8 @@ go test -short ./...             # skip the real-Mongo gateway tests
 ## Notes for AI Assistants
 
 - The project values simplicity over premature optimization. Prefer the smallest change that solves the problem.
-- When in doubt about scope, look at `NEXT_STEPS.md` — it tracks what's *intentionally* deferred.
-- Don't fix unrelated TS / lint errors as part of an unrelated change unless explicitly asked. There is a known frontend type-safety task that is scheduled separately.
+- When in doubt about scope, browse [open issues](https://github.com/mondial7/smart-360/issues) — they track what's *intentionally* deferred.
+- Don't fix unrelated TS / lint errors as part of an unrelated change unless explicitly asked.
 - The dev-login and `/api/debug/*` endpoints exist for local development only and must remain gated.
 - When changing the `consolidations` schema, remember its array/object fields are stored as JSON strings — parse on read, stringify on write.
 - The PDF renderer (`backend/handlers/pdf.go`) and the personal analytics endpoint (`backend/handlers/analytics.go`) are intentionally dependency-light. Keep them that way.

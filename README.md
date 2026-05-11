@@ -47,7 +47,7 @@ or from source — pick whichever fits your environment.
 - **Role-based access** — Admin, Team Admin, Member; every status change recorded in an audit log.
 - **Single-binary deploy option** — the SPA is embedded into the Go binary, so Homebrew installs the entire app from one file.
 
-See [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) and [`PRD.md`](PRD.md) for product context, and [`NEXT_STEPS.md`](NEXT_STEPS.md) for the roadmap.
+See [`PRODUCT-OVERVIEW.md`](PRODUCT-OVERVIEW.md) and [`PRD.md`](PRD.md) for product context. The roadmap lives in [GitHub Issues](https://github.com/mondial7/smart-360/issues).
 
 ---
 
@@ -271,37 +271,25 @@ Monitor usage and quota in the [Google Cloud Console](https://console.cloud.goog
 ## Releasing a new version
 
 Cutting a release builds the cross-platform binaries that Homebrew users
-download. The first time you do this, replace the placeholder `version`,
-`url`s, and `sha256` values in [`Formula/smart360.rb`](Formula/smart360.rb).
+download. The heavy lifting is automated by
+[`.github/workflows/release.yml`](.github/workflows/release.yml): push a
+`v*` tag and the workflow runs `make release`, attaches the tarballs and
+`SHA256SUMS.txt` to a GitHub release, and writes generated release notes.
 
 ```bash
-# 1. Cross-compile + create release archives
-make release VERSION=v1.0.0
-
-# 2. Inspect artifacts (./dist/)
-ls dist/
-#  smart360-v1.0.0-darwin-arm64.tar.gz
-#  smart360-v1.0.0-darwin-amd64.tar.gz
-#  smart360-v1.0.0-linux-amd64.tar.gz
-#  smart360-v1.0.0-linux-arm64.tar.gz
-#  smart360-v1.0.0-SHA256SUMS.txt
-
-# 3. Tag and push (this is where GitHub Actions would publish images / pages
-#    once you wire that up — see NEXT_STEPS.md #11):
+# 1. Tag and push — the Release workflow does the cross-compile + publish.
 git tag -a v1.0.0 -m "v1.0.0"
 git push origin v1.0.0
 
-# 4. Create a GitHub release at https://github.com/mondial7/smart-360/releases/new
-#    and attach every file in dist/.
+# 2. Wait for the workflow to finish, then download SHA256SUMS.txt from
+#    the release page. Update Formula/smart360.rb with the new `version`
+#    and per-arch `sha256` values.
 
-# 5. Update Formula/smart360.rb with the new version + sha256 values
-#    from dist/smart360-v1.0.0-SHA256SUMS.txt.
-
-# 6. Test the formula locally:
+# 3. Test the formula locally:
 brew install --build-from-source ./Formula/smart360.rb
 smart360 --version
 
-# 7. Publish to the tap so end users get it via `brew install smart360`:
+# 4. Publish to the tap so end users get it via `brew install smart360`.
 #    Copy the updated Formula/smart360.rb into the tap repo and push.
 git -C /path/to/homebrew-tap pull
 cp Formula/smart360.rb /path/to/homebrew-tap/Formula/smart360.rb
@@ -309,6 +297,10 @@ git -C /path/to/homebrew-tap add Formula/smart360.rb
 git -C /path/to/homebrew-tap commit -m "smart360 v1.0.0"
 git -C /path/to/homebrew-tap push
 ```
+
+To dry-run the build locally without tagging, run `make release VERSION=v1.0.0`
+and inspect `./dist/`. Automating the tap bump itself is tracked in
+[#36](https://github.com/mondial7/smart-360/issues/36).
 
 ---
 
@@ -389,8 +381,9 @@ showcase in `docs/`, and the Homebrew formula in `Formula/`. See
 ## Contributing & license
 
 Contributions welcome. Read [`CLAUDE.md`](CLAUDE.md) for repo conventions
-(commit format, test layout, Phosphor icons, scoped SASS, etc.) and
-[`NEXT_STEPS.md`](NEXT_STEPS.md) for the roadmap.
+(commit format, test layout, Phosphor icons, scoped SASS, etc.) and browse
+[open issues](https://github.com/mondial7/smart-360/issues) — anything
+labeled `good first issue` is a friendly entry point.
 
 1. Fork and create a feature branch (`feat/your-thing`).
 2. Run tests: `cd backend && go test ./...`.

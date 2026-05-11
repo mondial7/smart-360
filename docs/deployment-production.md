@@ -275,16 +275,19 @@ Certbot installs a renewal timer automatically.
 These are tracked separately and recommended for any production install,
 but they are out of scope here:
 
-- **Rate limiting & CSRF** — see [`NEXT_STEPS.md` §7](../NEXT_STEPS.md)
-  ("Enhanced Security"). Until these land, throttle abusive traffic at
-  the reverse proxy (`rate_limit` directive in Caddy 2.7+, or
-  `limit_req` in nginx).
-- **Database backups** — see [`NEXT_STEPS.md` §10](../NEXT_STEPS.md).
-  At minimum, schedule a nightly `mongodump` and ship the archive to
-  off-host storage.
-- **Observability** — see [`NEXT_STEPS.md` §9](../NEXT_STEPS.md). The
-  process logs to stdout (captured by `journalctl -u smart360`); there
-  is no Prometheus / OTel integration yet.
+- **Rate limiting & CSRF** — tracked in
+  [#26](https://github.com/mondial7/smart-360/issues/26) (rate limiting)
+  and [#32](https://github.com/mondial7/smart-360/issues/32) (broader
+  security hardening). Until these land, throttle abusive traffic at the
+  reverse proxy (`rate_limit` directive in Caddy 2.7+, or `limit_req` in
+  nginx).
+- **Database backups** — tracked in
+  [#35](https://github.com/mondial7/smart-360/issues/35). At minimum,
+  schedule a nightly `mongodump` and ship the archive to off-host storage.
+- **Observability** — tracked in
+  [#34](https://github.com/mondial7/smart-360/issues/34). The process
+  logs to stdout (captured by `journalctl -u smart360`); there is no
+  Prometheus / OTel integration yet.
 
 ---
 

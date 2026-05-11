@@ -360,11 +360,11 @@ Estimated monthly operational cost for small team (20 users, 10 rounds/month):
 
 ## Future Enhancements (Not Currently Implemented)
 
-Potential features for future releases (see [`NEXT_STEPS.md`](NEXT_STEPS.md) for full details):
-- Admin-level analytics dashboard (org-wide trends, themes, completion rates)
-- 360 comparison across multiple rounds
-- Anonymous comments on shared consolidated feedback
-- Slack / Teams integrations
-- Self-nomination for feedback
-- Peer recognition system
-- Manager-specific workflows
+Potential features for future releases — tracked as [open issues](https://github.com/mondial7/smart-360/issues):
+- Admin-level analytics dashboard (org-wide trends, themes, completion rates) — _shipped, see `PRODUCT-OVERVIEW.md`_
+- [360 comparison across multiple rounds](https://github.com/mondial7/smart-360/issues/29)
+- [Anonymous comments on shared consolidated feedback](https://github.com/mondial7/smart-360/issues/31)
+- [Slack / Teams integrations](https://github.com/mondial7/smart-360/issues/30)
+- [Self-nomination for feedback](https://github.com/mondial7/smart-360/issues/41)
+- [Peer recognition system](https://github.com/mondial7/smart-360/issues/42)
+- [Manager-specific workflows](https://github.com/mondial7/smart-360/issues/43)
