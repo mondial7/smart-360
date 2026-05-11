@@ -127,17 +127,6 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
-function formatDateTime(dateStr: string | null): string {
-  if (!dateStr) return 'Never'
-  return new Date(dateStr).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 function getRelativeTime(dateStr: string | null): string {
   if (!dateStr) return 'Never'
 
