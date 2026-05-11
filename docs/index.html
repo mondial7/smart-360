@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart 360 — AI-powered anonymous 360° feedback</title>
+  <meta name="description" content="Smart 360 turns anonymous peer feedback into clear, actionable insights using Google Gemini. Self-host in minutes via Homebrew, Docker, or source." />
+  <meta property="og:title" content="Smart 360 — AI-powered anonymous 360° feedback" />
+  <meta property="og:description" content="Self-hostable 360° feedback platform with AI consolidation, role-based access, and PDF export." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="brand" href="#top">
+        <span class="brand-mark" aria-hidden="true">360°</span>
+        <span class="brand-name">Smart&nbsp;360</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li>
+          <a class="nav-cta" href="https://github.com/mondial7/smart-360" rel="noopener">
+            GitHub →
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-inner">
+        <p class="eyebrow">Open source · MIT licensed · Self-hosted</p>
+        <h1>Turn honest peer feedback into <em>actionable growth</em>.</h1>
+        <p class="lede">
+          Smart&nbsp;360 collects anonymous structured feedback from your team
+          and uses Google&nbsp;Gemini to consolidate it into clear strengths,
+          improvement areas, and concrete next steps.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#install">Install in 60 seconds</a>
+          <a class="btn btn-secondary" href="https://github.com/mondial7/smart-360" rel="noopener">View on GitHub</a>
+        </div>
+        <p class="hero-meta">
+          <span>🍺 Homebrew</span><span>🐳 Docker</span><span>⚙️ Single Go binary</span>
+        </p>
+      </div>
+
+      <div class="hero-card" aria-hidden="true">
+        <div class="card-row">
+          <span class="dot dot-green"></span>
+          <span class="dot dot-amber"></span>
+          <span class="dot dot-red"></span>
+          <span class="card-title">consolidation · Q2 review</span>
+        </div>
+        <h3>Executive summary</h3>
+        <p>Strong technical leadership, consistently unblocks the team, and is trusted to own ambiguous problems end-to-end.</p>
+        <h4>Strengths</h4>
+        <ul>
+          <li>Clear written communication in design docs</li>
+          <li>Mentors junior engineers patiently</li>
+          <li>Drives reviews to closure quickly</li>
+        </ul>
+        <h4>Suggested next steps</h4>
+        <ul>
+          <li>Delegate code review for low-risk PRs</li>
+          <li>Run a quarterly retro with the platform team</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <h2>What it gives your team</h2>
+      <div class="grid">
+        <article class="feature">
+          <span class="feature-icon">🕶</span>
+          <h3>Truly anonymous</h3>
+          <p>Reviewers answer four structured prompts. The subject never sees who wrote what, only the consolidated insight.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">✨</span>
+          <h3>AI consolidation</h3>
+          <p>Google Gemini turns raw responses into a calibrated summary with strengths, growth areas, and concrete actions.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">📄</span>
+          <h3>Branded PDFs</h3>
+          <p>Every shared consolidation can be exported as a clean, print-ready PDF — perfect for 1:1s and review packets.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">📊</span>
+          <h3>Personal & admin analytics</h3>
+          <p>Radar charts per round, completion trends, theme extraction, team activity — all rendered with zero chart-library bloat.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">🛡️</span>
+          <h3>Role-based access</h3>
+          <p>Admin, Team Admin, and Member roles. Every status transition is recorded in an audit log.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-icon">🏠</span>
+          <h3>Runs on your hardware</h3>
+          <p>Single Go binary or Docker Compose stack. Works on a laptop, a Raspberry Pi, or a small VM on your LAN.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="how" id="how">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num">1</span>
+          <h3>Create a round</h3>
+          <p>An admin or team admin picks a subject and a list of reviewers, sets a deadline, and starts the round.</p>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <h3>Collect feedback</h3>
+          <p>Reviewers answer four structured prompts. Submissions are anonymous and editable until the deadline.</p>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <h3>Consolidate with AI</h3>
+          <p>On close, an admin triggers consolidation. Gemini identifies themes and proposes actionable next steps.</p>
+        </li>
+        <li>
+          <span class="step-num">4</span>
+          <h3>Share the result</h3>
+          <p>The admin reviews, optionally adds notes, then shares the consolidation with the subject in-app and as PDF.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="install" id="install">
+      <h2>Three ways to install</h2>
+      <p class="lede center">Pick the one that fits your environment. All three install the same product.</p>
+
+      <div class="install-grid">
+        <article class="install-card">
+          <header>
+            <span class="install-tag">Recommended for LAN / personal use</span>
+            <h3>🍺 Homebrew</h3>
+          </header>
+          <pre><code>brew install mongodb-community
+brew services start mongodb-community
+
+brew tap mondial7/tap
+brew install smart360
+smart360-setup
+$EDITOR ~/.config/smart360/.env
+brew services start smart360</code></pre>
+          <p>Open <code>http://localhost:8080</code>. A single Go binary with the UI embedded — no Node, no Docker required.</p>
+        </article>
+
+        <article class="install-card">
+          <header>
+            <span class="install-tag">Recommended for servers</span>
+            <h3>🐳 Docker Compose</h3>
+          </header>
+          <pre><code>git clone https://github.com/mondial7/smart-360.git
+cd smart-360
+cp .env.example .env
+$EDITOR .env
+docker compose up -d</code></pre>
+          <p>Bundles MongoDB, the Go API, and the nginx-served SPA. Open <code>http://localhost</code>.</p>
+        </article>
+
+        <article class="install-card">
+          <header>
+            <span class="install-tag">For development</span>
+            <h3>⚙️ From source</h3>
+          </header>
+          <pre><code>git clone https://github.com/mondial7/smart-360.git
+cd smart-360
+make build         # frontend + embedded Go binary
+cp .env.example .env
+$EDITOR .env
+./smart360</code></pre>
+          <p>Requires Go 1.25, Node 20, and a running MongoDB. Great for hacking on the code.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="architecture" id="architecture">
+      <h2>Architecture at a glance</h2>
+      <p class="lede center">Two deployment shapes from the same codebase.</p>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h3>Single-binary</h3>
+          <svg viewBox="0 0 360 220" role="img" aria-label="Single binary architecture">
+            <rect x="20" y="20" width="320" height="80" rx="10" class="box-primary" />
+            <text x="180" y="55" text-anchor="middle" class="box-title">smart360 (Go)</text>
+            <text x="180" y="78" text-anchor="middle" class="box-sub">REST API + embedded Vue SPA</text>
+            <line x1="180" y1="100" x2="180" y2="135" class="link" />
+            <rect x="120" y="140" width="120" height="60" rx="10" class="box-secondary" />
+            <text x="180" y="165" text-anchor="middle" class="box-title">MongoDB</text>
+            <text x="180" y="185" text-anchor="middle" class="box-sub">:27017</text>
+          </svg>
+        </div>
+
+        <div class="arch-card">
+          <h3>Docker Compose</h3>
+          <svg viewBox="0 0 360 280" role="img" aria-label="Docker compose architecture">
+            <rect x="20" y="10" width="320" height="60" rx="10" class="box-accent" />
+            <text x="180" y="38" text-anchor="middle" class="box-title">nginx (frontend)</text>
+            <text x="180" y="58" text-anchor="middle" class="box-sub">SPA + /api proxy</text>
+            <line x1="180" y1="70" x2="180" y2="100" class="link" />
+            <rect x="20" y="105" width="320" height="60" rx="10" class="box-primary" />
+            <text x="180" y="133" text-anchor="middle" class="box-title">backend (Go)</text>
+            <text x="180" y="153" text-anchor="middle" class="box-sub">Gin · JWT · Gemini</text>
+            <line x1="180" y1="165" x2="180" y2="195" class="link" />
+            <rect x="20" y="200" width="320" height="60" rx="10" class="box-secondary" />
+            <text x="180" y="228" text-anchor="middle" class="box-title">MongoDB</text>
+            <text x="180" y="248" text-anchor="middle" class="box-sub">named volume</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <h2>Ready to give your team better reviews?</h2>
+      <p>Smart 360 is open source under the MIT license. Star the repo, file issues, send PRs.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/mondial7/smart-360" rel="noopener">Get Smart 360 →</a>
+        <a class="btn btn-secondary" href="https://github.com/mondial7/smart-360/blob/main/README.md" rel="noopener">Read the docs</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Built with Go, Vue, and Google Gemini.
+      Source on <a href="https://github.com/mondial7/smart-360" rel="noopener">GitHub</a>.
+      MIT licensed.
+    </p>
+  </footer>
+</body>
+</html>

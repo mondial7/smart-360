@@ -2,18 +2,28 @@ package main
 
 import (
 	"context"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"smart360/database"
 	"smart360/handlers"
 	"smart360/middleware"
 	"smart360/models"
+	"smart360/web"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+)
+
+// Build metadata, populated by `go build -ldflags "-X main.version=..."`.
+var (
+	version   = "dev"
+	commit    = "unknown"
+	buildDate = "unknown"
 )
 
 // getEnv retrieves an environment variable or returns a fallback value
@@ -25,6 +35,12 @@ func getEnv(key, fallback string) string {
 }
 
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v" || os.Args[1] == "version") {
+		log.SetFlags(0)
+		log.Printf("smart360 %s (commit %s, built %s)", version, commit, buildDate)
+		return
+	}
+
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
@@ -51,14 +67,19 @@ func main() {
 	// Setup Gin
 	r := gin.Default()
 
-	// CORS configuration
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{getEnv("FRONTEND_URL", "http://localhost:5173")},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
+	// CORS is only needed when the SPA is served from a different origin
+	// (e.g. `npm run dev` on :5173, or the docker-compose nginx frontend).
+	// In single-binary mode the SPA is served from this same process, so we
+	// skip the middleware to avoid leaking permissive headers.
+	if !web.HasIndex() {
+		r.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{getEnv("FRONTEND_URL", "http://localhost:5173")},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			ExposeHeaders:    []string{"Content-Length"},
+			AllowCredentials: true,
+		}))
+	}
 
 	// Public routes
 	r.GET("/api/auth/google", handlers.GetGoogleAuthURL)
@@ -160,7 +181,48 @@ func main() {
 		})
 	}
 
+	// Mount embedded SPA if it was bundled at build time (single-binary
+	// distribution). API routes above take precedence; everything else
+	// falls back to index.html so client-side routing works.
+	if web.HasIndex() {
+		assets, err := web.Assets()
+		if err != nil {
+			log.Fatalf("Failed to load embedded SPA assets: %v", err)
+		}
+		mountSPA(r, assets)
+		log.Println("Serving embedded SPA from /")
+	}
+
 	// Start server
-	log.Println("Server starting on :8080")
-	r.Run(":8080")
+	port := getEnv("PORT", "8080")
+	log.Printf("Server starting on :%s", port)
+	r.Run(":" + port)
+}
+
+// mountSPA serves the embedded frontend assets and falls back to index.html
+// for any non-API path that does not match a file (so Vue Router controls
+// client-side navigation).
+func mountSPA(r *gin.Engine, assets fs.FS) {
+	fileServer := http.FileServer(http.FS(assets))
+
+	r.NoRoute(func(c *gin.Context) {
+		path := strings.TrimPrefix(c.Request.URL.Path, "/")
+
+		// API requests that fall through to NoRoute are genuine 404s.
+		if strings.HasPrefix(path, "api/") || path == "api" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+
+		// Serve the file if it exists, otherwise serve index.html (SPA fallback).
+		if path != "" {
+			if f, err := assets.Open(path); err == nil {
+				_ = f.Close()
+				fileServer.ServeHTTP(c.Writer, c.Request)
+				return
+			}
+		}
+		c.Request.URL.Path = "/"
+		fileServer.ServeHTTP(c.Writer, c.Request)
+	})
 }
