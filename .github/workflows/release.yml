@@ -1,0 +1,222 @@
+name: Release
+
+# Cuts a release on tag push or via manual dispatch:
+#   1. Cross-compile binaries (darwin+linux × amd64+arm64) with the SPA embedded.
+#   2. Build & push multi-arch Docker images to GHCR.
+#   3. Create the GitHub Release and attach binaries + SHA256SUMS.
+#   4. Update mondial7/homebrew-tap with the new version + sha256 values.
+#
+# Required secrets:
+#   - GITHUB_TOKEN        (provided automatically; used for the Release and GHCR)
+#   - HOMEBREW_TAP_TOKEN  (PAT with `contents:write` on mondial7/homebrew-tap)
+#
+# Manual dispatch supports a `dry_run` flag that builds everything but skips
+# publication — useful for validating the workflow without cutting a release.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. v1.0.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Build only, do not publish'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/smart-360-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/smart-360-frontend
+
+jobs:
+  binaries:
+    name: Cross-compile binaries
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build release artifacts
+        run: make release VERSION=${{ steps.version.outputs.value }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist/
+          retention-days: 7
+
+  docker:
+    name: Build & push Docker images
+    runs-on: ubuntu-latest
+    needs: binaries
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: github.event_name == 'push' || inputs.dry_run == false
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ needs.binaries.outputs.version }}
+            ${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ needs.binaries.outputs.version }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [binaries, docker]
+    if: github.event_name == 'push' || inputs.dry_run == false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: dist
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.binaries.outputs.version }}
+          name: ${{ needs.binaries.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*SHA256SUMS.txt
+
+  update-homebrew-tap:
+    name: Update Homebrew tap
+    runs-on: ubuntu-latest
+    needs: [binaries, github-release]
+    if: github.event_name == 'push' || inputs.dry_run == false
+    steps:
+      - name: Checkout source repo (for the formula template)
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: mondial7/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: dist
+
+      - name: Render formula with new version + sha256s
+        env:
+          VERSION: ${{ needs.binaries.outputs.version }}
+        run: |
+          set -euo pipefail
+          BARE_VERSION="${VERSION#v}"
+          SUMS="dist/smart360-${VERSION}-SHA256SUMS.txt"
+
+          SHA_DARWIN_ARM64=$(awk -v p="darwin-arm64.tar.gz" '$0 ~ p {print $1}' "$SUMS")
+          SHA_DARWIN_AMD64=$(awk -v p="darwin-amd64.tar.gz" '$0 ~ p {print $1}' "$SUMS")
+          SHA_LINUX_ARM64=$(awk -v p="linux-arm64.tar.gz"  '$0 ~ p {print $1}' "$SUMS")
+          SHA_LINUX_AMD64=$(awk -v p="linux-amd64.tar.gz"  '$0 ~ p {print $1}' "$SUMS")
+
+          for s in "$SHA_DARWIN_ARM64" "$SHA_DARWIN_AMD64" "$SHA_LINUX_ARM64" "$SHA_LINUX_AMD64"; do
+            if [ -z "$s" ] || [ "${#s}" -ne 64 ]; then
+              echo "Bad sha256 read from $SUMS: '$s'" >&2; exit 1
+            fi
+          done
+
+          mkdir -p tap/Formula
+          python3 - "$BARE_VERSION" "$SHA_DARWIN_ARM64" "$SHA_DARWIN_AMD64" "$SHA_LINUX_ARM64" "$SHA_LINUX_AMD64" <<'PY'
+          import re, sys
+          version, *shas = sys.argv[1:]
+          with open('source/Formula/smart360.rb') as f:
+              content = f.read()
+          content = re.sub(r'version "[^"]*"', f'version "{version}"', content, count=1)
+          # The four sha256 placeholders appear in this order in the formula:
+          #   darwin/arm64, darwin/amd64, linux/arm64, linux/amd64
+          it = iter(shas)
+          content = re.sub(r'sha256 "0{64}"', lambda _: f'sha256 "{next(it)}"', content)
+          with open('tap/Formula/smart360.rb', 'w') as f:
+              f.write(content)
+          PY
+
+      - name: Commit & push to tap
+        working-directory: tap
+        env:
+          VERSION: ${{ needs.binaries.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/smart360.rb
+          if git diff --cached --quiet; then
+            echo "Formula already up to date; nothing to commit"
+          else
+            git commit -m "smart360 ${VERSION}"
+            git push
+          fi
