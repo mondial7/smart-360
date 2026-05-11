@@ -147,6 +147,14 @@ func AddReviewersToRound(c *gin.Context) {
 			continue
 		}
 
+		// Team admins may only add reviewers from their own team.
+		if currentUser.Role == models.RoleTeamAdmin {
+			if currentUser.TeamID == nil || reviewerUser.TeamID == nil || *currentUser.TeamID != *reviewerUser.TeamID {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Team admins can only add reviewers from their own team"})
+				return
+			}
+		}
+
 		fmt.Printf("  Adding reviewer: %s (%s)\n", reviewerID.Hex(), reviewerUser.Name)
 		reviewer := models.RoundReviewer{
 			ID:         primitive.NewObjectID(),
@@ -347,21 +355,44 @@ func StartFeedbackRound(c *gin.Context) {
 
 func GetRoundDetails(c *gin.Context) {
 	roundID := c.Param("id")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
 	db := database.GetDB()
 	ctx := context.Background()
 
-	// Convert roundID string to ObjectID
 	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
 		return
 	}
 
-	// Get populated round data
 	populatedRound, err := getPopulatedRound(ctx, db, roundObjID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
 		return
+	}
+
+	// Authorization: admin / creator / subject / listed reviewer may view.
+	// Reviewer roster is only revealed to admin and creator — exposing it
+	// to subjects or peers would deanonymize the 360 feedback.
+	isAdmin := currentUser.Role == models.RoleAdmin
+	isCreator := currentUser.ID == populatedRound.CreatedByID
+	isSubject := currentUser.ID == populatedRound.SubjectID
+	isReviewer := false
+	for _, r := range populatedRound.Reviewers {
+		if r.ReviewerID == currentUser.ID {
+			isReviewer = true
+			break
+		}
+	}
+
+	if !isAdmin && !isCreator && !isSubject && !isReviewer {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to view this round"})
+		return
+	}
+
+	if !isAdmin && !isCreator {
+		populatedRound.Reviewers = []PopulatedRoundReviewer{}
 	}
 
 	c.JSON(http.StatusOK, populatedRound)

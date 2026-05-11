@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
+import { PhNotePencil, PhWarningCircle } from '@phosphor-icons/vue'
 
 const route = useRoute()
-const router = useRouter()
 const auth = useAuthStore()
 
 const roundId = route.params.id as string
@@ -137,7 +137,10 @@ function canEdit() {
             </span>
           </div>
           <div v-if="canEdit()" class="submission__meta-actions">
-            <button @click="startEditing" class="btn btn--secondary submission__edit-btn">✏️ Edit Feedback</button>
+            <button @click="startEditing" class="btn btn--secondary btn--with-icon submission__edit-btn">
+              <PhNotePencil :size="16" weight="regular" />
+              <span>Edit Feedback</span>
+            </button>
           </div>
         </div>
 
@@ -195,7 +198,10 @@ function canEdit() {
         </div>
 
         <div v-if="round.status !== 'active'" class="submission__notice">
-          <p class="submission__notice-text">⚠️ This round is {{ round.status }}. Feedback can only be edited while the round is active.</p>
+          <p class="submission__notice-text">
+            <PhWarningCircle :size="18" weight="fill" />
+            <span>This round is {{ round.status }}. Feedback can only be edited while the round is active.</span>
+          </p>
         </div>
       </div>
     </template>
@@ -392,6 +398,9 @@ function canEdit() {
   }
 
   &__notice-text {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.5rem;
     color: var(--text-primary);
     margin: 0;
     font-size: 0.9rem;

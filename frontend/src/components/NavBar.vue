@@ -3,6 +3,19 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useRouter } from 'vue-router'
+import {
+  PhChartBar,
+  PhChartPieSlice,
+  PhUsers,
+  PhBuildings,
+  PhArrowsClockwise,
+  PhClipboardText,
+  PhChatCircleText,
+  PhSun,
+  PhMoon,
+  PhList,
+  PhX
+} from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -39,21 +52,13 @@ router.afterEach(() => {
 
         <div class="mobile-header__actions">
           <button @click="theme.toggleTheme()" class="mobile-header__theme-btn" aria-label="Toggle theme">
-            <svg v-if="theme.isDark" class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-            <svg v-else class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-            </svg>
+            <PhSun v-if="theme.isDark" :size="24" weight="regular" />
+            <PhMoon v-else :size="24" weight="regular" />
           </button>
 
           <button @click="toggleMobileMenu" class="mobile-header__hamburger" aria-label="Toggle menu">
-            <svg v-if="!isMobileMenuOpen" class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-            <svg v-else class="mobile-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
+            <PhList v-if="!isMobileMenuOpen" :size="24" weight="regular" />
+            <PhX v-else :size="24" weight="regular" />
           </button>
         </div>
       </div>
@@ -73,27 +78,31 @@ router.afterEach(() => {
 
         <nav class="mobile-drawer__nav">
           <router-link to="/" class="nav-link">
-            <span class="nav-link__icon">📊</span>
+            <PhChartBar class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Dashboard</span>
           </router-link>
           <router-link to="/team" class="nav-link">
-            <span class="nav-link__icon">👥</span>
+            <PhUsers class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Team</span>
           </router-link>
           <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">
-            <span class="nav-link__icon">🏢</span>
+            <PhBuildings class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Teams</span>
           </router-link>
           <router-link to="/rounds" class="nav-link">
-            <span class="nav-link__icon">🔄</span>
+            <PhArrowsClockwise class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Rounds</span>
           </router-link>
+          <router-link v-if="auth.isAdmin" to="/analytics" class="nav-link">
+            <PhChartPieSlice class="nav-link__icon" :size="20" weight="regular" />
+            <span class="nav-link__text">Analytics</span>
+          </router-link>
           <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
-            <span class="nav-link__icon">📋</span>
+            <PhClipboardText class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">Audit Log</span>
           </router-link>
           <router-link to="/my-feedback" class="nav-link">
-            <span class="nav-link__icon">💬</span>
+            <PhChatCircleText class="nav-link__icon" :size="20" weight="regular" />
             <span class="nav-link__text">My Feedback</span>
           </router-link>
         </nav>
@@ -118,39 +127,39 @@ router.afterEach(() => {
 
       <nav class="sidebar__nav">
         <router-link to="/" class="nav-link">
-          <span class="nav-link__icon">📊</span>
+          <PhChartBar class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">Dashboard</span>
         </router-link>
         <router-link to="/team" class="nav-link">
-          <span class="nav-link__icon">👥</span>
+          <PhUsers class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">Team</span>
         </router-link>
         <router-link v-if="auth.isAdmin" to="/teams" class="nav-link">
-          <span class="nav-link__icon">🏢</span>
+          <PhBuildings class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">Teams</span>
         </router-link>
         <router-link to="/rounds" class="nav-link">
-          <span class="nav-link__icon">🔄</span>
+          <PhArrowsClockwise class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">Rounds</span>
         </router-link>
+        <router-link v-if="auth.isAdmin" to="/analytics" class="nav-link">
+          <PhChartPieSlice class="nav-link__icon" :size="20" weight="regular" />
+          <span class="nav-link__text">Analytics</span>
+        </router-link>
         <router-link v-if="auth.isAdmin" to="/audit-logs" class="nav-link">
-          <span class="nav-link__icon">📋</span>
+          <PhClipboardText class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">Audit Log</span>
         </router-link>
         <router-link to="/my-feedback" class="nav-link">
-          <span class="nav-link__icon">💬</span>
+          <PhChatCircleText class="nav-link__icon" :size="20" weight="regular" />
           <span class="nav-link__text">My Feedback</span>
         </router-link>
       </nav>
 
       <div class="sidebar__footer">
         <button @click="theme.toggleTheme()" class="sidebar__theme-btn">
-          <svg v-if="theme.isDark" class="sidebar__theme-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-          </svg>
-          <svg v-else class="sidebar__theme-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-          </svg>
+          <PhSun v-if="theme.isDark" :size="16" weight="regular" />
+          <PhMoon v-else :size="16" weight="regular" />
           <span>{{ theme.isDark ? 'Light' : 'Dark' }}</span>
         </button>
 
@@ -461,9 +470,7 @@ router.afterEach(() => {
   }
 
   &__icon {
-    font-size: 1.25rem;
-    width: 24px;
-    text-align: center;
+    flex-shrink: 0;
   }
 
   &__text {

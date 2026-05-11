@@ -27,7 +27,9 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		secret := os.Getenv("JWT_SECRET")
 		if secret == "" {
-			secret = "your-secret-key-change-in-production"
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Server misconfigured"})
+			c.Abort()
+			return
 		}
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -95,6 +97,28 @@ func AdminOnly() gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// AdminOrTeamAdminRole gates a route on role membership only — does NOT
+// validate any per-team scope. Use it when the team boundary depends on
+// request body data (e.g. the round's subject) and must be checked inside
+// the handler.
+func AdminOrTeamAdminRole() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+			c.Abort()
+			return
+		}
+		u := user.(models.User)
+		if u.Role != models.RoleAdmin && u.Role != models.RoleTeamAdmin {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin or team admin access required"})
+			c.Abort()
+			return
+		}
 		c.Next()
 	}
 }

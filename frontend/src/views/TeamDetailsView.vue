@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { Team } from '@/types/team'
-import type { User } from '@/types/user'
+import { PhX } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,8 +161,9 @@ function goBack() {
                 @click="removeMember(member.id)"
                 class="member__remove"
                 title="Remove member"
+                aria-label="Remove member"
               >
-                ×
+                <PhX :size="14" weight="bold" />
               </button>
             </div>
           </div>

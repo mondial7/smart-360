@@ -4,6 +4,18 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { FeedbackRound } from '@/types/round'
+import {
+  PhNotePencil,
+  PhArrowLeft,
+  PhTrophy,
+  PhTrendUp,
+  PhTarget,
+  PhFileText,
+  PhClipboardText,
+  PhCheck,
+  PhArrowUp,
+  PhArrowRight
+} from '@phosphor-icons/vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -222,15 +234,19 @@ function getUserById(userId: string) {
 
     <template v-else-if="round">
       <header class="round-details__header">
-        <router-link to="/rounds" class="round-details__back">← Back to Rounds</router-link>
+        <router-link to="/rounds" class="round-details__back">
+          <PhArrowLeft :size="14" weight="bold" />
+          <span>Back to Rounds</span>
+        </router-link>
         <div class="round-details__header-content">
           <h1 class="round-details__title">Round Details</h1>
           <button
             v-if="auth.isAdmin || round.createdById === auth.user?.id"
             @click="openEditModal"
-            class="btn btn--primary round-details__edit-btn"
+            class="btn btn--primary btn--with-icon round-details__edit-btn"
           >
-            ✏️ Edit Round
+            <PhNotePencil :size="16" weight="regular" />
+            <span>Edit Round</span>
           </button>
         </div>
         <div class="round-details__meta">
@@ -321,43 +337,61 @@ function getUserById(userId: string) {
         <div class="round-details__consolidation-body">
           <!-- Executive Summary -->
           <section class="consolidation-section">
-            <h2 class="consolidation-section__title">Executive Summary</h2>
+            <h2 class="consolidation-section__title">
+              <PhFileText :size="20" weight="duotone" />
+              <span>Executive Summary</span>
+            </h2>
             <p class="consolidation-section__summary">{{ consolidation.executiveSummary }}</p>
           </section>
 
           <!-- Strengths -->
           <section class="consolidation-section">
-            <h2 class="consolidation-section__title">💪 Key Strengths</h2>
+            <h2 class="consolidation-section__title">
+              <PhTrophy :size="20" weight="duotone" />
+              <span>Key Strengths</span>
+            </h2>
             <ul class="consolidation-list consolidation-list--positive">
               <li v-for="(strength, i) in consolidation.strengths" :key="i">
-                {{ strength }}
+                <PhCheck class="consolidation-list__icon" :size="18" weight="bold" />
+                <span>{{ strength }}</span>
               </li>
             </ul>
           </section>
 
           <!-- Areas for Improvement -->
           <section class="consolidation-section">
-            <h2 class="consolidation-section__title">📈 Areas for Improvement</h2>
+            <h2 class="consolidation-section__title">
+              <PhTrendUp :size="20" weight="duotone" />
+              <span>Areas for Improvement</span>
+            </h2>
             <ul class="consolidation-list consolidation-list--improvement">
               <li v-for="(area, i) in consolidation.areasForImprovement" :key="i">
-                {{ area }}
+                <PhArrowUp class="consolidation-list__icon" :size="18" weight="bold" />
+                <span>{{ area }}</span>
               </li>
             </ul>
           </section>
 
           <!-- Actionable Insights -->
           <section class="consolidation-section">
-            <h2 class="consolidation-section__title">🎯 Actionable Insights</h2>
+            <h2 class="consolidation-section__title">
+              <PhTarget :size="20" weight="duotone" />
+              <span>Actionable Insights</span>
+            </h2>
             <ul class="consolidation-list consolidation-list--action">
               <li v-for="(insight, i) in consolidation.actionableInsights" :key="i">
-                {{ insight }}
+                <PhArrowRight class="consolidation-list__icon" :size="18" weight="bold" />
+                <span>{{ insight }}</span>
               </li>
             </ul>
           </section>
 
           <!-- Question Summaries -->
           <section class="consolidation-section">
-            <h2 class="consolidation-section__title">📋 Detailed Question Analysis</h2>
+            <h2 class="consolidation-section__title">
+              <PhClipboardText :size="20" weight="duotone" />
+              <span>Detailed Question Analysis</span>
+            </h2>
             <div class="questions">
               <div class="question-card">
                 <h4 class="question-card__title">1. Key Strengths</h4>
@@ -380,7 +414,10 @@ function getUserById(userId: string) {
 
           <!-- Admin Notes -->
           <section v-if="consolidation.adminNotes" class="consolidation-section">
-            <h2 class="consolidation-section__title">📝 Admin Notes</h2>
+            <h2 class="consolidation-section__title">
+              <PhNotePencil :size="20" weight="duotone" />
+              <span>Admin Notes</span>
+            </h2>
             <p class="consolidation-section__admin-notes">{{ consolidation.adminNotes }}</p>
           </section>
         </div>
@@ -533,7 +570,9 @@ function getUserById(userId: string) {
   }
 
   &__back {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     margin-bottom: 1rem;
     color: var(--color-primary);
     text-decoration: none;
@@ -878,6 +917,9 @@ function getUserById(userId: string) {
   }
 
   &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 1.125rem;
     margin: 0 0 1rem 0;
     color: var(--text-primary);
@@ -914,45 +956,42 @@ function getUserById(userId: string) {
   margin: 0;
 
   li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
     padding: 1rem;
     margin-bottom: 0.75rem;
     border-radius: 8px;
-    position: relative;
-    padding-left: 2.5rem;
     color: var(--text-primary);
+  }
 
-    &::before {
-      position: absolute;
-      left: 0.75rem;
-      font-size: 1.25rem;
-    }
+  &__icon {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
   }
 
   &--positive li {
     background: rgba(76, 175, 80, 0.1);
+  }
 
-    &::before {
-      content: '✓';
-      color: var(--color-success);
-    }
+  &--positive &__icon {
+    color: var(--color-success);
   }
 
   &--improvement li {
     background: rgba(255, 152, 0, 0.1);
+  }
 
-    &::before {
-      content: '↑';
-      color: var(--color-warning);
-    }
+  &--improvement &__icon {
+    color: var(--color-warning);
   }
 
   &--action li {
     background: rgba(33, 150, 243, 0.1);
+  }
 
-    &::before {
-      content: '→';
-      color: var(--color-info);
-    }
+  &--action &__icon {
+    color: var(--color-info);
   }
 }
 

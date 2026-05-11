@@ -4,6 +4,9 @@ export interface DashboardStats {
   memberCount: number
   totalRounds: number
   activeRounds: number
-  pendingReviews: number
+  myRounds: number
+  subjectRounds: number
+  mySubmissions: number
   myFeedbackCount: number
+  pendingReviews?: number
 }

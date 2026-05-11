@@ -193,7 +193,213 @@ func (h *testRoundHandler) AddReviewersToRound(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Reviewers added successfully"})
 }
 
+// GetRoundDetails mirrors handlers.GetRoundDetails authorization logic but
+// uses the round repository directly (skipping the populated user fields).
+// This is enough to exercise the auth branches and reviewer-stripping rule.
+func (h *testRoundHandler) GetRoundDetails(c *gin.Context) {
+	roundID := c.Param("id")
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	currentUser := user.(models.User)
+	ctx := context.Background()
+
+	roundObjID, err := primitive.ObjectIDFromHex(roundID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
+		return
+	}
+
+	round, err := h.roundRepo.FindByID(ctx, roundObjID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+
+	populatedRound := &PopulatedRound{
+		ID:          round.ID,
+		SubjectID:   round.SubjectID,
+		CreatedByID: round.CreatedByID,
+		Status:      round.Status,
+		Reviewers:   make([]PopulatedRoundReviewer, 0, len(round.Reviewers)),
+	}
+	for _, r := range round.Reviewers {
+		populatedRound.Reviewers = append(populatedRound.Reviewers, PopulatedRoundReviewer{
+			ID:         r.ID,
+			RoundID:    r.RoundID,
+			ReviewerID: r.ReviewerID,
+			CreatedAt:  r.CreatedAt,
+		})
+	}
+
+	isAdmin := currentUser.Role == models.RoleAdmin
+	isCreator := currentUser.ID == populatedRound.CreatedByID
+	isSubject := currentUser.ID == populatedRound.SubjectID
+	isReviewer := false
+	for _, r := range populatedRound.Reviewers {
+		if r.ReviewerID == currentUser.ID {
+			isReviewer = true
+			break
+		}
+	}
+
+	if !isAdmin && !isCreator && !isSubject && !isReviewer {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to view this round"})
+		return
+	}
+
+	if !isAdmin && !isCreator {
+		populatedRound.Reviewers = []PopulatedRoundReviewer{}
+	}
+
+	c.JSON(http.StatusOK, populatedRound)
+}
+
 // Integration Tests
+
+func TestGetRoundDetails_Integration(t *testing.T) {
+	t.Run("admin_sees_full_reviewer_roster", func(t *testing.T) {
+		roundRepo := repositories.NewFakeRoundRepository()
+		h := &testRoundHandler{roundRepo: roundRepo}
+
+		creator := testutil.NewTestUser("creator-r1@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+		require.NoError(t, roundRepo.AddReviewer(context.Background(), round.ID, models.RoundReviewer{
+			ID:         primitive.NewObjectID(),
+			RoundID:    round.ID,
+			ReviewerID: primitive.NewObjectID(),
+			CreatedAt:  time.Now(),
+		}))
+
+		admin := testutil.NewTestUser("admin-r1@example.com", models.RoleAdmin)
+		c, w := testutil.NewTestGinContext(admin)
+		testutil.SetParam(c, "id", round.ID.Hex())
+
+		h.GetRoundDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var pr PopulatedRound
+		require.NoError(t, testutil.ParseJSONResponse(w, &pr))
+		assert.Len(t, pr.Reviewers, 1)
+	})
+
+	t.Run("creator_sees_full_reviewer_roster", func(t *testing.T) {
+		roundRepo := repositories.NewFakeRoundRepository()
+		h := &testRoundHandler{roundRepo: roundRepo}
+
+		creator := testutil.NewTestUser("creator-r2@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+		require.NoError(t, roundRepo.AddReviewer(context.Background(), round.ID, models.RoundReviewer{
+			ID:         primitive.NewObjectID(),
+			RoundID:    round.ID,
+			ReviewerID: primitive.NewObjectID(),
+			CreatedAt:  time.Now(),
+		}))
+
+		c, w := testutil.NewTestGinContext(creator)
+		testutil.SetParam(c, "id", round.ID.Hex())
+
+		h.GetRoundDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var pr PopulatedRound
+		require.NoError(t, testutil.ParseJSONResponse(w, &pr))
+		assert.Len(t, pr.Reviewers, 1)
+	})
+
+	t.Run("subject_sees_round_but_reviewer_roster_is_stripped", func(t *testing.T) {
+		roundRepo := repositories.NewFakeRoundRepository()
+		h := &testRoundHandler{roundRepo: roundRepo}
+
+		subject := testutil.NewTestUser("subject-r3@example.com", models.RoleMember)
+		creator := testutil.NewTestUser("creator-r3@example.com", models.RoleMember)
+		round := testutil.NewTestRound(subject.ID, creator.ID, models.RoundShared)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+		require.NoError(t, roundRepo.AddReviewer(context.Background(), round.ID, models.RoundReviewer{
+			ID:         primitive.NewObjectID(),
+			RoundID:    round.ID,
+			ReviewerID: primitive.NewObjectID(),
+			CreatedAt:  time.Now(),
+		}))
+
+		c, w := testutil.NewTestGinContext(subject)
+		testutil.SetParam(c, "id", round.ID.Hex())
+
+		h.GetRoundDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var pr PopulatedRound
+		require.NoError(t, testutil.ParseJSONResponse(w, &pr))
+		assert.Empty(t, pr.Reviewers, "subjects must not see who reviewed them")
+	})
+
+	t.Run("listed_reviewer_sees_round_but_no_other_reviewers", func(t *testing.T) {
+		roundRepo := repositories.NewFakeRoundRepository()
+		h := &testRoundHandler{roundRepo: roundRepo}
+
+		creator := testutil.NewTestUser("creator-r4@example.com", models.RoleMember)
+		reviewer := testutil.NewTestUser("reviewer-r4@example.com", models.RoleMember)
+		other := testutil.NewTestUser("other-r4@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+		require.NoError(t, roundRepo.AddReviewer(context.Background(), round.ID, models.RoundReviewer{
+			ID:         primitive.NewObjectID(),
+			RoundID:    round.ID,
+			ReviewerID: reviewer.ID,
+			CreatedAt:  time.Now(),
+		}))
+		require.NoError(t, roundRepo.AddReviewer(context.Background(), round.ID, models.RoundReviewer{
+			ID:         primitive.NewObjectID(),
+			RoundID:    round.ID,
+			ReviewerID: other.ID,
+			CreatedAt:  time.Now(),
+		}))
+
+		c, w := testutil.NewTestGinContext(reviewer)
+		testutil.SetParam(c, "id", round.ID.Hex())
+
+		h.GetRoundDetails(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var pr PopulatedRound
+		require.NoError(t, testutil.ParseJSONResponse(w, &pr))
+		assert.Empty(t, pr.Reviewers, "reviewers must not see other reviewers")
+	})
+
+	t.Run("unrelated_member_is_forbidden", func(t *testing.T) {
+		roundRepo := repositories.NewFakeRoundRepository()
+		h := &testRoundHandler{roundRepo: roundRepo}
+
+		creator := testutil.NewTestUser("creator-r5@example.com", models.RoleMember)
+		round := testutil.NewTestRound(primitive.NewObjectID(), creator.ID, models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), round))
+
+		intruder := testutil.NewTestUser("intruder-r5@example.com", models.RoleMember)
+		c, w := testutil.NewTestGinContext(intruder)
+		testutil.SetParam(c, "id", round.ID.Hex())
+
+		h.GetRoundDetails(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("nonexistent_round_returns_not_found", func(t *testing.T) {
+		roundRepo := repositories.NewFakeRoundRepository()
+		h := &testRoundHandler{roundRepo: roundRepo}
+
+		admin := testutil.NewTestUser("admin-r6@example.com", models.RoleAdmin)
+		c, w := testutil.NewTestGinContext(admin)
+		testutil.SetParam(c, "id", primitive.NewObjectID().Hex())
+
+		h.GetRoundDetails(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
 
 func TestCreateFeedbackRound_Integration(t *testing.T) {
 	roundRepo := repositories.NewFakeRoundRepository()

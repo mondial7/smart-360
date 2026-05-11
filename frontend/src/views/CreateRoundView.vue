@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { User } from '@/types/user'
 import type { CreateRoundRequest } from '@/types/round'
+import { PhCheck } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -180,7 +181,7 @@ function formatDateTimeLocal(dateStr: string): string {
           <img v-if="user.photoUrl" :src="user.photoUrl" :alt="user.name" class="user-card__photo">
           <div v-else class="user-card__photo-placeholder">{{ user.name.charAt(0).toUpperCase() }}</div>
           <span class="user-card__name">{{ user.name }}</span>
-          <span v-if="reviewerIds.includes(user.id)" class="user-card__check">✓</span>
+          <PhCheck v-if="reviewerIds.includes(user.id)" class="user-card__check" :size="16" weight="bold" />
         </div>
       </div>
 

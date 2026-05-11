@@ -16,23 +16,33 @@ import (
 // Simple MongoDB-based submission handlers
 func GetRoundSubmissions(c *gin.Context) {
 	roundID := c.Param("roundId")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
 	db := database.GetDB()
 	ctx := context.Background()
 
-	fmt.Printf("GetRoundSubmissions called for roundID: %s\n", roundID)
-
-	// Convert roundID string to ObjectID
 	roundObjID, err := primitive.ObjectIDFromHex(roundID)
 	if err != nil {
-		fmt.Printf("Error converting roundID to ObjectID: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
 		return
 	}
 
-	// Get all submissions for this round
+	// Authorization: only the round creator or a global admin may read raw
+	// submissions, since the (reviewer_id, responses) pairing breaks the
+	// 360-feedback anonymity guarantee.
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+	if currentUser.Role != models.RoleAdmin && round.CreatedByID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to view submissions for this round"})
+		return
+	}
+
 	cursor, err := db.Collection("submissions").Find(ctx, bson.M{"round_id": roundObjID})
 	if err != nil {
-		fmt.Printf("Error finding submissions: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch submissions"})
 		return
 	}
@@ -40,21 +50,20 @@ func GetRoundSubmissions(c *gin.Context) {
 
 	var submissions []models.Submission
 	if err = cursor.All(ctx, &submissions); err != nil {
-		fmt.Printf("Error decoding submissions: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode submissions"})
 		return
 	}
 
-	fmt.Printf("Found %d submissions for round %s\n", len(submissions), roundID)
 	c.JSON(http.StatusOK, submissions)
 }
 
 func GetSubmissionDetails(c *gin.Context) {
 	submissionID := c.Param("submissionId")
+	user, _ := c.Get("user")
+	currentUser := user.(models.User)
 	db := database.GetDB()
 	ctx := context.Background()
 
-	// Convert submissionID string to ObjectID
 	submissionObjID, err := primitive.ObjectIDFromHex(submissionID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
@@ -66,6 +75,17 @@ func GetSubmissionDetails(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
 		return
+	}
+
+	// Authorization: only the reviewer who wrote it, the round creator, or
+	// a global admin may read the (reviewer_id, responses) pairing.
+	if currentUser.Role != models.RoleAdmin && submission.ReviewerID != currentUser.ID {
+		var round models.FeedbackRound
+		err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": submission.RoundID}).Decode(&round)
+		if err != nil || round.CreatedByID != currentUser.ID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Not authorized to view this submission"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, submission)
@@ -115,14 +135,41 @@ func SubmitFeedback(c *gin.Context) {
 	db := database.GetDB()
 	ctx := context.Background()
 
-	// Convert roundID string to ObjectID
 	roundObjID, err := primitive.ObjectIDFromHex(req.RoundID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid round ID"})
 		return
 	}
 
-	// Check if submission already exists
+	// Validate round exists, is active, caller is an enlisted reviewer, and
+	// caller is not the round subject. Without this check any authenticated
+	// user can inject phantom submissions into any round in any status.
+	var round models.FeedbackRound
+	err = db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+	if round.Status != models.RoundActive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Round is not accepting submissions"})
+		return
+	}
+	if round.SubjectID == currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Subjects cannot submit feedback on their own round"})
+		return
+	}
+	isReviewer := false
+	for _, r := range round.Reviewers {
+		if r.ReviewerID == currentUser.ID {
+			isReviewer = true
+			break
+		}
+	}
+	if !isReviewer {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
+		return
+	}
+
 	var existing models.Submission
 	err = db.Collection("submissions").FindOne(ctx, bson.M{
 		"round_id":    roundObjID,
@@ -134,7 +181,6 @@ func SubmitFeedback(c *gin.Context) {
 		return
 	}
 
-	// Create submission
 	submission := models.Submission{
 		RoundID:     roundObjID,
 		ReviewerID:  currentUser.ID,

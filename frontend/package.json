@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "build:docker": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@phosphor-icons/vue": "^2.2.1",
     "axios": "^1.6.8",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",

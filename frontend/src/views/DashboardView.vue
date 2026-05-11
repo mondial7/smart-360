@@ -4,6 +4,13 @@ import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { DashboardStats } from '@/types/dashboard'
 import type { FeedbackRound } from '@/types/round'
+import MyAnalyticsCard from '@/components/MyAnalyticsCard.vue'
+import {
+  PhClipboardText,
+  PhUsers,
+  PhPlus,
+  PhArrowRight
+} from '@phosphor-icons/vue'
 
 const auth = useAuthStore()
 const stats = ref<DashboardStats | null>(null)
@@ -134,11 +141,14 @@ function getRoundStatusText(round: FeedbackRound): string {
               </div>
             </div>
           </div>
-          <router-link to="/rounds" class="dashboard__view-all">View all rounds →</router-link>
+          <router-link to="/rounds" class="dashboard__view-all">
+            <span>View all rounds</span>
+            <PhArrowRight :size="14" weight="bold" />
+          </router-link>
         </div>
 
         <div class="empty-state" v-else>
-          <div class="empty-state__icon">📋</div>
+          <PhClipboardText class="empty-state__icon" :size="48" weight="duotone" />
           <p class="empty-state__text">No active feedback rounds. Create your first round to get started!</p>
         </div>
 
@@ -146,15 +156,15 @@ function getRoundStatusText(round: FeedbackRound): string {
           <h2 class="dashboard__section-title">Quick Actions</h2>
           <div class="action-grid">
             <router-link to="/team" class="action-card">
-              <span class="action-card__icon">👥</span>
+              <PhUsers class="action-card__icon" :size="28" weight="duotone" />
               <span class="action-card__text">Manage Team</span>
             </router-link>
             <router-link to="/rounds" class="action-card">
-              <span class="action-card__icon">📋</span>
+              <PhClipboardText class="action-card__icon" :size="28" weight="duotone" />
               <span class="action-card__text">View Rounds</span>
             </router-link>
             <router-link to="/rounds/new" class="action-card action-card--primary">
-              <span class="action-card__icon">➕</span>
+              <PhPlus class="action-card__icon" :size="28" weight="bold" />
               <span class="action-card__text">Create Round</span>
             </router-link>
           </div>
@@ -169,7 +179,10 @@ function getRoundStatusText(round: FeedbackRound): string {
               {{ myRounds.filter(r => r.status === 'active' && !submissionStatus[r.id]).length }}
             </div>
             <div class="stat-card__label">Pending Reviews</div>
-            <router-link to="/rounds" class="stat-card__link">Review now →</router-link>
+            <router-link to="/rounds" class="stat-card__link">
+              <span>Review now</span>
+              <PhArrowRight :size="14" weight="bold" />
+            </router-link>
           </div>
 
           <div class="stat-card">
@@ -180,9 +193,14 @@ function getRoundStatusText(round: FeedbackRound): string {
           <div class="stat-card">
             <div class="stat-card__value">{{ stats?.myFeedbackCount || 0 }}</div>
             <div class="stat-card__label">My Feedback</div>
-            <router-link to="/my-feedback" class="stat-card__link">View →</router-link>
+            <router-link to="/my-feedback" class="stat-card__link">
+              <span>View</span>
+              <PhArrowRight :size="14" weight="bold" />
+            </router-link>
           </div>
         </div>
+
+        <MyAnalyticsCard />
 
         <div v-if="myRounds.length > 0" class="feedback-section">
           <h2 class="dashboard__section-title">Feedback Requests</h2>
@@ -229,7 +247,7 @@ function getRoundStatusText(round: FeedbackRound): string {
         </div>
 
         <div class="empty-state card" v-else>
-          <div class="empty-state__icon">📋</div>
+          <PhClipboardText class="empty-state__icon" :size="48" weight="duotone" />
           <h2 class="empty-state__title">No Feedback Requests</h2>
           <p class="empty-state__text">You don't have any pending feedback requests at the moment.</p>
           <router-link to="/team" class="btn btn--primary">View Team</router-link>
@@ -284,9 +302,10 @@ function getRoundStatusText(round: FeedbackRound): string {
   }
 
   &__view-all {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     margin-top: 1rem;
-    text-align: center;
     color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
@@ -359,6 +378,9 @@ function getRoundStatusText(round: FeedbackRound): string {
   }
 
   &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     font-size: 0.85rem;
     color: var(--color-primary);
     text-decoration: none;
@@ -449,9 +471,9 @@ function getRoundStatusText(round: FeedbackRound): string {
   margin-bottom: 2rem;
 
   &__icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
+    margin: 0 auto 1rem;
+    color: var(--text-tertiary);
+    opacity: 0.7;
   }
 
   &__title {
@@ -500,7 +522,11 @@ function getRoundStatusText(round: FeedbackRound): string {
   }
 
   &__icon {
-    font-size: 1.5rem;
+    color: var(--color-primary);
+
+    .action-card--primary & {
+      color: white;
+    }
   }
 
   &__text {
