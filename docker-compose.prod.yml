@@ -1,0 +1,84 @@
+# Production / distribution Compose file for Smart 360 Feedback.
+#
+# Unlike docker-compose.yml (which builds the backend and frontend images
+# from local source — useful for development), this file consumes the
+# pre-built images published to GHCR by the release workflow:
+#   ghcr.io/mondial7/smart-360-backend:<version>
+#   ghcr.io/mondial7/smart-360-frontend:<version>
+#
+# Usage:
+#   cp .env.example .env && $EDITOR .env
+#   SMART360_VERSION=v1.0.0 docker compose -f docker-compose.prod.yml up -d
+#
+# Pin the version in production. SMART360_VERSION defaults to `latest` for
+# convenience but `latest` should be reserved for development / smoke tests.
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: smart360-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: smart360
+    volumes:
+      - mongodb_data:/data/db
+    # NOTE: docker-compose.yml (dev) bind-mounts backend/scripts/mongo-init.js
+    # to create JSON-schema validators on first boot. We omit it here so the
+    # prod compose file is self-contained (no source-tree dependency). The Go
+    # backend creates the collections and indexes it needs on startup
+    # (see backend/database/indexes.go).
+    networks:
+      - smart360-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    image: ghcr.io/mondial7/smart-360-backend:${SMART360_VERSION:-latest}
+    container_name: smart360-backend
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017
+      MONGODB_DB: smart360
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/auth/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - smart360-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/me"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    image: ghcr.io/mondial7/smart-360-frontend:${SMART360_VERSION:-latest}
+    container_name: smart360-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - smart360-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  smart360-network:
+    driver: bridge
