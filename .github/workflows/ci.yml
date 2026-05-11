@@ -13,8 +13,12 @@ concurrency:
 
 jobs:
   backend:
+    # Pinned to 22.04: memongo's MongoDB 6.0.0 binary is linked against
+    # libssl 1.1, which is missing on ubuntu-24.04 (the current
+    # `ubuntu-latest`). When bumping the mongo version in
+    # testutil/mongodb.go to one built for 24.04, this pin can go.
     name: Backend (Go ${{ matrix.go }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         go: ['1.25']
