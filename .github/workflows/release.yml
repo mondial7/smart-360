@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.value }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,9 +46,18 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            VERSION="${{ inputs.version }}"
           else
-            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+          # Anything with a `-` suffix (e.g. v1.0.0-rc1, v1.0.0-beta.2) is a
+          # pre-release per semver. Used downstream to skip Docker `latest`
+          # and the tap update so end users on stable channels are unaffected.
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up Go
@@ -98,15 +108,38 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # `latest` should track the most recent stable GA release only — pre-releases
+      # (rc, beta, etc.) get the explicit version tag and nothing else, so a user
+      # who runs `docker pull …:latest` never accidentally pulls an rc build.
+      - name: Compute Docker tag list
+        id: tags
+        run: |
+          VERSION="${{ needs.binaries.outputs.version }}"
+          IS_PRERELEASE="${{ needs.binaries.outputs.is_prerelease }}"
+
+          backend="${{ env.BACKEND_IMAGE }}:${VERSION}"
+          frontend="${{ env.FRONTEND_IMAGE }}:${VERSION}"
+          if [ "$IS_PRERELEASE" = "false" ]; then
+            backend="${backend}"$'\n'"${{ env.BACKEND_IMAGE }}:latest"
+            frontend="${frontend}"$'\n'"${{ env.FRONTEND_IMAGE }}:latest"
+          fi
+
+          {
+            echo "backend<<EOF"
+            echo "$backend"
+            echo "EOF"
+            echo "frontend<<EOF"
+            echo "$frontend"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build & push backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' || inputs.dry_run == false }}
-          tags: |
-            ${{ env.BACKEND_IMAGE }}:${{ needs.binaries.outputs.version }}
-            ${{ env.BACKEND_IMAGE }}:latest
+          tags: ${{ steps.tags.outputs.backend }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -116,9 +149,7 @@ jobs:
           context: ./frontend
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' || inputs.dry_run == false }}
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:${{ needs.binaries.outputs.version }}
-            ${{ env.FRONTEND_IMAGE }}:latest
+          tags: ${{ steps.tags.outputs.frontend }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -144,6 +175,7 @@ jobs:
           tag_name: ${{ needs.binaries.outputs.version }}
           name: ${{ needs.binaries.outputs.version }}
           generate_release_notes: true
+          prerelease: ${{ needs.binaries.outputs.is_prerelease == 'true' }}
           files: |
             dist/*.tar.gz
             dist/*SHA256SUMS.txt
@@ -152,7 +184,11 @@ jobs:
     name: Update Homebrew tap
     runs-on: ubuntu-latest
     needs: [binaries, github-release]
-    if: github.event_name == 'push' || inputs.dry_run == false
+    # Tap bumps are stable-only. Pre-releases stay opt-in via direct binary
+    # download or `docker pull ghcr.io/…:vX.Y.Z-rcN`.
+    if: |
+      (github.event_name == 'push' || inputs.dry_run == false) &&
+      needs.binaries.outputs.is_prerelease == 'false'
     steps:
       - name: Checkout source repo (for the formula template)
         uses: actions/checkout@v4
