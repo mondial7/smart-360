@@ -16,6 +16,7 @@ type Consolidation struct {
 	ActionableInsights  string             `bson:"actionable_insights" json:"actionableInsights"`    // JSON array
 	QuestionSummaries   string             `bson:"question_summaries" json:"questionSummaries"`      // JSON object
 	SelfVsOthersDelta   *SelfVsOthersDelta `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
+	VoiceBreakdown      *VoiceBreakdown    `bson:"voice_breakdown,omitempty" json:"voiceBreakdown,omitempty"`
 	AdminNotes          string             `bson:"admin_notes" json:"adminNotes"`
 	SharedAt            *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
 	CreatedAt           time.Time          `bson:"created_at" json:"createdAt"`
@@ -30,4 +31,22 @@ type SelfVsOthersDelta struct {
 	HiddenStrengths []string `bson:"hidden_strengths" json:"hiddenStrengths"` // self underestimates
 	Aligned         []string `bson:"aligned" json:"aligned"`                  // both agree
 	Summary         string   `bson:"summary" json:"summary"`                  // 1–2 sentence coaching framing of the gap
+}
+
+// Voice is one vantage's view of the subject — what someone observing from a
+// particular relationship (manager, peer, report, …) consistently sees.
+type Voice struct {
+	ReviewerCount int      `bson:"reviewer_count" json:"reviewerCount"`
+	Summary       string   `bson:"summary" json:"summary"` // 1–2 sentence coaching synthesis
+	Themes        []string `bson:"themes" json:"themes"`   // 3–5 short, behaviourally-anchored bullets
+}
+
+// VoiceBreakdown separates the consolidation by vantage. A manager seeing
+// "ready for the next level" and a peer seeing "easy to collaborate with" are
+// different load-bearing signals — surfacing them as distinct streams stops
+// the consolidation from averaging them into mush.
+type VoiceBreakdown struct {
+	ManagerVoice *Voice `bson:"manager_voice,omitempty" json:"managerVoice,omitempty"`
+	PeerVoice    *Voice `bson:"peer_voice,omitempty" json:"peerVoice,omitempty"`
+	ReportVoice  *Voice `bson:"report_voice,omitempty" json:"reportVoice,omitempty"`
 }

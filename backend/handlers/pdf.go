@@ -130,6 +130,13 @@ func renderConsolidationPDF(subject models.User, round models.FeedbackRound, c m
 		}
 	}
 
+	if c.VoiceBreakdown != nil {
+		writeSectionTitle(pdf, "Voices — Different Vantages, Distinct Signals")
+		writeVoiceBlock(pdf, "Manager voice", c.VoiceBreakdown.ManagerVoice)
+		writeVoiceBlock(pdf, "Peer voice", c.VoiceBreakdown.PeerVoice)
+		writeVoiceBlock(pdf, "Direct-report voice", c.VoiceBreakdown.ReportVoice)
+	}
+
 	if c.SelfVsOthersDelta != nil && c.SelfVsOthersDelta.SelfSubmitted {
 		writeSectionTitle(pdf, "Self vs Peers — Where You and Your Team See Things Differently")
 		if c.SelfVsOthersDelta.Summary != "" {
@@ -194,6 +201,32 @@ func writeSection(pdf *fpdf.Fpdf, title string, items []string, bullet bool) {
 		pdf.Ln(1)
 	}
 	pdf.Ln(3)
+}
+
+func writeVoiceBlock(pdf *fpdf.Fpdf, title string, v *models.Voice) {
+	if v == nil {
+		return
+	}
+	pdf.SetFont("Helvetica", "B", 11)
+	pdf.SetTextColor(40, 40, 40)
+	pdf.CellFormat(0, 6, fmt.Sprintf("%s — %d reviewer(s)", title, v.ReviewerCount), "", 1, "L", false, 0, "")
+	if v.Summary != "" {
+		pdf.SetFont("Helvetica", "I", 11)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.MultiCell(0, 6, v.Summary, "", "L", false)
+	}
+	if len(v.Themes) > 0 {
+		pdf.SetFont("Helvetica", "", 11)
+		pdf.SetTextColor(60, 60, 60)
+		for _, theme := range v.Themes {
+			t := strings.TrimSpace(theme)
+			if t == "" {
+				continue
+			}
+			pdf.MultiCell(0, 6, "- "+t, "", "L", false)
+		}
+	}
+	pdf.Ln(2)
 }
 
 func writeDeltaSubsection(pdf *fpdf.Fpdf, title string, items []string) {

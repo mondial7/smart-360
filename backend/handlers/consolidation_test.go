@@ -383,3 +383,71 @@ func TestBuildFeedbackPrompts(t *testing.T) {
 		assert.Contains(t, peerTexts[0], "Interaction frequency: unspecified")
 	})
 }
+
+func TestCountByVoice(t *testing.T) {
+	submissions := []models.Submission{
+		{Relationship: models.RelationshipManager},
+		{Relationship: models.RelationshipPeer},
+		{Relationship: models.RelationshipPeer},
+		{Relationship: models.RelationshipCrossFunctional}, // bucketed under peer
+		{Relationship: models.RelationshipReport},
+		{IsSelf: true}, // never counted
+		{IsSelf: true, Relationship: models.RelationshipManager},
+	}
+
+	mgr, peer, report := countByVoice(submissions)
+	assert.Equal(t, 1, mgr, "exactly one manager submission")
+	assert.Equal(t, 3, peer, "peer voice covers peer + cross_functional")
+	assert.Equal(t, 1, report, "exactly one report submission")
+}
+
+func TestBuildVoiceBreakdown(t *testing.T) {
+	payload := aiVoiceBreakdownPayload{
+		ManagerVoice: aiVoicePayload{Summary: "mgr summary", Themes: []string{"mgr theme"}},
+		PeerVoice:    aiVoicePayload{Summary: "peer summary", Themes: []string{"peer theme"}},
+		ReportVoice:  aiVoicePayload{Summary: "report summary", Themes: []string{"report theme"}},
+	}
+
+	t.Run("populates_voices_with_non_zero_counts", func(t *testing.T) {
+		vb := buildVoiceBreakdown(payload, 1, 2, 0)
+		require.NotNil(t, vb)
+		require.NotNil(t, vb.ManagerVoice)
+		assert.Equal(t, 1, vb.ManagerVoice.ReviewerCount)
+		assert.Equal(t, "mgr summary", vb.ManagerVoice.Summary)
+		require.NotNil(t, vb.PeerVoice)
+		assert.Equal(t, 2, vb.PeerVoice.ReviewerCount)
+		assert.Nil(t, vb.ReportVoice, "voice with zero reviewers must be dropped")
+	})
+
+	t.Run("returns_nil_when_no_peer_submissions", func(t *testing.T) {
+		assert.Nil(t, buildVoiceBreakdown(payload, 0, 0, 0))
+	})
+}
+
+func TestCombineFeedbackSubmissions_VoiceBreakdown(t *testing.T) {
+	roundID := primitive.NewObjectID()
+	generatedByID := primitive.NewObjectID()
+
+	mgrResp, _ := json.Marshal(map[string]string{"a": "Sets clear scope"})
+	peerResp, _ := json.Marshal(map[string]string{"a": "Pairs generously"})
+	reportResp, _ := json.Marshal(map[string]string{"a": "Gives concrete feedback"})
+
+	submissions := []models.Submission{
+		{Responses: string(mgrResp), Relationship: models.RelationshipManager},
+		{Responses: string(peerResp), Relationship: models.RelationshipPeer},
+		{Responses: string(reportResp), Relationship: models.RelationshipReport},
+	}
+
+	result := combineFeedbackSubmissions(submissions, roundID, generatedByID)
+
+	require.NotNil(t, result.VoiceBreakdown)
+	require.NotNil(t, result.VoiceBreakdown.ManagerVoice)
+	assert.Equal(t, 1, result.VoiceBreakdown.ManagerVoice.ReviewerCount)
+	assert.Contains(t, result.VoiceBreakdown.ManagerVoice.Themes[0], "Sets clear scope")
+
+	require.NotNil(t, result.VoiceBreakdown.PeerVoice)
+	assert.Contains(t, result.VoiceBreakdown.PeerVoice.Themes[0], "Pairs generously")
+
+	require.NotNil(t, result.VoiceBreakdown.ReportVoice)
+	assert.Contains(t, result.VoiceBreakdown.ReportVoice.Themes[0], "Gives concrete feedback")
+}

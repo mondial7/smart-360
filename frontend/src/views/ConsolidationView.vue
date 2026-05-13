@@ -15,6 +15,7 @@ import {
   PhTarget,
   PhClipboardText,
   PhScales,
+  PhUsersThree,
   PhX,
   PhPlus,
   PhArrowUp,
@@ -545,6 +546,53 @@ const frequencyLabels: Record<string, string> = {
                 <h4 class="question-card__title">4. One experiment to try</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
               </div>
+            </div>
+          </section>
+
+          <!-- Voice breakdown -->
+          <section v-if="consolidation?.voiceBreakdown" class="section">
+            <h2 class="section__title">
+              <PhUsersThree :size="20" weight="duotone" />
+              <span>Voice Breakdown</span>
+            </h2>
+            <p class="section__hint">Synthesis split by vantage so manager / peer / direct-report signals don't average into mush.</p>
+            <div class="voices">
+              <article v-if="consolidation.voiceBreakdown.managerVoice" class="voice">
+                <header class="voice__header">
+                  <h4 class="voice__title">Manager voice</h4>
+                  <span class="voice__count">{{ consolidation.voiceBreakdown.managerVoice.reviewerCount }} reviewer(s)</span>
+                </header>
+                <p v-if="consolidation.voiceBreakdown.managerVoice.summary" class="voice__summary">
+                  {{ consolidation.voiceBreakdown.managerVoice.summary }}
+                </p>
+                <ul v-if="consolidation.voiceBreakdown.managerVoice.themes?.length" class="voice__themes">
+                  <li v-for="(t, i) in consolidation.voiceBreakdown.managerVoice.themes" :key="`mv-${i}`">{{ t }}</li>
+                </ul>
+              </article>
+              <article v-if="consolidation.voiceBreakdown.peerVoice" class="voice">
+                <header class="voice__header">
+                  <h4 class="voice__title">Peer voice</h4>
+                  <span class="voice__count">{{ consolidation.voiceBreakdown.peerVoice.reviewerCount }} reviewer(s)</span>
+                </header>
+                <p v-if="consolidation.voiceBreakdown.peerVoice.summary" class="voice__summary">
+                  {{ consolidation.voiceBreakdown.peerVoice.summary }}
+                </p>
+                <ul v-if="consolidation.voiceBreakdown.peerVoice.themes?.length" class="voice__themes">
+                  <li v-for="(t, i) in consolidation.voiceBreakdown.peerVoice.themes" :key="`pv-${i}`">{{ t }}</li>
+                </ul>
+              </article>
+              <article v-if="consolidation.voiceBreakdown.reportVoice" class="voice">
+                <header class="voice__header">
+                  <h4 class="voice__title">Direct-report voice</h4>
+                  <span class="voice__count">{{ consolidation.voiceBreakdown.reportVoice.reviewerCount }} reviewer(s)</span>
+                </header>
+                <p v-if="consolidation.voiceBreakdown.reportVoice.summary" class="voice__summary">
+                  {{ consolidation.voiceBreakdown.reportVoice.summary }}
+                </p>
+                <ul v-if="consolidation.voiceBreakdown.reportVoice.themes?.length" class="voice__themes">
+                  <li v-for="(t, i) in consolidation.voiceBreakdown.reportVoice.themes" :key="`rv-${i}`">{{ t }}</li>
+                </ul>
+              </article>
             </div>
           </section>
 
@@ -1187,6 +1235,60 @@ const frequencyLabels: Record<string, string> = {
   color: var(--text-primary);
   line-height: 1.6;
   border-left: 4px solid var(--color-primary);
+}
+
+.voices {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.voice {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  border-left: 4px solid var(--color-primary);
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.4rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__count {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__summary {
+    margin: 0 0 0.5rem;
+    color: var(--text-primary);
+    line-height: 1.55;
+    font-style: italic;
+  }
+
+  &__themes {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+
+    li {
+      margin-bottom: 0.3rem;
+    }
+  }
 }
 
 .delta {

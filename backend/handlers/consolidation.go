@@ -365,6 +365,16 @@ func generateGeminiConsolidation(submissions []models.Submission, roundID primit
 		selfSection = "Self-assessment from the subject:\n" + selfText
 	}
 
+	// Reviewer counts per voice are deterministic, so compute them server-side
+	// rather than asking the model. The model produces the synthesis text only.
+	mgrCount, peerCount, reportCount := countByVoice(submissions)
+	voiceContext := fmt.Sprintf(
+		"Voice reviewer counts: manager=%d, peer=%d (includes cross-functional), report=%d. "+
+			"Produce a summary and themes for every voice; if a voice has zero reviewers, "+
+			"return an empty summary string and an empty themes array for that voice.",
+		mgrCount, peerCount, reportCount,
+	)
+
 	prompt := fmt.Sprintf(`You are a thoughtful coach helping someone grow over the next 6 months.
 You are reviewing 360 feedback from multiple peers AND a self-assessment from the subject, and synthesising it for them.
 
@@ -389,6 +399,13 @@ For the self-vs-others delta:
 - summary: 1–2 sentences in a coaching tone naming the most important gap and why closing it matters.
 - If no self-assessment was submitted, set self_submitted=false, return empty arrays, and summary="".
 
+For the voice_breakdown — separate views by vantage so distinct signals do not get averaged into mush:
+- manager_voice: synthesise only the feedback from reviewers tagged "manager (manages the subject)". Lean into themes a manager is uniquely placed to see (scope, growth trajectory, readiness, judgement).
+- peer_voice: synthesise feedback from reviewers tagged as peers OR cross-functional collaborators. Lean into themes about day-to-day collaboration, execution, and how they affect the people around them.
+- report_voice: synthesise feedback from reviewers tagged "direct report (the subject manages them)". Lean into themes a report is uniquely placed to see (clarity, support, feedback they give, psychological safety).
+- For each voice, summary is 1–2 sentences in coaching tone, and themes is at most 5 behaviourally-anchored bullets. Do not duplicate the top-level executive summary verbatim — each voice should add what's distinctive about that vantage.
+%s
+
 Feedback data from peer reviewers:
 %s
 
@@ -412,10 +429,15 @@ Return a single minified JSON object with this exact shape:
     "hidden_strengths": ["Themes peers value that the self-assessment underplays (at most 5)"],
     "aligned": ["Themes where self and peers clearly agree (at most 5)"],
     "summary": "1–2 sentence coaching framing of the most important gap"
+  },
+  "voice_breakdown": {
+    "manager_voice": {"summary": "1–2 sentences from the manager's vantage, or empty string if no manager reviewer", "themes": ["At most 5 themes, or empty array"]},
+    "peer_voice":    {"summary": "1–2 sentences from peer/cross-functional vantage, or empty string if no peer reviewer", "themes": ["At most 5 themes, or empty array"]},
+    "report_voice":  {"summary": "1–2 sentences from a direct report's vantage, or empty string if no report reviewer", "themes": ["At most 5 themes, or empty array"]}
   }
 }
 
-Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, strings.Join(peerTexts, "\n\n"), selfSection)
+Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, voiceContext, strings.Join(peerTexts, "\n\n"), selfSection)
 
 	// Initialize Gemini client
 	ctx := context.Background()
@@ -474,8 +496,17 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, s
 				},
 				Required: []string{"self_submitted", "blind_spots", "hidden_strengths", "aligned", "summary"},
 			},
+			"voice_breakdown": &genai.Schema{
+				Type: genai.TypeObject,
+				Properties: map[string]*genai.Schema{
+					"manager_voice": voiceSchema(),
+					"peer_voice":    voiceSchema(),
+					"report_voice":  voiceSchema(),
+				},
+				Required: []string{"manager_voice", "peer_voice", "report_voice"},
+			},
 		},
-		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries", "self_vs_others_delta"},
+		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries", "self_vs_others_delta", "voice_breakdown"},
 	}
 
 	// Generate content
@@ -548,9 +579,77 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, s
 			Aligned:         aiResponse.SelfVsOthersDelta.Aligned,
 			Summary:         aiResponse.SelfVsOthersDelta.Summary,
 		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		VoiceBreakdown: buildVoiceBreakdown(aiResponse.VoiceBreakdown, mgrCount, peerCount, reportCount),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}, nil
+}
+
+// countByVoice counts peer submissions per vantage. The "peer" voice covers
+// both `peer` and `cross_functional` relationships — the distinction is for
+// signal-weighting, not for voice separation.
+func countByVoice(submissions []models.Submission) (manager, peer, report int) {
+	for _, s := range submissions {
+		if s.IsSelf {
+			continue
+		}
+		switch s.Relationship {
+		case models.RelationshipManager:
+			manager++
+		case models.RelationshipReport:
+			report++
+		case models.RelationshipPeer, models.RelationshipCrossFunctional:
+			peer++
+		}
+	}
+	return manager, peer, report
+}
+
+// buildVoiceBreakdown promotes the AI voice payload into the typed model
+// struct, attaching the reviewer count we computed server-side and dropping
+// any voice that had zero reviewers (preventing the model from making up text
+// for a vantage that was never represented).
+func buildVoiceBreakdown(p aiVoiceBreakdownPayload, mgrCount, peerCount, reportCount int) *models.VoiceBreakdown {
+	if mgrCount == 0 && peerCount == 0 && reportCount == 0 {
+		return nil
+	}
+	vb := &models.VoiceBreakdown{}
+	if mgrCount > 0 {
+		vb.ManagerVoice = &models.Voice{
+			ReviewerCount: mgrCount,
+			Summary:       p.ManagerVoice.Summary,
+			Themes:        p.ManagerVoice.Themes,
+		}
+	}
+	if peerCount > 0 {
+		vb.PeerVoice = &models.Voice{
+			ReviewerCount: peerCount,
+			Summary:       p.PeerVoice.Summary,
+			Themes:        p.PeerVoice.Themes,
+		}
+	}
+	if reportCount > 0 {
+		vb.ReportVoice = &models.Voice{
+			ReviewerCount: reportCount,
+			Summary:       p.ReportVoice.Summary,
+			Themes:        p.ReportVoice.Themes,
+		}
+	}
+	return vb
+}
+
+func voiceSchema() *genai.Schema {
+	return &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"summary": &genai.Schema{Type: genai.TypeString},
+			"themes": &genai.Schema{
+				Type:  genai.TypeArray,
+				Items: &genai.Schema{Type: genai.TypeString},
+			},
+		},
+		Required: []string{"summary", "themes"},
+	}
 }
 
 // aiDeltaPayload mirrors the self_vs_others_delta block from the Gemini schema.
@@ -562,14 +661,28 @@ type aiDeltaPayload struct {
 	Summary         string   `json:"summary"`
 }
 
+// aiVoicePayload mirrors a single voice block from the Gemini schema.
+type aiVoicePayload struct {
+	Summary string   `json:"summary"`
+	Themes  []string `json:"themes"`
+}
+
+// aiVoiceBreakdownPayload mirrors the voice_breakdown block.
+type aiVoiceBreakdownPayload struct {
+	ManagerVoice aiVoicePayload `json:"manager_voice"`
+	PeerVoice    aiVoicePayload `json:"peer_voice"`
+	ReportVoice  aiVoicePayload `json:"report_voice"`
+}
+
 // aiPayload is the full JSON shape we expect from Gemini.
 type aiPayload struct {
-	ExecutiveSummary    string            `json:"executive_summary"`
-	Strengths           []string          `json:"strengths"`
-	AreasForImprovement []string          `json:"areas_for_improvement"`
-	ActionableInsights  []string          `json:"actionable_insights"`
-	QuestionSummaries   map[string]string `json:"question_summaries"`
-	SelfVsOthersDelta   aiDeltaPayload    `json:"self_vs_others_delta"`
+	ExecutiveSummary    string                  `json:"executive_summary"`
+	Strengths           []string                `json:"strengths"`
+	AreasForImprovement []string                `json:"areas_for_improvement"`
+	ActionableInsights  []string                `json:"actionable_insights"`
+	QuestionSummaries   map[string]string       `json:"question_summaries"`
+	SelfVsOthersDelta   aiDeltaPayload          `json:"self_vs_others_delta"`
+	VoiceBreakdown      aiVoiceBreakdownPayload `json:"voice_breakdown"`
 }
 
 func fallbackAIPayload(hasSelf bool) aiPayload {
@@ -589,6 +702,9 @@ func fallbackAIPayload(hasSelf bool) aiPayload {
 	p.SelfVsOthersDelta.BlindSpots = []string{}
 	p.SelfVsOthersDelta.HiddenStrengths = []string{}
 	p.SelfVsOthersDelta.Aligned = []string{}
+	p.VoiceBreakdown.ManagerVoice.Themes = []string{}
+	p.VoiceBreakdown.PeerVoice.Themes = []string{}
+	p.VoiceBreakdown.ReportVoice.Themes = []string{}
 	return p
 }
 
@@ -673,6 +789,18 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 	peerCount := 0
 	questionSummaries := make(map[string]string)
 
+	// Per-voice aggregates feed the fallback VoiceBreakdown when no LLM key is
+	// configured. Keeping it lightweight: we just stitch the raw "continue"
+	// answers as themes so the manager has something to look at.
+	type voiceAcc struct {
+		count    int
+		themes   []string
+		blockers []string
+	}
+	mgrAcc := voiceAcc{}
+	peerAcc := voiceAcc{}
+	reportAcc := voiceAcc{}
+
 	for _, submission := range submissions {
 		var responses map[string]string
 		if err := json.Unmarshal([]byte(submission.Responses), &responses); err != nil {
@@ -685,6 +813,25 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 			continue
 		}
 		peerCount++
+
+		var acc *voiceAcc
+		switch submission.Relationship {
+		case models.RelationshipManager:
+			acc = &mgrAcc
+		case models.RelationshipReport:
+			acc = &reportAcc
+		case models.RelationshipPeer, models.RelationshipCrossFunctional:
+			acc = &peerAcc
+		}
+		if acc != nil {
+			acc.count++
+			if t := responses["a"]; t != "" {
+				acc.themes = append(acc.themes, t)
+			}
+			if t := responses["b"]; t != "" {
+				acc.blockers = append(acc.blockers, t)
+			}
+		}
 
 		if continueDoing, ok := responses["a"]; ok && continueDoing != "" {
 			allContinue = append(allContinue, continueDoing)
@@ -763,6 +910,33 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 		}
 	}
 
+	toVoice := func(label string, acc voiceAcc) *models.Voice {
+		if acc.count == 0 {
+			return nil
+		}
+		v := &models.Voice{
+			ReviewerCount: acc.count,
+			Summary:       fmt.Sprintf("%s feedback captured from %d reviewer(s). AI synthesis unavailable without GEMINI_API_KEY — themes below are raw answers, not summaries.", label, acc.count),
+			Themes:        []string{},
+		}
+		if len(acc.themes) > 0 {
+			v.Themes = append(v.Themes, "What to continue: "+strings.Join(acc.themes, "; "))
+		}
+		if len(acc.blockers) > 0 {
+			v.Themes = append(v.Themes, "What's blocking growth: "+strings.Join(acc.blockers, "; "))
+		}
+		return v
+	}
+
+	var voiceBreakdown *models.VoiceBreakdown
+	if mgrAcc.count+peerAcc.count+reportAcc.count > 0 {
+		voiceBreakdown = &models.VoiceBreakdown{
+			ManagerVoice: toVoice("Manager", mgrAcc),
+			PeerVoice:    toVoice("Peer", peerAcc),
+			ReportVoice:  toVoice("Direct report", reportAcc),
+		}
+	}
+
 	return models.Consolidation{
 		RoundID:             roundID,
 		GeneratedByID:       generatedByID,
@@ -772,6 +946,7 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 		ActionableInsights:  string(insightsJSON),
 		QuestionSummaries:   string(questionsJSON),
 		SelfVsOthersDelta:   delta,
+		VoiceBreakdown:      voiceBreakdown,
 		CreatedAt:           time.Now(),
 		UpdatedAt:           time.Now(),
 	}
