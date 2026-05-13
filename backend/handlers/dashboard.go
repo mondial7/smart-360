@@ -158,9 +158,15 @@ func GetRoundsForMe(c *gin.Context) {
 	db := database.GetDB()
 	ctx := context.Background()
 
-	// Find all rounds where the current user is in the reviewers array
+	// "Rounds for me" = rounds where the user owes a submission. That's either:
+	//   • the user is an enlisted reviewer, OR
+	//   • the user is the round's subject and still owes a self-assessment
+	//     (the self-assessment is the highest-signal input the 360 produces).
 	cursor, err := db.Collection("feedback_rounds").Find(ctx, bson.M{
-		"reviewers.reviewer_id": currentUser.ID,
+		"$or": []bson.M{
+			{"reviewers.reviewer_id": currentUser.ID},
+			{"subject_id": currentUser.ID, "status": models.RoundActive},
+		},
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch rounds"})

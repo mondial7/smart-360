@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 import type { FeedbackRound } from '@/types/round'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const roundId = route.params.id as string  // Changed from parseInt to string
 
 const round = ref<FeedbackRound | null>(null)
@@ -13,12 +15,23 @@ const loading = ref(true)
 const submitting = ref(false)
 const alreadySubmitted = ref(false)
 
-const questions = [
-  { key: 'a', text: 'What are this person\'s key strengths?' },
-  { key: 'b', text: 'What areas could this person improve?' },
-  { key: 'c', text: 'What specific behaviors or actions have you observed that stood out?' },
-  { key: 'd', text: 'What advice would you give to help this person grow?' }
+const isSelf = computed(() => !!round.value && round.value.subjectId === auth.user?.id)
+
+const peerQuestions = [
+  { key: 'a', text: 'What does this person do that has the biggest positive impact on the team or product? Where possible, share one concrete example (Situation → Behaviour → Impact).' },
+  { key: 'b', text: 'Looking at the last 3–6 months, what\'s currently holding this person back from their next level of impact (skill, habit, or environment)?' },
+  { key: 'c', text: 'If this person doubled down on one strength over the next 6 months, what should it be — and what would change for the team?' },
+  { key: 'd', text: 'What\'s one concrete experiment or focus area you\'d suggest they try in the next 30–60 days?' }
 ]
+
+const selfQuestions = [
+  { key: 'a', text: 'What do you do that has the biggest positive impact on the team or product? Share one concrete example (Situation → Behaviour → Impact).' },
+  { key: 'b', text: 'Looking at the last 3–6 months, what\'s holding you back from your next level of impact (skill, habit, or environment)?' },
+  { key: 'c', text: 'If you doubled down on one of your strengths over the next 6 months, what would it be — and what would change for the team?' },
+  { key: 'd', text: 'What\'s one concrete experiment or focus area you\'d like to try in the next 30–60 days?' }
+]
+
+const questions = computed(() => isSelf.value ? selfQuestions : peerQuestions)
 
 const responses = ref<Record<string, string>>({
   a: '',
@@ -50,8 +63,7 @@ async function loadRound() {
 }
 
 async function submitFeedback() {
-  // Validate all questions answered
-  for (const q of questions) {
+  for (const q of questions.value) {
     if (!responses.value[q.key].trim()) {
       alert('Please answer all questions before submitting.')
       return
@@ -64,7 +76,9 @@ async function submitFeedback() {
       roundId,
       responses: JSON.stringify(responses.value)
     })
-    alert('Feedback submitted successfully! Thank you for your input.')
+    alert(isSelf.value
+      ? 'Self-assessment submitted. Thanks for taking the time to reflect.'
+      : 'Feedback submitted successfully! Thank you for your input.')
     router.push('/rounds')
   } catch (error: any) {
     alert(error.response?.data?.error || 'Failed to submit feedback. Please try again.')
@@ -97,16 +111,23 @@ function formatDate(dateStr: string | null): string {
 
     <template v-else-if="round">
       <header class="submit__header">
-        <h1 class="submit__title">Submit Feedback</h1>
-        <p class="submit__subtitle">
+        <h1 class="submit__title">{{ isSelf ? 'Your Self-Assessment' : 'Submit Feedback' }}</h1>
+        <p v-if="isSelf" class="submit__subtitle">
+          This is your half of the 360. Your answers will be compared against peer feedback so you can see where you and your team are aligned, and where the gaps are.
+        </p>
+        <p v-else class="submit__subtitle">
           Anonymous feedback for <strong class="submit__subject">{{ round.subject?.name }}</strong>
         </p>
         <p class="submit__deadline">Deadline: {{ formatDate(round.deadline) }}</p>
       </header>
 
       <div class="submit__banner">
-        <span class="submit__banner-icon">🔒</span>
-        <span class="submit__banner-text">Your feedback is completely anonymous. The subject will never know who wrote what.</span>
+        <span class="submit__banner-icon">{{ isSelf ? '🪞' : '🔒' }}</span>
+        <span class="submit__banner-text">
+          {{ isSelf
+            ? 'Be candid — the value of a self-assessment is the gap between how you see yourself and how others see you.'
+            : 'Your feedback is completely anonymous. The subject will never know who wrote what.' }}
+        </span>
       </div>
 
       <form @submit.prevent="submitFeedback" class="submit__form">
@@ -125,7 +146,7 @@ function formatDate(dateStr: string | null): string {
         <div class="submit__actions">
           <router-link to="/rounds" class="btn btn--secondary">Cancel</router-link>
           <button type="submit" class="btn btn--primary" :disabled="submitting">
-            {{ submitting ? 'Submitting...' : 'Submit Feedback' }}
+            {{ submitting ? 'Submitting...' : (isSelf ? 'Submit Self-Assessment' : 'Submit Feedback') }}
           </button>
         </div>
       </form>

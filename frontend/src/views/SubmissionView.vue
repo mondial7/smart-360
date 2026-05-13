@@ -21,10 +21,10 @@ const editResponses = ref<Record<string, string>>({
 })
 
 const questions = [
-  { key: 'a', text: 'What are this person\'s key strengths?' },
-  { key: 'b', text: 'What areas could this person improve?' },
-  { key: 'c', text: 'What specific behaviors or actions have you observed that stood out?' },
-  { key: 'd', text: 'What advice would you give to help this person grow?' }
+  { key: 'a', text: 'What does this person do that has the biggest positive impact on the team or product? Where possible, share one concrete example (Situation → Behaviour → Impact).' },
+  { key: 'b', text: 'Looking at the last 3–6 months, what\'s currently holding this person back from their next level of impact (skill, habit, or environment)?' },
+  { key: 'c', text: 'If this person doubled down on one strength over the next 6 months, what should it be — and what would change for the team?' },
+  { key: 'd', text: 'What\'s one concrete experiment or focus area you\'d suggest they try in the next 30–60 days?' }
 ]
 
 onMounted(async () => {
@@ -148,28 +148,28 @@ function canEdit() {
           <h2 class="submission__responses-title">Your Feedback Responses</h2>
 
           <div class="response-item">
-            <h3 class="response-item__question">1. What are this person's key strengths?</h3>
+            <h3 class="response-item__question">1. What does this person do that has the biggest positive impact on the team or product?</h3>
             <div class="response-item__answer">
               {{ submission.responsesParsed?.a || 'No response provided' }}
             </div>
           </div>
 
           <div class="response-item">
-            <h3 class="response-item__question">2. What areas could this person improve?</h3>
+            <h3 class="response-item__question">2. What's currently holding this person back from their next level of impact?</h3>
             <div class="response-item__answer">
               {{ submission.responsesParsed?.b || 'No response provided' }}
             </div>
           </div>
 
           <div class="response-item">
-            <h3 class="response-item__question">3. What specific behaviors or actions have you observed that stood out?</h3>
+            <h3 class="response-item__question">3. If they doubled down on one strength, what should it be — and what would change for the team?</h3>
             <div class="response-item__answer">
               {{ submission.responsesParsed?.c || 'No response provided' }}
             </div>
           </div>
 
           <div class="response-item">
-            <h3 class="response-item__question">4. What advice would you give to help this person grow?</h3>
+            <h3 class="response-item__question">4. One concrete experiment or focus area for the next 30–60 days?</h3>
             <div class="response-item__answer">
               {{ submission.responsesParsed?.d || 'No response provided' }}
             </div>

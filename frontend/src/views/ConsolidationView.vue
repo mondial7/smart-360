@@ -6,6 +6,7 @@ import type { FeedbackRound } from '@/types/round'
 import {
   PhSparkle,
   PhEye,
+  PhEyeSlash,
   PhCheck,
   PhPaperPlaneTilt,
   PhNotePencil,
@@ -13,6 +14,7 @@ import {
   PhTrendUp,
   PhTarget,
   PhClipboardText,
+  PhScales,
   PhX,
   PhPlus,
   PhArrowUp,
@@ -491,20 +493,20 @@ function parseResponses(responsesStr: string): Record<string, string> {
             <div v-if="editingSection === 'questions'" class="section__edit">
               <div class="questions-editor">
                 <div class="question-card">
-                  <h4 class="question-card__title">1. Key Strengths</h4>
-                  <textarea v-model="editForm.questionSummaries.a" placeholder="Summary of strengths..." class="section__textarea"></textarea>
+                  <h4 class="question-card__title">1. What to continue</h4>
+                  <textarea v-model="editForm.questionSummaries.a" placeholder="Synthesis of what reviewers think this person should keep doing..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4 class="question-card__title">2. Areas to Improve</h4>
-                  <textarea v-model="editForm.questionSummaries.b" placeholder="Summary of improvements..." class="section__textarea"></textarea>
+                  <h4 class="question-card__title">2. What's blocking growth</h4>
+                  <textarea v-model="editForm.questionSummaries.b" placeholder="Synthesis of what's holding them back (skill, habit, environment)..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4 class="question-card__title">3. Observed Behaviors</h4>
-                  <textarea v-model="editForm.questionSummaries.c" placeholder="Summary of behaviors..." class="section__textarea"></textarea>
+                  <h4 class="question-card__title">3. Where to double down</h4>
+                  <textarea v-model="editForm.questionSummaries.c" placeholder="Synthesis of the one strength to amplify over the next 6 months..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4 class="question-card__title">4. Growth Advice</h4>
-                  <textarea v-model="editForm.questionSummaries.d" placeholder="Summary of advice..." class="section__textarea"></textarea>
+                  <h4 class="question-card__title">4. One experiment to try</h4>
+                  <textarea v-model="editForm.questionSummaries.d" placeholder="Synthesis of suggested experiments for the next 30–60 days..." class="section__textarea"></textarea>
                 </div>
               </div>
               <div class="section__edit-actions">
@@ -514,20 +516,63 @@ function parseResponses(responsesStr: string): Record<string, string> {
             </div>
             <div v-else class="questions">
               <div class="question-card">
-                <h4 class="question-card__title">1. Key Strengths</h4>
+                <h4 class="question-card__title">1. What to continue</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.a }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">2. Areas to Improve</h4>
+                <h4 class="question-card__title">2. What's blocking growth</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.b }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">3. Observed Behaviors</h4>
+                <h4 class="question-card__title">3. Where to double down</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.c }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">4. Growth Advice</h4>
+                <h4 class="question-card__title">4. One experiment to try</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Self vs Peers delta -->
+          <section v-if="consolidation?.selfVsOthersDelta?.selfSubmitted" class="section">
+            <h2 class="section__title">
+              <PhScales :size="20" weight="duotone" />
+              <span>Self vs Peers Delta</span>
+            </h2>
+            <p v-if="consolidation.selfVsOthersDelta.summary" class="section__hint">
+              {{ consolidation.selfVsOthersDelta.summary }}
+            </p>
+            <div class="delta">
+              <div v-if="consolidation.selfVsOthersDelta.blindSpots?.length" class="delta__group">
+                <h4 class="delta__title">
+                  <PhEyeSlash :size="16" weight="bold" />
+                  <span>Blind spots</span>
+                </h4>
+                <p class="delta__hint">Themes peers raised that the self-assessment didn't surface.</p>
+                <ul class="delta__list">
+                  <li v-for="(item, idx) in consolidation.selfVsOthersDelta.blindSpots" :key="`bs-${idx}`">{{ item }}</li>
+                </ul>
+              </div>
+              <div v-if="consolidation.selfVsOthersDelta.hiddenStrengths?.length" class="delta__group">
+                <h4 class="delta__title">
+                  <PhEye :size="16" weight="bold" />
+                  <span>Hidden strengths</span>
+                </h4>
+                <p class="delta__hint">Things peers value that the subject may underestimate.</p>
+                <ul class="delta__list">
+                  <li v-for="(item, idx) in consolidation.selfVsOthersDelta.hiddenStrengths" :key="`hs-${idx}`">{{ item }}</li>
+                </ul>
+              </div>
+              <div v-if="consolidation.selfVsOthersDelta.aligned?.length" class="delta__group">
+                <h4 class="delta__title">
+                  <PhCheck :size="16" weight="bold" />
+                  <span>Aligned</span>
+                </h4>
+                <p class="delta__hint">Where self and peers agree clearly.</p>
+                <ul class="delta__list">
+                  <li v-for="(item, idx) in consolidation.selfVsOthersDelta.aligned" :key="`al-${idx}`">{{ item }}</li>
+                </ul>
               </div>
             </div>
           </section>
@@ -547,19 +592,19 @@ function parseResponses(responsesStr: string): Record<string, string> {
                 </div>
                 <div class="review__content">
                   <div class="review__item">
-                    <h4 class="review__question">What are this person's key strengths?</h4>
+                    <h4 class="review__question">Biggest positive impact (with example)</h4>
                     <p class="review__answer">{{ parseResponses(submission.responses).a || 'No response' }}</p>
                   </div>
                   <div class="review__item">
-                    <h4 class="review__question">What areas could they improve?</h4>
+                    <h4 class="review__question">What's blocking their next level of impact</h4>
                     <p class="review__answer">{{ parseResponses(submission.responses).b || 'No response' }}</p>
                   </div>
                   <div class="review__item">
-                    <h4 class="review__question">What should they continue doing?</h4>
+                    <h4 class="review__question">One strength to double down on</h4>
                     <p class="review__answer">{{ parseResponses(submission.responses).c || 'No response' }}</p>
                   </div>
                   <div class="review__item">
-                    <h4 class="review__question">What should they start or stop doing?</h4>
+                    <h4 class="review__question">One experiment for the next 30–60 days</h4>
                     <p class="review__answer">{{ parseResponses(submission.responses).d || 'No response' }}</p>
                   </div>
                 </div>
@@ -1094,6 +1139,52 @@ function parseResponses(responsesStr: string): Record<string, string> {
   color: var(--text-primary);
   line-height: 1.6;
   border-left: 4px solid var(--color-primary);
+}
+
+.delta {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  &__group {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 3px solid var(--color-primary);
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+  }
+
+  &__hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+    line-height: 1.4;
+  }
+
+  &__list {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+
+    li {
+      margin-bottom: 0.35rem;
+    }
+  }
 }
 
 .feedback-list {

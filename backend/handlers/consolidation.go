@@ -356,54 +356,60 @@ func GetMyConsolidatedFeedback(c *gin.Context) {
 }
 
 func generateGeminiConsolidation(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID, apiKey string) (models.Consolidation, error) {
-	// Prepare the feedback data for Gemini
-	var feedbackTexts []string
-	for _, submission := range submissions {
-		var responses map[string]string
-		if err := json.Unmarshal([]byte(submission.Responses), &responses); err != nil {
-			continue
-		}
+	// Segregate the subject's self-assessment from peer feedback so the model
+	// can compute the self-vs-others delta — the highest-signal output of a 360.
+	peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions)
 
-		feedback := fmt.Sprintf("Feedback from reviewer:\n")
-		if strengths, ok := responses["a"]; ok && strengths != "" {
-			feedback += fmt.Sprintf("Strengths: %s\n", strengths)
-		}
-		if improvements, ok := responses["b"]; ok && improvements != "" {
-			feedback += fmt.Sprintf("Areas for improvement: %s\n", improvements)
-		}
-		if behaviors, ok := responses["c"]; ok && behaviors != "" {
-			feedback += fmt.Sprintf("Observed behaviors: %s\n", behaviors)
-		}
-		if advice, ok := responses["d"]; ok && advice != "" {
-			feedback += fmt.Sprintf("Growth advice: %s\n", advice)
-		}
-		feedbackTexts = append(feedbackTexts, feedback)
+	selfSection := "No self-assessment submitted — return self_vs_others_delta with self_submitted=false and empty arrays."
+	if hasSelf {
+		selfSection = "Self-assessment from the subject:\n" + selfText
 	}
 
-	// Create the prompt for Gemini
-	prompt := fmt.Sprintf(`You are an expert and caring Engineering Team Lead proficient in 360-degree feedback analysis. 
-Please analyze the following feedback from multiple reviewers and provide a comprehensive consolidation.
+	prompt := fmt.Sprintf(`You are a thoughtful coach helping someone grow over the next 6 months.
+You are reviewing 360 feedback from multiple peers AND a self-assessment from the subject, and synthesising it for them.
 
-Feedback data:
+Apply these guidelines strictly:
+- Use behavioural, observable language. Avoid trait or personality labels (do not say "they ARE …"). Prefer "they often DO X, which leads to Y".
+- Use growth-oriented framing. Replace deficit language ("weakness", "bad at", "lacks") with forward-looking framing ("opportunity to amplify", "would unlock impact by", "next-level habit to build").
+- Never reproduce direct quotes that could identify a specific reviewer. Synthesise across reviewers.
+- If any reviewer input contains personal attacks, identity-targeted comments, or content unrelated to professional behaviour, omit it entirely from the consolidation. Do not surface it to the subject and do not reference that it was filtered.
+- Be specific. Vague compliments ("good communicator", "team player") are useless — ground every point in observable behaviour or impact.
+- Anchor your analysis on this person's last 3–6 months.
+
+For the self-vs-others delta:
+- blind_spots: things peers consistently flagged that the self-assessment does not acknowledge. Frame as opportunities, not accusations.
+- hidden_strengths: things peers value highly that the self-assessment underplays or omits.
+- aligned: themes where the self-assessment and peer feedback clearly agree.
+- summary: 1–2 sentences in a coaching tone naming the most important gap and why closing it matters.
+- If no self-assessment was submitted, set self_submitted=false, return empty arrays, and summary="".
+
+Feedback data from peer reviewers:
 %s
 
-Please provide the analysis in the following JSON format:
+%s
+
+Return a single minified JSON object with this exact shape:
 {
-  "executive_summary": "A concise 2-3 sentence summary of the feedback from multiple reviewers and provide a comprehensive consolidation. Using an Engineering Manager tone.",
-  "strengths": ["List of key strengths mentioned by reviewers"],
-  "areas_for_improvement": ["List of areas that need improvement"],
-  "actionable_insights": ["List of specific, actionable recommendations"],
+  "executive_summary": "2–3 sentences in a coaching tone. Forward-looking. No verdicts.",
+  "strengths": ["Behaviourally anchored strengths (at most 5)"],
+  "areas_for_improvement": ["Growth-oriented opportunities, NOT deficits (at most 5)"],
+  "actionable_insights": ["The TOP 1–3 focus areas the subject should act on first. Never more than 3. Each should be a concrete next step, not advice in the abstract."],
   "question_summaries": {
-    "a": "Summary of strengths feedback",
-    "b": "Summary of improvement areas feedback", 
-    "c": "Summary of observed behaviors feedback",
-    "d": "Summary of growth advice feedback"
+    "a": "Synthesis across reviewers of what this person should continue doing",
+    "b": "Synthesis across reviewers of what's blocking their next level of impact",
+    "c": "Synthesis across reviewers of the one strength to double down on",
+    "d": "Synthesis across reviewers of concrete experiments for the next 30–60 days"
+  },
+  "self_vs_others_delta": {
+    "self_submitted": true,
+    "blind_spots": ["Themes peers see that the self-assessment misses (at most 5)"],
+    "hidden_strengths": ["Themes peers value that the self-assessment underplays (at most 5)"],
+    "aligned": ["Themes where self and peers clearly agree (at most 5)"],
+    "summary": "1–2 sentence coaching framing of the most important gap"
   }
 }
 
-Focus on being constructive, specific, and actionable.
-
-Return ONLY a single minified JSON object. Do not include any code fences, markdown, or explanatory text.`, strings.Join(feedbackTexts, "\n\n"))
+Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, strings.Join(peerTexts, "\n\n"), selfSection)
 
 	// Initialize Gemini client
 	ctx := context.Background()
@@ -442,8 +448,28 @@ Return ONLY a single minified JSON object. Do not include any code fences, markd
 				},
 				Required: []string{"a", "b", "c", "d"},
 			},
+			"self_vs_others_delta": &genai.Schema{
+				Type: genai.TypeObject,
+				Properties: map[string]*genai.Schema{
+					"self_submitted": &genai.Schema{Type: genai.TypeBoolean},
+					"blind_spots": &genai.Schema{
+						Type:  genai.TypeArray,
+						Items: &genai.Schema{Type: genai.TypeString},
+					},
+					"hidden_strengths": &genai.Schema{
+						Type:  genai.TypeArray,
+						Items: &genai.Schema{Type: genai.TypeString},
+					},
+					"aligned": &genai.Schema{
+						Type:  genai.TypeArray,
+						Items: &genai.Schema{Type: genai.TypeString},
+					},
+					"summary": &genai.Schema{Type: genai.TypeString},
+				},
+				Required: []string{"self_submitted", "blind_spots", "hidden_strengths", "aligned", "summary"},
+			},
 		},
-		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries"},
+		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries", "self_vs_others_delta"},
 	}
 
 	// Generate content
@@ -487,59 +513,15 @@ Return ONLY a single minified JSON object. Do not include any code fences, markd
 		}
 	}
 
-	// Parse JSON response
-	var aiResponse struct {
-		ExecutiveSummary    string            `json:"executive_summary"`
-		Strengths           []string          `json:"strengths"`
-		AreasForImprovement []string          `json:"areas_for_improvement"`
-		ActionableInsights  []string          `json:"actionable_insights"`
-		QuestionSummaries   map[string]string `json:"question_summaries"`
-	}
-
-	// Validate and unmarshal JSON
+	aiResponse := aiPayload{}
 	if !json.Valid([]byte(clean)) {
 		fmt.Printf("invalid JSON from Gemini. RAW AS %q\n", clean)
-		aiResponse = struct {
-			ExecutiveSummary    string            `json:"executive_summary"`
-			Strengths           []string          `json:"strengths"`
-			AreasForImprovement []string          `json:"areas_for_improvement"`
-			ActionableInsights  []string          `json:"actionable_insights"`
-			QuestionSummaries   map[string]string `json:"question_summaries"`
-		}{
-			ExecutiveSummary:    "..",
-			Strengths:           []string{".."},
-			AreasForImprovement: []string{".."},
-			ActionableInsights:  []string{".."},
-			QuestionSummaries: map[string]string{
-				"a": "..",
-				"b": "..",
-				"c": "..",
-				"d": "..",
-			},
-		}
+		aiResponse = fallbackAIPayload(hasSelf)
 	} else if err := json.Unmarshal([]byte(clean), &aiResponse); err != nil {
 		fmt.Printf("unmarshal error: %v\nRAW AS %q\n", err, clean)
-		aiResponse = struct {
-			ExecutiveSummary    string            `json:"executive_summary"`
-			Strengths           []string          `json:"strengths"`
-			AreasForImprovement []string          `json:"areas_for_improvement"`
-			ActionableInsights  []string          `json:"actionable_insights"`
-			QuestionSummaries   map[string]string `json:"question_summaries"`
-		}{
-			ExecutiveSummary:    "..",
-			Strengths:           []string{".."},
-			AreasForImprovement: []string{".."},
-			ActionableInsights:  []string{".."},
-			QuestionSummaries: map[string]string{
-				"a": "..",
-				"b": "..",
-				"c": "..",
-				"d": "..",
-			},
-		}
+		aiResponse = fallbackAIPayload(hasSelf)
 	}
 
-	// Convert arrays and objects to JSON strings for database compatibility
 	strengthsJSON, _ := json.Marshal(aiResponse.Strengths)
 	improvementsJSON, _ := json.Marshal(aiResponse.AreasForImprovement)
 	insightsJSON, _ := json.Marshal(aiResponse.ActionableInsights)
@@ -553,76 +535,193 @@ Return ONLY a single minified JSON object. Do not include any code fences, markd
 		AreasForImprovement: string(improvementsJSON),
 		ActionableInsights:  string(insightsJSON),
 		QuestionSummaries:   string(questionsJSON),
-		CreatedAt:           time.Now(),
-		UpdatedAt:           time.Now(),
+		SelfVsOthersDelta: &models.SelfVsOthersDelta{
+			SelfSubmitted:   aiResponse.SelfVsOthersDelta.SelfSubmitted,
+			BlindSpots:      aiResponse.SelfVsOthersDelta.BlindSpots,
+			HiddenStrengths: aiResponse.SelfVsOthersDelta.HiddenStrengths,
+			Aligned:         aiResponse.SelfVsOthersDelta.Aligned,
+			Summary:         aiResponse.SelfVsOthersDelta.Summary,
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}, nil
 }
 
-func combineFeedbackSubmissions(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID) models.Consolidation {
-	var allStrengths []string
-	var allImprovements []string
-	var allBehaviors []string
-	var allAdvice []string
-	questionSummaries := make(map[string]string)
+// aiDeltaPayload mirrors the self_vs_others_delta block from the Gemini schema.
+type aiDeltaPayload struct {
+	SelfSubmitted   bool     `json:"self_submitted"`
+	BlindSpots      []string `json:"blind_spots"`
+	HiddenStrengths []string `json:"hidden_strengths"`
+	Aligned         []string `json:"aligned"`
+	Summary         string   `json:"summary"`
+}
 
+// aiPayload is the full JSON shape we expect from Gemini.
+type aiPayload struct {
+	ExecutiveSummary    string            `json:"executive_summary"`
+	Strengths           []string          `json:"strengths"`
+	AreasForImprovement []string          `json:"areas_for_improvement"`
+	ActionableInsights  []string          `json:"actionable_insights"`
+	QuestionSummaries   map[string]string `json:"question_summaries"`
+	SelfVsOthersDelta   aiDeltaPayload    `json:"self_vs_others_delta"`
+}
+
+func fallbackAIPayload(hasSelf bool) aiPayload {
+	p := aiPayload{
+		ExecutiveSummary:    "Consolidation could not be generated automatically. Please review the raw submissions.",
+		Strengths:           []string{},
+		AreasForImprovement: []string{},
+		ActionableInsights:  []string{},
+		QuestionSummaries: map[string]string{
+			"a": "",
+			"b": "",
+			"c": "",
+			"d": "",
+		},
+	}
+	p.SelfVsOthersDelta.SelfSubmitted = hasSelf
+	p.SelfVsOthersDelta.BlindSpots = []string{}
+	p.SelfVsOthersDelta.HiddenStrengths = []string{}
+	p.SelfVsOthersDelta.Aligned = []string{}
+	return p
+}
+
+// buildFeedbackPrompts splits submissions into peer feedback blocks and the
+// subject's self-assessment block.
+func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, selfText string, hasSelf bool) {
 	for _, submission := range submissions {
-		// Parse the JSON responses
 		var responses map[string]string
 		if err := json.Unmarshal([]byte(submission.Responses), &responses); err != nil {
 			continue
 		}
 
-		// Collect responses for each question
-		if strengths, ok := responses["a"]; ok && strengths != "" {
-			allStrengths = append(allStrengths, strengths)
+		header := "Feedback from peer reviewer:"
+		if submission.IsSelf {
+			header = "Self-assessment from the subject:"
 		}
-		if improvements, ok := responses["b"]; ok && improvements != "" {
-			allImprovements = append(allImprovements, improvements)
+		block := header + "\n"
+		if continueDoing, ok := responses["a"]; ok && continueDoing != "" {
+			block += fmt.Sprintf("What to continue (biggest positive impact, with example): %s\n", continueDoing)
 		}
-		if behaviors, ok := responses["c"]; ok && behaviors != "" {
-			allBehaviors = append(allBehaviors, behaviors)
+		if blockers, ok := responses["b"]; ok && blockers != "" {
+			block += fmt.Sprintf("What's blocking growth (last 3–6 months): %s\n", blockers)
 		}
-		if advice, ok := responses["d"]; ok && advice != "" {
-			allAdvice = append(allAdvice, advice)
+		if amplify, ok := responses["c"]; ok && amplify != "" {
+			block += fmt.Sprintf("Where to double down (one strength to amplify): %s\n", amplify)
+		}
+		if experiment, ok := responses["d"]; ok && experiment != "" {
+			block += fmt.Sprintf("Suggested experiment (next 30–60 days): %s\n", experiment)
+		}
+
+		if submission.IsSelf {
+			selfText = block
+			hasSelf = true
+		} else {
+			peerTexts = append(peerTexts, block)
+		}
+	}
+	return peerTexts, selfText, hasSelf
+}
+
+func combineFeedbackSubmissions(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID) models.Consolidation {
+	var allContinue []string
+	var allBlockers []string
+	var allAmplify []string
+	var allExperiments []string
+	var selfResponses map[string]string
+	hasSelf := false
+	peerCount := 0
+	questionSummaries := make(map[string]string)
+
+	for _, submission := range submissions {
+		var responses map[string]string
+		if err := json.Unmarshal([]byte(submission.Responses), &responses); err != nil {
+			continue
+		}
+
+		if submission.IsSelf {
+			selfResponses = responses
+			hasSelf = true
+			continue
+		}
+		peerCount++
+
+		if continueDoing, ok := responses["a"]; ok && continueDoing != "" {
+			allContinue = append(allContinue, continueDoing)
+		}
+		if blockers, ok := responses["b"]; ok && blockers != "" {
+			allBlockers = append(allBlockers, blockers)
+		}
+		if amplify, ok := responses["c"]; ok && amplify != "" {
+			allAmplify = append(allAmplify, amplify)
+		}
+		if experiment, ok := responses["d"]; ok && experiment != "" {
+			allExperiments = append(allExperiments, experiment)
 		}
 	}
 
-	// Create executive summary from all responses
-	executiveSummary := "Consolidated feedback from " + fmt.Sprintf("%d", len(submissions)) + " reviewers. "
-	if len(allStrengths) > 0 {
-		executiveSummary += "Key strengths identified include communication and collaboration. "
+	executiveSummary := fmt.Sprintf("Consolidated feedback from %d peer reviewers. ", peerCount)
+	if hasSelf {
+		executiveSummary += "Includes a self-assessment from the subject for delta analysis. "
 	}
-	if len(allImprovements) > 0 {
-		executiveSummary += "Areas for improvement focus on documentation and process. "
+	if len(allContinue) > 0 {
+		executiveSummary += "Reviewers called out concrete behaviours worth continuing. "
+	}
+	if len(allBlockers) > 0 || len(allExperiments) > 0 {
+		executiveSummary += "There are clear opportunities to unlock the next level of impact over the coming months."
 	}
 
 	// Create question summaries
-	if len(allStrengths) > 0 {
-		questionSummaries["a"] = "Reviewers highlighted: " + strings.Join(allStrengths, "; ")
+	if len(allContinue) > 0 {
+		questionSummaries["a"] = "What to continue: " + strings.Join(allContinue, "; ")
 	}
-	if len(allImprovements) > 0 {
-		questionSummaries["b"] = "Suggested improvements: " + strings.Join(allImprovements, "; ")
+	if len(allBlockers) > 0 {
+		questionSummaries["b"] = "What's blocking growth: " + strings.Join(allBlockers, "; ")
 	}
-	if len(allBehaviors) > 0 {
-		questionSummaries["c"] = "Observed behaviors: " + strings.Join(allBehaviors, "; ")
+	if len(allAmplify) > 0 {
+		questionSummaries["c"] = "Where to double down: " + strings.Join(allAmplify, "; ")
 	}
-	if len(allAdvice) > 0 {
-		questionSummaries["d"] = "Growth advice: " + strings.Join(allAdvice, "; ")
+	if len(allExperiments) > 0 {
+		questionSummaries["d"] = "Suggested experiments (next 30–60 days): " + strings.Join(allExperiments, "; ")
 	}
 
-	// Create actionable insights from advice
+	// Top focus areas (cap at 3) drawn from the suggested experiments.
 	var actionableInsights []string
-	for _, advice := range allAdvice {
-		if len(advice) > 10 {
-			actionableInsights = append(actionableInsights, advice)
+	for _, experiment := range allExperiments {
+		if len(actionableInsights) >= 3 {
+			break
+		}
+		if len(experiment) > 10 {
+			actionableInsights = append(actionableInsights, experiment)
 		}
 	}
 
 	// Convert arrays and objects back to JSON strings for database compatibility
-	strengthsJSON, _ := json.Marshal(allStrengths)
-	improvementsJSON, _ := json.Marshal(allImprovements)
+	strengthsJSON, _ := json.Marshal(allContinue)
+	improvementsJSON, _ := json.Marshal(allBlockers)
 	insightsJSON, _ := json.Marshal(actionableInsights)
 	questionsJSON, _ := json.Marshal(questionSummaries)
+
+	// Without an LLM we can't infer semantic delta; surface the raw self answers
+	// alongside a flag so the UI can prompt the manager to interpret them.
+	delta := &models.SelfVsOthersDelta{
+		SelfSubmitted:   hasSelf,
+		BlindSpots:      []string{},
+		HiddenStrengths: []string{},
+		Aligned:         []string{},
+	}
+	if hasSelf {
+		delta.Summary = "Self-assessment captured — AI-assisted delta unavailable without GEMINI_API_KEY. Compare manually."
+		if selfContinue := selfResponses["a"]; selfContinue != "" {
+			delta.Aligned = append(delta.Aligned, "Self — what to continue: "+selfContinue)
+		}
+		if selfBlockers := selfResponses["b"]; selfBlockers != "" {
+			delta.BlindSpots = append(delta.BlindSpots, "Self — what's blocking growth: "+selfBlockers)
+		}
+		if selfAmplify := selfResponses["c"]; selfAmplify != "" {
+			delta.HiddenStrengths = append(delta.HiddenStrengths, "Self — where to double down: "+selfAmplify)
+		}
+	}
 
 	return models.Consolidation{
 		RoundID:             roundID,
@@ -632,6 +731,7 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 		AreasForImprovement: string(improvementsJSON),
 		ActionableInsights:  string(insightsJSON),
 		QuestionSummaries:   string(questionsJSON),
+		SelfVsOthersDelta:   delta,
 		CreatedAt:           time.Now(),
 		UpdatedAt:           time.Now(),
 	}

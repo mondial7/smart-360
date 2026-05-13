@@ -13,7 +13,10 @@ import {
   PhMinus,
   PhCheck,
   PhArrowUp,
-  PhArrowRight
+  PhArrowRight,
+  PhEye,
+  PhEyeSlash,
+  PhScales
 } from '@phosphor-icons/vue'
 
 const consolidations = ref<any[]>([])
@@ -227,20 +230,63 @@ function parseFilename(disposition: string | undefined): string | null {
             </h3>
             <div class="questions">
               <div class="question-card">
-                <h4 class="question-card__title">1. Key Strengths</h4>
+                <h4 class="question-card__title">1. What to continue</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.a || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">2. Areas to Improve</h4>
+                <h4 class="question-card__title">2. What's blocking growth</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.b || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">3. Observed Behaviors</h4>
+                <h4 class="question-card__title">3. Where to double down</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.c || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">4. Growth Advice</h4>
+                <h4 class="question-card__title">4. One experiment to try</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d || 'No summary available' }}</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Self vs Peers delta -->
+          <section v-if="consolidation.selfVsOthersDelta?.selfSubmitted" class="feedback-section">
+            <h3 class="feedback-section__title">
+              <PhScales :size="20" weight="duotone" />
+              <span>Self vs Peers — Where You and Your Team See Things Differently</span>
+            </h3>
+            <p v-if="consolidation.selfVsOthersDelta.summary" class="feedback-section__summary">
+              {{ consolidation.selfVsOthersDelta.summary }}
+            </p>
+            <div class="delta">
+              <div v-if="consolidation.selfVsOthersDelta.blindSpots?.length" class="delta__group">
+                <h4 class="delta__title">
+                  <PhEyeSlash :size="16" weight="bold" />
+                  <span>Blind spots</span>
+                </h4>
+                <p class="delta__hint">Things peers consistently flagged that your self-assessment didn't surface.</p>
+                <ul class="delta__list">
+                  <li v-for="(item, idx) in consolidation.selfVsOthersDelta.blindSpots" :key="`bs-${idx}`">{{ item }}</li>
+                </ul>
+              </div>
+              <div v-if="consolidation.selfVsOthersDelta.hiddenStrengths?.length" class="delta__group">
+                <h4 class="delta__title">
+                  <PhEye :size="16" weight="bold" />
+                  <span>Hidden strengths</span>
+                </h4>
+                <p class="delta__hint">Things peers value highly that you may underestimate.</p>
+                <ul class="delta__list">
+                  <li v-for="(item, idx) in consolidation.selfVsOthersDelta.hiddenStrengths" :key="`hs-${idx}`">{{ item }}</li>
+                </ul>
+              </div>
+              <div v-if="consolidation.selfVsOthersDelta.aligned?.length" class="delta__group">
+                <h4 class="delta__title">
+                  <PhCheck :size="16" weight="bold" />
+                  <span>Aligned themes</span>
+                </h4>
+                <p class="delta__hint">Where your self-view and peer feedback clearly agree.</p>
+                <ul class="delta__list">
+                  <li v-for="(item, idx) in consolidation.selfVsOthersDelta.aligned" :key="`al-${idx}`">{{ item }}</li>
+                </ul>
               </div>
             </div>
           </section>
@@ -646,6 +692,52 @@ function parseFilename(disposition: string | undefined): string | null {
 
   @media (min-width: 768px) {
     padding: 1.25rem;
+  }
+}
+
+.delta {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  &__group {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 3px solid var(--color-primary);
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+  }
+
+  &__hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+    line-height: 1.4;
+  }
+
+  &__list {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+
+    li {
+      margin-bottom: 0.35rem;
+    }
   }
 }
 </style>

@@ -38,6 +38,7 @@ type Submission struct {
 	RoundID     primitive.ObjectID `bson:"round_id" json:"roundId"`
 	ReviewerID  primitive.ObjectID `bson:"reviewer_id" json:"reviewerId"`
 	Responses   string             `bson:"responses" json:"responses"` // JSON string
+	IsSelf      bool               `bson:"is_self,omitempty" json:"isSelf,omitempty"`
 	SubmittedAt time.Time          `bson:"submitted_at" json:"submittedAt"`
 	UpdatedAt   time.Time          `bson:"updated_at" json:"updatedAt"`
 }

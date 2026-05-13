@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"smart360/models"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,7 @@ func TestCombineFeedbackSubmissions(t *testing.T) {
 		assert.Equal(t, roundID, result.RoundID)
 		assert.Equal(t, generatedByID, result.GeneratedByID)
 		assert.NotEmpty(t, result.ExecutiveSummary)
-		assert.Contains(t, result.ExecutiveSummary, "1 reviewers")
+		assert.Contains(t, result.ExecutiveSummary, "1 peer reviewers")
 
 		// Verify strengths were captured
 		var strengths []string
@@ -106,7 +107,7 @@ func TestCombineFeedbackSubmissions(t *testing.T) {
 		result := combineFeedbackSubmissions(submissions, roundID, generatedByID)
 
 		// Verify all submissions are counted
-		assert.Contains(t, result.ExecutiveSummary, "3 reviewers")
+		assert.Contains(t, result.ExecutiveSummary, "3 peer reviewers")
 
 		// Verify all strengths were captured
 		var strengths []string
@@ -146,7 +147,7 @@ func TestCombineFeedbackSubmissions(t *testing.T) {
 		// Should still return a valid consolidation
 		assert.Equal(t, roundID, result.RoundID)
 		assert.Equal(t, generatedByID, result.GeneratedByID)
-		assert.Contains(t, result.ExecutiveSummary, "0 reviewers")
+		assert.Contains(t, result.ExecutiveSummary, "0 peer reviewers")
 
 		// All arrays should be empty
 		var strengths []string
@@ -239,9 +240,10 @@ func TestCombineFeedbackSubmissions(t *testing.T) {
 
 		result := combineFeedbackSubmissions(submissions, roundID, generatedByID)
 
-		// Should handle invalid JSON gracefully by skipping it
+		// Should handle invalid JSON gracefully by skipping it: invalid submissions
+		// do not contribute to the consolidation, so they should not be counted.
 		assert.Equal(t, roundID, result.RoundID)
-		assert.Contains(t, result.ExecutiveSummary, "2 reviewers")
+		assert.Contains(t, result.ExecutiveSummary, "0 peer reviewers")
 
 		// All arrays should be empty since JSON parsing failed
 		var strengths []string
@@ -283,5 +285,60 @@ func TestCombineFeedbackSubmissions(t *testing.T) {
 		// Verify timestamps are set
 		assert.False(t, result.CreatedAt.IsZero())
 		assert.False(t, result.UpdatedAt.IsZero())
+	})
+
+	t.Run("self_submission_is_excluded_from_peer_aggregation_and_populates_delta", func(t *testing.T) {
+		peerResponses, _ := json.Marshal(map[string]string{
+			"a": "Strong on cross-team communication",
+			"b": "Ships before testing edge cases",
+			"c": "Mentorship",
+			"d": "Pair with juniors weekly for the next two months",
+		})
+		selfResponses, _ := json.Marshal(map[string]string{
+			"a": "I think I'm good at unblocking the team",
+			"b": "I should probably document more",
+			"c": "Technical depth",
+			"d": "Read more system-design material",
+		})
+
+		submissions := []models.Submission{
+			{Responses: string(peerResponses)},
+			{Responses: string(selfResponses), IsSelf: true},
+		}
+
+		result := combineFeedbackSubmissions(submissions, roundID, generatedByID)
+
+		assert.Contains(t, result.ExecutiveSummary, "1 peer reviewers",
+			"self submissions should not be counted as peer reviewers")
+		assert.Contains(t, result.ExecutiveSummary, "self-assessment")
+
+		// Peer aggregations should NOT include the self response.
+		var strengths []string
+		require.NoError(t, json.Unmarshal([]byte(result.Strengths), &strengths))
+		assert.Len(t, strengths, 1)
+		assert.Equal(t, "Strong on cross-team communication", strengths[0])
+
+		// The delta should be populated and flagged as self-submitted.
+		require.NotNil(t, result.SelfVsOthersDelta)
+		assert.True(t, result.SelfVsOthersDelta.SelfSubmitted)
+		assert.NotEmpty(t, result.SelfVsOthersDelta.Summary,
+			"fallback should fill a coaching-flavoured summary when self is present")
+		joined := strings.Join(append(append(append([]string{},
+			result.SelfVsOthersDelta.BlindSpots...),
+			result.SelfVsOthersDelta.HiddenStrengths...),
+			result.SelfVsOthersDelta.Aligned...), " | ")
+		assert.Contains(t, joined, "unblocking the team",
+			"raw self answers should surface somewhere in the delta")
+	})
+
+	t.Run("no_self_submission_leaves_delta_flag_off", func(t *testing.T) {
+		responses, _ := json.Marshal(map[string]string{"a": "Solid"})
+		submissions := []models.Submission{{Responses: string(responses)}}
+
+		result := combineFeedbackSubmissions(submissions, roundID, generatedByID)
+
+		require.NotNil(t, result.SelfVsOthersDelta)
+		assert.False(t, result.SelfVsOthersDelta.SelfSubmitted)
+		assert.Empty(t, result.SelfVsOthersDelta.Summary)
 	})
 }

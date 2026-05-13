@@ -154,20 +154,19 @@ func SubmitFeedback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Round is not accepting submissions"})
 		return
 	}
-	if round.SubjectID == currentUser.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Subjects cannot submit feedback on their own round"})
-		return
-	}
-	isReviewer := false
-	for _, r := range round.Reviewers {
-		if r.ReviewerID == currentUser.ID {
-			isReviewer = true
-			break
+	isSelf := round.SubjectID == currentUser.ID
+	if !isSelf {
+		isReviewer := false
+		for _, r := range round.Reviewers {
+			if r.ReviewerID == currentUser.ID {
+				isReviewer = true
+				break
+			}
 		}
-	}
-	if !isReviewer {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
-		return
+		if !isReviewer {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
+			return
+		}
 	}
 
 	var existing models.Submission
@@ -185,6 +184,7 @@ func SubmitFeedback(c *gin.Context) {
 		RoundID:     roundObjID,
 		ReviewerID:  currentUser.ID,
 		Responses:   req.Responses,
+		IsSelf:      isSelf,
 		SubmittedAt: time.Now(),
 		UpdatedAt:   time.Now(),
 	}

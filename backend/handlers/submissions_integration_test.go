@@ -57,20 +57,19 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Round is not accepting submissions"})
 		return
 	}
-	if round.SubjectID == currentUser.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Subjects cannot submit feedback on their own round"})
-		return
-	}
-	isReviewer := false
-	for _, r := range round.Reviewers {
-		if r.ReviewerID == currentUser.ID {
-			isReviewer = true
-			break
+	isSelf := round.SubjectID == currentUser.ID
+	if !isSelf {
+		isReviewer := false
+		for _, r := range round.Reviewers {
+			if r.ReviewerID == currentUser.ID {
+				isReviewer = true
+				break
+			}
 		}
-	}
-	if !isReviewer {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
-		return
+		if !isReviewer {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
+			return
+		}
 	}
 
 	count, err := h.submissionRepo.CountByRoundAndReviewer(ctx, roundObjID, currentUser.ID)
@@ -85,6 +84,7 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		RoundID:     roundObjID,
 		ReviewerID:  currentUser.ID,
 		Responses:   req.Responses,
+		IsSelf:      isSelf,
 		SubmittedAt: time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -293,22 +293,28 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
 
-	t.Run("subject_cannot_submit_on_own_round", func(t *testing.T) {
-		subject := testutil.NewTestUser("subject@example.com", models.RoleMember)
+	t.Run("subject_can_self_submit_and_row_is_flagged", func(t *testing.T) {
+		subject := testutil.NewTestUser("self-subject@example.com", models.RoleMember)
 		testRound := testutil.NewTestRound(subject.ID, primitive.NewObjectID(), models.RoundActive)
 		err := roundRepo.Create(context.Background(), testRound)
 		require.NoError(t, err)
-		enlistReviewer(t, testRound, subject.ID)
+		// Deliberately do NOT enlist the subject as a peer reviewer; the
+		// self-assessment path must work purely on the subject identity.
 
 		c, w := testutil.NewTestGinContext(subject)
 		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
 			"roundId":   testRound.ID.Hex(),
-			"responses": "{}",
+			"responses": `{"a":"self-strength","b":"self-blocker","c":"self-amplify","d":"self-experiment"}`,
 		}))
 
 		handler.SubmitFeedback(c)
 
-		assert.Equal(t, http.StatusForbidden, w.Code)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		stored, err := submissionRepo.FindByRoundAndReviewer(context.Background(), testRound.ID, subject.ID)
+		require.NoError(t, err)
+		require.NotNil(t, stored)
+		assert.True(t, stored.IsSelf, "subject's submission must be flagged as self")
 	})
 
 	t.Run("inactive_round_is_rejected", func(t *testing.T) {

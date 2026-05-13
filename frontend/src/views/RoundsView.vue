@@ -68,6 +68,20 @@ function isAssignedReviewer(round: FeedbackRound): boolean {
   return round.reviewers?.some(r => r.reviewerId === auth.user?.id) ?? false
 }
 
+function isSubject(round: FeedbackRound): boolean {
+  return round.subjectId === auth.user?.id
+}
+
+function owesSubmission(round: FeedbackRound): boolean {
+  if (round.status !== 'active') return false
+  if (hasSubmitted(round.id)) return false
+  return isAssignedReviewer(round) || isSubject(round)
+}
+
+function submitButtonLabel(round: FeedbackRound): string {
+  return isSubject(round) ? 'Submit Self-Assessment' : 'Submit Feedback'
+}
+
 function hasSubmitted(roundId: string): boolean {  // Changed from number to string
   return submissionStatus.value[roundId] ?? false
 }
@@ -179,16 +193,16 @@ async function closeRound(id: string) {  // Changed from number to string
           </div>
         </div>
 
-        <div v-if="isAssignedReviewer(round) && !hasSubmitted(round.id) && round.status === 'active'" class="round-card__actions">
+        <div v-if="owesSubmission(round)" class="round-card__actions">
           <router-link :to="`/rounds/${round.id}/submit`" class="btn btn--primary round-card__btn">
-            Submit Feedback
+            {{ submitButtonLabel(round) }}
           </router-link>
         </div>
 
         <div v-else-if="hasSubmitted(round.id)" class="round-card__actions round-card__actions--column">
           <span class="round-card__submitted">
             <PhCheck :size="14" weight="bold" />
-            <span>Feedback Submitted</span>
+            <span>{{ isSubject(round) ? 'Self-Assessment Submitted' : 'Feedback Submitted' }}</span>
           </span>
           <router-link :to="`/rounds/${round.id}/submission`" class="btn btn--secondary round-card__btn">
             View My Submission

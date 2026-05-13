@@ -109,10 +109,10 @@ func renderConsolidationPDF(subject models.User, round models.FeedbackRound, c m
 
 	if summaries := parseJSONStringMap(c.QuestionSummaries); len(summaries) > 0 {
 		labels := map[string]string{
-			"a": "Strengths summary",
-			"b": "Improvements summary",
-			"c": "Observed behaviors",
-			"d": "Growth advice",
+			"a": "What to continue",
+			"b": "What's blocking growth",
+			"c": "Where to double down",
+			"d": "One experiment to try (30–60 days)",
 		}
 		writeSectionTitle(pdf, "Question-by-Question Summary")
 		for _, key := range []string{"a", "b", "c", "d"} {
@@ -128,6 +128,19 @@ func renderConsolidationPDF(subject models.User, round models.FeedbackRound, c m
 			pdf.MultiCell(0, 6, text, "", "L", false)
 			pdf.Ln(2)
 		}
+	}
+
+	if c.SelfVsOthersDelta != nil && c.SelfVsOthersDelta.SelfSubmitted {
+		writeSectionTitle(pdf, "Self vs Peers — Where You and Your Team See Things Differently")
+		if c.SelfVsOthersDelta.Summary != "" {
+			pdf.SetFont("Helvetica", "I", 11)
+			pdf.SetTextColor(60, 60, 60)
+			pdf.MultiCell(0, 6, c.SelfVsOthersDelta.Summary, "", "L", false)
+			pdf.Ln(3)
+		}
+		writeDeltaSubsection(pdf, "Blind spots (peers see, you may not)", c.SelfVsOthersDelta.BlindSpots)
+		writeDeltaSubsection(pdf, "Hidden strengths (you may underestimate)", c.SelfVsOthersDelta.HiddenStrengths)
+		writeDeltaSubsection(pdf, "Aligned themes (self and peers agree)", c.SelfVsOthersDelta.Aligned)
 	}
 
 	if c.AdminNotes != "" {
@@ -181,6 +194,25 @@ func writeSection(pdf *fpdf.Fpdf, title string, items []string, bullet bool) {
 		pdf.Ln(1)
 	}
 	pdf.Ln(3)
+}
+
+func writeDeltaSubsection(pdf *fpdf.Fpdf, title string, items []string) {
+	if len(items) == 0 {
+		return
+	}
+	pdf.SetFont("Helvetica", "B", 11)
+	pdf.SetTextColor(40, 40, 40)
+	pdf.CellFormat(0, 6, title, "", 1, "L", false, 0, "")
+	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetTextColor(60, 60, 60)
+	for _, item := range items {
+		text := strings.TrimSpace(item)
+		if text == "" {
+			continue
+		}
+		pdf.MultiCell(0, 6, "- "+text, "", "L", false)
+	}
+	pdf.Ln(2)
 }
 
 func parseJSONList(raw string) []string {

@@ -15,8 +15,19 @@ type Consolidation struct {
 	AreasForImprovement string             `bson:"areas_for_improvement" json:"areasForImprovement"` // JSON array
 	ActionableInsights  string             `bson:"actionable_insights" json:"actionableInsights"`    // JSON array
 	QuestionSummaries   string             `bson:"question_summaries" json:"questionSummaries"`      // JSON object
+	SelfVsOthersDelta   *SelfVsOthersDelta `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
 	AdminNotes          string             `bson:"admin_notes" json:"adminNotes"`
 	SharedAt            *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
 	CreatedAt           time.Time          `bson:"created_at" json:"createdAt"`
 	UpdatedAt           time.Time          `bson:"updated_at" json:"updatedAt"`
+}
+
+// SelfVsOthersDelta captures how the subject's self-assessment compares to peer
+// feedback. It is the single highest-leverage signal a 360 round produces.
+type SelfVsOthersDelta struct {
+	SelfSubmitted   bool     `bson:"self_submitted" json:"selfSubmitted"`
+	BlindSpots      []string `bson:"blind_spots" json:"blindSpots"`           // peers see, self doesn't
+	HiddenStrengths []string `bson:"hidden_strengths" json:"hiddenStrengths"` // self underestimates
+	Aligned         []string `bson:"aligned" json:"aligned"`                  // both agree
+	Summary         string   `bson:"summary" json:"summary"`                  // 1–2 sentence coaching framing of the gap
 }
