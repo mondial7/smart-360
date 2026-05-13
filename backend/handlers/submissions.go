@@ -121,8 +121,10 @@ func CheckSubmissionStatus(c *gin.Context) {
 
 func SubmitFeedback(c *gin.Context) {
 	var req struct {
-		RoundID   string `json:"roundId" binding:"required"`
-		Responses string `json:"responses" binding:"required"`
+		RoundID              string                      `json:"roundId" binding:"required"`
+		Responses            string                      `json:"responses" binding:"required"`
+		Relationship         models.ReviewerRelationship `json:"relationship,omitempty"`
+		InteractionFrequency models.InteractionFrequency `json:"interactionFrequency,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -167,6 +169,18 @@ func SubmitFeedback(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
 			return
 		}
+		// Peer feedback must declare the reviewer's relationship and how often
+		// they interact with the subject. Without this metadata the AI cannot
+		// down-weight thin signals and the resulting consolidation drifts toward
+		// false equivalence between a daily collaborator and a one-off contact.
+		if !req.Relationship.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or missing relationship (manager, report, peer, cross_functional)"})
+			return
+		}
+		if !req.InteractionFrequency.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or missing interactionFrequency (daily, weekly, monthly, rarely)"})
+			return
+		}
 	}
 
 	var existing models.Submission
@@ -187,6 +201,10 @@ func SubmitFeedback(c *gin.Context) {
 		IsSelf:      isSelf,
 		SubmittedAt: time.Now(),
 		UpdatedAt:   time.Now(),
+	}
+	if !isSelf {
+		submission.Relationship = req.Relationship
+		submission.InteractionFrequency = req.InteractionFrequency
 	}
 
 	_, err = db.Collection("submissions").InsertOne(ctx, submission)

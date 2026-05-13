@@ -24,8 +24,10 @@ type testSubmissionHandler struct {
 
 func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 	var req struct {
-		RoundID   string `json:"roundId" binding:"required"`
-		Responses string `json:"responses" binding:"required"`
+		RoundID              string                      `json:"roundId" binding:"required"`
+		Responses            string                      `json:"responses" binding:"required"`
+		Relationship         models.ReviewerRelationship `json:"relationship,omitempty"`
+		InteractionFrequency models.InteractionFrequency `json:"interactionFrequency,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -70,6 +72,14 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Not a reviewer for this round"})
 			return
 		}
+		if !req.Relationship.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or missing relationship"})
+			return
+		}
+		if !req.InteractionFrequency.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or missing interactionFrequency"})
+			return
+		}
 	}
 
 	count, err := h.submissionRepo.CountByRoundAndReviewer(ctx, roundObjID, currentUser.ID)
@@ -78,7 +88,6 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		return
 	}
 
-	// Create submission
 	submission := &models.Submission{
 		ID:          primitive.NewObjectID(),
 		RoundID:     roundObjID,
@@ -87,6 +96,10 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		IsSelf:      isSelf,
 		SubmittedAt: time.Now(),
 		UpdatedAt:   time.Now(),
+	}
+	if !isSelf {
+		submission.Relationship = req.Relationship
+		submission.InteractionFrequency = req.InteractionFrequency
 	}
 
 	err = h.submissionRepo.Create(ctx, submission)
@@ -227,8 +240,10 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 		responsesJSON, _ := json.Marshal(responses)
 
 		body := map[string]interface{}{
-			"roundId":   testRound.ID.Hex(),
-			"responses": string(responsesJSON),
+			"roundId":              testRound.ID.Hex(),
+			"responses":            string(responsesJSON),
+			"relationship":         string(models.RelationshipPeer),
+			"interactionFrequency": string(models.InteractionDaily),
 		}
 		err = testutil.SetJSONBody(c, body)
 		require.NoError(t, err)
@@ -243,6 +258,8 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 		assert.Equal(t, testRound.ID, submissions[0].RoundID)
 		assert.Equal(t, testUser.ID, submissions[0].ReviewerID)
 		assert.Equal(t, string(responsesJSON), submissions[0].Responses)
+		assert.Equal(t, models.RelationshipPeer, submissions[0].Relationship)
+		assert.Equal(t, models.InteractionDaily, submissions[0].InteractionFrequency)
 	})
 
 	t.Run("duplicate_submission_returns_conflict", func(t *testing.T) {
@@ -260,8 +277,10 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 
 		c, w := testutil.NewTestGinContext(testUser)
 		body := map[string]interface{}{
-			"roundId":   testRound.ID.Hex(),
-			"responses": string(responsesJSON),
+			"roundId":              testRound.ID.Hex(),
+			"responses":            string(responsesJSON),
+			"relationship":         string(models.RelationshipPeer),
+			"interactionFrequency": string(models.InteractionWeekly),
 		}
 		err = testutil.SetJSONBody(c, body)
 		require.NoError(t, err)
@@ -291,6 +310,62 @@ func TestSubmitFeedback_Integration(t *testing.T) {
 		handler.SubmitFeedback(c)
 
 		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("peer_missing_relationship_is_rejected", func(t *testing.T) {
+		testUser := testutil.NewTestUser("no-rel@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), testRound))
+		enlistReviewer(t, testRound, testUser.ID)
+
+		c, w := testutil.NewTestGinContext(testUser)
+		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
+			"roundId":              testRound.ID.Hex(),
+			"responses":            `{"a":"x"}`,
+			"interactionFrequency": string(models.InteractionDaily),
+			// relationship intentionally omitted
+		}))
+
+		handler.SubmitFeedback(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("peer_invalid_relationship_is_rejected", func(t *testing.T) {
+		testUser := testutil.NewTestUser("bad-rel@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), testRound))
+		enlistReviewer(t, testRound, testUser.ID)
+
+		c, w := testutil.NewTestGinContext(testUser)
+		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
+			"roundId":              testRound.ID.Hex(),
+			"responses":            `{"a":"x"}`,
+			"relationship":         "best-friend",
+			"interactionFrequency": string(models.InteractionDaily),
+		}))
+
+		handler.SubmitFeedback(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("peer_missing_interaction_frequency_is_rejected", func(t *testing.T) {
+		testUser := testutil.NewTestUser("no-freq@example.com", models.RoleMember)
+		testRound := testutil.NewTestRound(primitive.NewObjectID(), primitive.NewObjectID(), models.RoundActive)
+		require.NoError(t, roundRepo.Create(context.Background(), testRound))
+		enlistReviewer(t, testRound, testUser.ID)
+
+		c, w := testutil.NewTestGinContext(testUser)
+		require.NoError(t, testutil.SetJSONBody(c, map[string]interface{}{
+			"roundId":      testRound.ID.Hex(),
+			"responses":    `{"a":"x"}`,
+			"relationship": string(models.RelationshipPeer),
+		}))
+
+		handler.SubmitFeedback(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("subject_can_self_submit_and_row_is_flagged", func(t *testing.T) {

@@ -259,6 +259,20 @@ function parseResponses(responsesStr: string): Record<string, string> {
     return {}
   }
 }
+
+const relationshipLabels: Record<string, string> = {
+  manager: 'Manager',
+  report: 'Direct report',
+  peer: 'Peer',
+  cross_functional: 'Cross-functional'
+}
+
+const frequencyLabels: Record<string, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  rarely: 'Rarely'
+}
 </script>
 
 <template>
@@ -587,8 +601,18 @@ function parseResponses(responsesStr: string): Record<string, string> {
             <div class="reviews">
               <div v-for="(submission, idx) in submissions" :key="submission.id" class="review">
                 <div class="review__header">
-                  <span class="review__label">Reviewer {{ idx + 1 }}</span>
+                  <span class="review__label">
+                    {{ submission.isSelf ? 'Self-assessment' : `Reviewer ${idx + 1}` }}
+                  </span>
                   <span class="review__date">{{ formatDate(submission.submittedAt) }}</span>
+                </div>
+                <div v-if="!submission.isSelf && (submission.relationship || submission.interactionFrequency)" class="review__vantage">
+                  <span v-if="submission.relationship" class="review__vantage-tag">
+                    {{ relationshipLabels[submission.relationship] || submission.relationship }}
+                  </span>
+                  <span v-if="submission.interactionFrequency" class="review__vantage-tag review__vantage-tag--muted">
+                    {{ frequencyLabels[submission.interactionFrequency] || submission.interactionFrequency }}
+                  </span>
                 </div>
                 <div class="review__content">
                   <div class="review__item">
@@ -1087,6 +1111,30 @@ function parseResponses(responsesStr: string): Record<string, string> {
 
     @media (min-width: 768px) {
       font-size: 0.85rem;
+    }
+  }
+
+  &__vantage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: -0.25rem 0 0.75rem;
+  }
+
+  &__vantage-tag {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+
+    &--muted {
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
     }
   }
 

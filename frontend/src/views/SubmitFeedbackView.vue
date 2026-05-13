@@ -40,6 +40,26 @@ const responses = ref<Record<string, string>>({
   d: ''
 })
 
+type Relationship = 'manager' | 'report' | 'peer' | 'cross_functional'
+type Frequency = 'daily' | 'weekly' | 'monthly' | 'rarely'
+
+const relationship = ref<Relationship | ''>('')
+const interactionFrequency = ref<Frequency | ''>('')
+
+const relationshipOptions: Array<{ value: Relationship; label: string }> = [
+  { value: 'manager', label: 'I manage them' },
+  { value: 'report', label: 'They manage me' },
+  { value: 'peer', label: 'We are peers / teammates' },
+  { value: 'cross_functional', label: 'We collaborate across teams' }
+]
+
+const frequencyOptions: Array<{ value: Frequency; label: string }> = [
+  { value: 'daily', label: 'Daily — we work together most days' },
+  { value: 'weekly', label: 'Weekly — we sync at least once a week' },
+  { value: 'monthly', label: 'Monthly — we connect occasionally' },
+  { value: 'rarely', label: 'Rarely — limited direct interaction' }
+]
+
 onMounted(async () => {
   await loadRound()
 })
@@ -63,6 +83,16 @@ async function loadRound() {
 }
 
 async function submitFeedback() {
+  if (!isSelf.value) {
+    if (!relationship.value) {
+      alert('Please pick your relationship to this person before submitting.')
+      return
+    }
+    if (!interactionFrequency.value) {
+      alert('Please pick how often you interact with this person before submitting.')
+      return
+    }
+  }
   for (const q of questions.value) {
     if (!responses.value[q.key].trim()) {
       alert('Please answer all questions before submitting.')
@@ -72,10 +102,15 @@ async function submitFeedback() {
 
   submitting.value = true
   try {
-    await apiClient.post('/submissions', {
+    const payload: Record<string, unknown> = {
       roundId,
       responses: JSON.stringify(responses.value)
-    })
+    }
+    if (!isSelf.value) {
+      payload.relationship = relationship.value
+      payload.interactionFrequency = interactionFrequency.value
+    }
+    await apiClient.post('/submissions', payload)
     alert(isSelf.value
       ? 'Self-assessment submitted. Thanks for taking the time to reflect.'
       : 'Feedback submitted successfully! Thank you for your input.')
@@ -131,6 +166,27 @@ function formatDate(dateStr: string | null): string {
       </div>
 
       <form @submit.prevent="submitFeedback" class="submit__form">
+        <fieldset v-if="!isSelf" class="submit__context">
+          <legend class="submit__context-legend">Your vantage point</legend>
+          <p class="submit__context-hint">
+            This helps the consolidation weight signals — a daily peer's view carries different evidentiary weight than a one-off contact.
+          </p>
+          <div class="submit__context-row">
+            <label for="relationship" class="submit__context-label">Your relationship</label>
+            <select id="relationship" v-model="relationship" required class="submit__context-select">
+              <option value="" disabled>Choose…</option>
+              <option v-for="opt in relationshipOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="submit__context-row">
+            <label for="frequency" class="submit__context-label">How often you interact</label>
+            <select id="frequency" v-model="interactionFrequency" required class="submit__context-select">
+              <option value="" disabled>Choose…</option>
+              <option v-for="opt in frequencyOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+        </fieldset>
+
         <div v-for="question in questions" :key="question.key" class="question">
           <label :for="question.key" class="question__label">{{ question.text }}</label>
           <textarea
@@ -290,6 +346,67 @@ function formatDate(dateStr: string | null): string {
       justify-content: flex-end;
       gap: 1rem;
     }
+  }
+}
+
+.submit__context {
+  background: var(--bg-primary);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.submit__context-legend {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  padding: 0 0.4rem;
+}
+
+.submit__context-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.submit__context-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.submit__context-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+
+  @media (min-width: 640px) {
+    flex: 0 0 14rem;
+  }
+}
+
+.submit__context-select {
+  flex: 1;
+  padding: 0.55rem 0.7rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
   }
 }
 

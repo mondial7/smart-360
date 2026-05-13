@@ -111,6 +111,20 @@ async function saveEdits() {
 function canEdit() {
   return round.value?.status === 'active' && !submission.value?.sharedAt
 }
+
+const relationshipLabels: Record<string, string> = {
+  manager: 'Manager — manages the subject',
+  report: 'Direct report — managed by the subject',
+  peer: 'Peer / teammate',
+  cross_functional: 'Cross-functional collaborator'
+}
+
+const frequencyLabels: Record<string, string> = {
+  daily: 'Daily — most days',
+  weekly: 'Weekly — at least once a week',
+  monthly: 'Monthly — occasional',
+  rarely: 'Rarely — limited direct interaction'
+}
 </script>
 
 <template>
@@ -146,6 +160,16 @@ function canEdit() {
 
         <div v-if="!editing" class="submission__responses">
           <h2 class="submission__responses-title">Your Feedback Responses</h2>
+
+          <div v-if="!submission.isSelf && (submission.relationship || submission.interactionFrequency)" class="submission__vantage">
+            <h3 class="submission__vantage-title">Your vantage point</h3>
+            <p v-if="submission.relationship" class="submission__vantage-line">
+              <strong>Relationship:</strong> {{ relationshipLabels[submission.relationship] || submission.relationship }}
+            </p>
+            <p v-if="submission.interactionFrequency" class="submission__vantage-line">
+              <strong>Interaction:</strong> {{ frequencyLabels[submission.interactionFrequency] || submission.interactionFrequency }}
+            </p>
+          </div>
 
           <div class="response-item">
             <h3 class="response-item__question">1. What does this person do that has the biggest positive impact on the team or product?</h3>
@@ -409,6 +433,30 @@ function canEdit() {
       font-size: 1rem;
     }
   }
+}
+
+.submission__vantage {
+  background: var(--bg-secondary);
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--color-primary);
+  margin-bottom: 1.5rem;
+}
+
+.submission__vantage-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.submission__vantage-line {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  line-height: 1.5;
 }
 
 .response-item {

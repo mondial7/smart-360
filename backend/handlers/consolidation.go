@@ -376,6 +376,12 @@ Apply these guidelines strictly:
 - Be specific. Vague compliments ("good communicator", "team player") are useless — ground every point in observable behaviour or impact.
 - Anchor your analysis on this person's last 3–6 months.
 
+Weight reviewer signals by relationship and interaction frequency:
+- Daily peers and the subject's manager have the richest signal — give their themes more weight, especially for execution and collaboration behaviours.
+- Direct reports (subjects who manage them) carry distinct, high-value signal for leadership and feedback behaviours — weight them heavily for those themes.
+- Cross-functional collaborators with rare interaction provide thin signal — only surface their themes if they appear in at least one other reviewer's input, otherwise treat them as a hypothesis rather than a finding.
+- If a theme appears in only one rarely-interacting reviewer's input, frame it cautiously ("one cross-functional partner observed …") instead of stating it as fact.
+
 For the self-vs-others delta:
 - blind_spots: things peers consistently flagged that the self-assessment does not acknowledge. Frame as opportunities, not accusations.
 - hidden_strengths: things peers value highly that the self-assessment underplays or omits.
@@ -587,7 +593,9 @@ func fallbackAIPayload(hasSelf bool) aiPayload {
 }
 
 // buildFeedbackPrompts splits submissions into peer feedback blocks and the
-// subject's self-assessment block.
+// subject's self-assessment block. Peer blocks are tagged with the reviewer's
+// relationship and interaction frequency so the model can down-weight thin
+// signals (a rare cross-functional contact) versus rich ones (a daily peer).
 func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, selfText string, hasSelf bool) {
 	for _, submission := range submissions {
 		var responses map[string]string
@@ -600,6 +608,10 @@ func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, 
 			header = "Self-assessment from the subject:"
 		}
 		block := header + "\n"
+		if !submission.IsSelf {
+			block += fmt.Sprintf("Relationship to subject: %s\n", relationshipLabel(submission.Relationship))
+			block += fmt.Sprintf("Interaction frequency: %s\n", frequencyLabel(submission.InteractionFrequency))
+		}
 		if continueDoing, ok := responses["a"]; ok && continueDoing != "" {
 			block += fmt.Sprintf("What to continue (biggest positive impact, with example): %s\n", continueDoing)
 		}
@@ -621,6 +633,34 @@ func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, 
 		}
 	}
 	return peerTexts, selfText, hasSelf
+}
+
+func relationshipLabel(r models.ReviewerRelationship) string {
+	switch r {
+	case models.RelationshipManager:
+		return "manager (manages the subject)"
+	case models.RelationshipReport:
+		return "direct report (the subject manages them)"
+	case models.RelationshipPeer:
+		return "peer (direct teammate)"
+	case models.RelationshipCrossFunctional:
+		return "cross-functional collaborator (different team)"
+	}
+	return "unspecified"
+}
+
+func frequencyLabel(f models.InteractionFrequency) string {
+	switch f {
+	case models.InteractionDaily:
+		return "daily — works together most days"
+	case models.InteractionWeekly:
+		return "weekly — syncs at least once a week"
+	case models.InteractionMonthly:
+		return "monthly — connects occasionally"
+	case models.InteractionRarely:
+		return "rarely — limited direct interaction"
+	}
+	return "unspecified"
 }
 
 func combineFeedbackSubmissions(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID) models.Consolidation {

@@ -342,3 +342,44 @@ func TestCombineFeedbackSubmissions(t *testing.T) {
 		assert.Empty(t, result.SelfVsOthersDelta.Summary)
 	})
 }
+
+func TestBuildFeedbackPrompts(t *testing.T) {
+	t.Run("peer_blocks_include_relationship_and_frequency", func(t *testing.T) {
+		peerResponses, _ := json.Marshal(map[string]string{"a": "Drives clarity in design reviews"})
+		selfResponses, _ := json.Marshal(map[string]string{"a": "I try to facilitate"})
+
+		submissions := []models.Submission{
+			{
+				Responses:            string(peerResponses),
+				Relationship:         models.RelationshipManager,
+				InteractionFrequency: models.InteractionDaily,
+			},
+			{Responses: string(selfResponses), IsSelf: true},
+		}
+
+		peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions)
+
+		require.Len(t, peerTexts, 1)
+		assert.Contains(t, peerTexts[0], "Relationship to subject: manager")
+		assert.Contains(t, peerTexts[0], "Interaction frequency: daily")
+		assert.Contains(t, peerTexts[0], "Drives clarity in design reviews")
+
+		assert.True(t, hasSelf)
+		assert.NotContains(t, selfText, "Relationship to subject",
+			"self block should not include reviewer-relationship metadata")
+		assert.Contains(t, selfText, "I try to facilitate")
+	})
+
+	t.Run("unspecified_relationship_is_labelled", func(t *testing.T) {
+		peerResponses, _ := json.Marshal(map[string]string{"a": "x"})
+		submissions := []models.Submission{
+			{Responses: string(peerResponses)}, // no Relationship / InteractionFrequency
+		}
+
+		peerTexts, _, _ := buildFeedbackPrompts(submissions)
+
+		require.Len(t, peerTexts, 1)
+		assert.Contains(t, peerTexts[0], "Relationship to subject: unspecified")
+		assert.Contains(t, peerTexts[0], "Interaction frequency: unspecified")
+	})
+}

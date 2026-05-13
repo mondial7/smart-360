@@ -101,7 +101,7 @@ If you want one PR that gets ~80% of the value without rebuilding the schema:
 In rough order of value. Status is updated as each ships.
 
 1. ✅ **Self-assessment + delta view** *(shipped)*. Subject fills the same questions in self-flavoured wording; AI consolidation produces `self_vs_others_delta` with `blind_spots`, `hidden_strengths`, `aligned`, and a coaching summary. Rendered in `MyFeedbackView`, `ConsolidationView`, and the PDF.
-2. **Reviewer-relationship metadata** on each submission (manager / peer / report / cross-functional + interaction frequency). Fed into the AI prompt so thin signals are down-weighted.
+2. ✅ **Reviewer-relationship metadata** *(shipped)*. Each peer submission now declares `relationship` (manager / report / peer / cross_functional) and `interactionFrequency` (daily / weekly / monthly / rarely). Both are required for peer submissions and skipped for self-assessments. The metadata is injected into the AI prompt per reviewer block and the prompt instructs the model to down-weight thin signals (rare + cross-functional) and to flag single-source themes as hypotheses rather than findings. Surfaced as pill tags in the consolidation per-reviewer breakdown and on the user's own submission view.
 3. **Configurable templates per role family** (`template_id` on round; questions/persona/competencies stored as config rather than hard-coded). Lets non-eng teams use the same tool.
 4. **Likert ratings against a competency rubric** (execution / collaboration / ownership / technical judgement, each 1–5 with a one-line justification). Required for cross-team calibration once promo discussions touch this data.
 5. **Manager-voice vs peer-voice separation** in the consolidation.
