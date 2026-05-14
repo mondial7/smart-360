@@ -95,7 +95,9 @@ func ConsolidateFeedback(c *gin.Context) {
 		// Use Gemini for AI consolidation
 		consolidation, err = generateGeminiConsolidation(submissions, roundObjID, currentUser.ID, geminiKey, template)
 		if err != nil {
-			fmt.Printf("Error generating Gemini consolidation: %v\n", err)
+			// Sanitise before logging — the genai SDK embeds the API key in URLs
+			// inside its error strings.
+			fmt.Printf("Error generating Gemini consolidation: %s\n", sanitiseErr(err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate AI consolidation"})
 			return
 		}
@@ -598,8 +600,12 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, p
 		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries", "self_vs_others_delta", "voice_breakdown", "manager_only_channel"},
 	}
 
-	// Generate content
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	// Generate content. Cap the call at 60s — Gemini occasionally hangs on
+	// borderline prompts; without a deadline a single consolidate request
+	// could block the HTTP handler indefinitely.
+	genCtx, genCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer genCancel()
+	resp, err := model.GenerateContent(genCtx, genai.Text(prompt))
 	if err != nil {
 		return models.Consolidation{}, fmt.Errorf("failed to generate content: %w", err)
 	}

@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"smart360/database"
 	"smart360/models"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +20,36 @@ import (
 	"google.golang.org/api/option"
 )
 
+// keyQueryParamRE matches any `key=<value>` query parameter (URL-encoded or
+// not). genai's SDK embeds the Gemini API key in the request URL, and its
+// error strings include that full URL verbatim — persisting that into an
+// audit log would leak the live key to anyone with read access. We rewrite
+// the value to "REDACTED" everywhere before the error string is stored.
+var keyQueryParamRE = regexp.MustCompile(`(?i)([?&]key=)[^&"\s]+`)
+
+// sanitiseErr renders the given error as a safe-to-log string. Today that
+// means scrubbing the Gemini API key out of any URL the SDK threaded into the
+// error message. Add more rules here if we ever surface other transport-layer
+// errors that could carry secrets.
+func sanitiseErr(err error) string {
+	if err == nil {
+		return ""
+	}
+	return keyQueryParamRE.ReplaceAllString(err.Error(), "${1}REDACTED")
+}
+
 // moderationModelName is the Gemini model used for the scrub pass. Kept as a
 // const so the value lands in audit logs unambiguously.
 const moderationModelName = "gemini-flash-latest"
+
+// moderationCallTimeout caps each individual moderation call. Gemini safety
+// filters occasionally don't return at all on borderline content; without a
+// hard cap a single hung call could block the whole round indefinitely.
+const moderationCallTimeout = 25 * time.Second
+
+// moderationConcurrency caps in-flight moderation calls. 5 is enough to keep
+// a typical round (~10 reviewers) sub-30s without saturating Gemini quotas.
+const moderationConcurrency = 5
 
 // GetModerationLogsForRound returns the audit trail of moderation passes for
 // a round. Admin / round creator only — the subject never sees these.
@@ -154,9 +183,13 @@ func moderateSubmission(ctx context.Context, client *genai.Client, submission mo
 		Required: []string{"cleaned", "flagged", "reasons"},
 	}
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	// Cap each call independently. Gemini safety filters can hang on borderline
+	// content; we'd rather forward the original text than block the round.
+	callCtx, cancel := context.WithTimeout(ctx, moderationCallTimeout)
+	defer cancel()
+	resp, err := model.GenerateContent(callCtx, genai.Text(prompt))
 	if err != nil || len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		log.Reasons = []string{fmt.Sprintf("moderation call failed: %v — original content was forwarded unchanged", err)}
+		log.Reasons = []string{fmt.Sprintf("moderation call failed: %s — original content was forwarded unchanged", sanitiseErr(err))}
 		return submission, log
 	}
 
@@ -167,7 +200,7 @@ func moderateSubmission(ctx context.Context, client *genai.Client, submission mo
 
 	result := moderationResult{}
 	if err := json.Unmarshal([]byte(raw), &result); err != nil {
-		log.Reasons = []string{fmt.Sprintf("moderation response was not valid JSON: %v — original content was forwarded unchanged", err)}
+		log.Reasons = []string{fmt.Sprintf("moderation response was not valid JSON: %s — original content was forwarded unchanged", sanitiseErr(err))}
 		return submission, log
 	}
 
@@ -251,18 +284,29 @@ func moderateSubmissions(ctx context.Context, submissions []models.Submission, r
 		return submissions, []models.ModerationLog{{
 			RoundID:     roundID,
 			Model:       moderationModelName,
-			Reasons:     []string{fmt.Sprintf("could not initialise moderation client: %v", err)},
+			Reasons:     []string{fmt.Sprintf("could not initialise moderation client: %s", sanitiseErr(err))},
 			ModeratedAt: time.Now(),
 		}}
 	}
 	defer client.Close()
 
-	cleaned := make([]models.Submission, 0, len(submissions))
-	logs := make([]models.ModerationLog, 0, len(submissions))
-	for _, s := range submissions {
-		out, log := moderateSubmission(ctx, client, s, roundID)
-		cleaned = append(cleaned, out)
-		logs = append(logs, log)
+	// Fan out: each moderation call is independent and the bulk of the wall
+	// time is the round trip to Gemini, so running them in parallel is a
+	// straight win. We cap concurrency to keep API usage and goroutine count
+	// predictable.
+	cleaned := make([]models.Submission, len(submissions))
+	logs := make([]models.ModerationLog, len(submissions))
+	sem := make(chan struct{}, moderationConcurrency)
+	var wg sync.WaitGroup
+	for i, s := range submissions {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, s models.Submission) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			cleaned[i], logs[i] = moderateSubmission(ctx, client, s, roundID)
+		}(i, s)
 	}
+	wg.Wait()
 	return cleaned, logs
 }
