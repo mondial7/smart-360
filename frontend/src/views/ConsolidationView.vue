@@ -16,6 +16,7 @@ import {
   PhClipboardText,
   PhScales,
   PhUsersThree,
+  PhGauge,
   PhX,
   PhPlus,
   PhArrowUp,
@@ -551,6 +552,50 @@ const frequencyLabels: Record<string, string> = {
                 <h4 class="question-card__title">4. {{ cardTitle('d', 'One experiment to try') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
               </div>
+            </div>
+          </section>
+
+          <!-- Competency ratings -->
+          <section v-if="consolidation?.competencyRatings?.length" class="section">
+            <h2 class="section__title">
+              <PhGauge :size="20" weight="duotone" />
+              <span>Competency Ratings</span>
+            </h2>
+            <p class="section__hint">Server-computed averages from the Likert rubric. Wide spreads indicate reviewers disagree — surface for the 1:1 conversation.</p>
+            <div class="rubric-grid">
+              <article v-for="r in consolidation.competencyRatings" :key="r.key" class="rubric-card">
+                <header class="rubric-card__header">
+                  <h4 class="rubric-card__name">{{ r.name }}</h4>
+                  <span v-if="r.othersAverage != null" class="rubric-card__avg">
+                    {{ r.othersAverage.toFixed(1) }}
+                    <small>/ 5 avg ({{ r.othersCount }})</small>
+                  </span>
+                </header>
+                <p v-if="r.description" class="rubric-card__desc">{{ r.description }}</p>
+                <ul class="rubric-card__rows">
+                  <li v-if="r.selfScore != null">
+                    <span class="rubric-card__label">Self</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.selfScore / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.selfScore.toFixed(1) }}</span>
+                  </li>
+                  <li v-if="r.managerAverage != null">
+                    <span class="rubric-card__label">Manager</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.managerAverage / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.managerAverage.toFixed(1) }}</span>
+                  </li>
+                  <li v-if="r.peerAverage != null">
+                    <span class="rubric-card__label">Peers</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.peerAverage / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.peerAverage.toFixed(1) }}</span>
+                  </li>
+                  <li v-if="r.reportAverage != null">
+                    <span class="rubric-card__label">Reports</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.reportAverage / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.reportAverage.toFixed(1) }}</span>
+                  </li>
+                </ul>
+                <p v-if="r.spread >= 2" class="rubric-card__spread">⚠ Wide spread ({{ r.spread.toFixed(1) }} points) — reviewers don't agree on this axis.</p>
+              </article>
             </div>
           </section>
 
@@ -1246,6 +1291,109 @@ const frequencyLabels: Record<string, string> = {
   display: grid;
   gap: 1rem;
   margin-top: 0.75rem;
+}
+
+.rubric-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.rubric-card {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  border-left: 4px solid var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__avg {
+    font-weight: 700;
+    color: var(--color-primary);
+    font-size: 1rem;
+
+    small {
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-left: 0.25rem;
+    }
+  }
+
+  &__desc {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  &__rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    li {
+      display: grid;
+      grid-template-columns: 4rem 1fr 2.5rem;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+  }
+
+  &__label {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  &__bar {
+    position: relative;
+    height: 8px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  &__bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 4px;
+  }
+
+  &__num {
+    text-align: right;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__spread {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: #c2410c;
+    font-weight: 500;
+  }
 }
 
 .voice {

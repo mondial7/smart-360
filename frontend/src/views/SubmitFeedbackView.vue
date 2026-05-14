@@ -31,6 +31,14 @@ const questions = computed(() => {
 
 const responses = ref<Record<string, string>>({})
 
+// One Likert slot per template competency: score (1-5, 0 = not yet picked) +
+// one-line justification. The backend rejects 0s, empty justifications, and
+// missing keys, so we mirror that with required form controls.
+const ratingScores = ref<Record<string, number>>({})
+const ratingJustifications = ref<Record<string, string>>({})
+
+const competencies = computed(() => template.value?.competencies || [])
+
 type Relationship = 'manager' | 'report' | 'peer' | 'cross_functional'
 type Frequency = 'daily' | 'weekly' | 'monthly' | 'rarely'
 
@@ -78,6 +86,16 @@ async function loadRound() {
         slots[q.key] = ''
       }
       responses.value = slots
+
+      // Seed empty rating slots for every competency the template defines.
+      const scores: Record<string, number> = {}
+      const justifications: Record<string, string> = {}
+      for (const c of template.value?.competencies || []) {
+        scores[c.key] = 0
+        justifications[c.key] = ''
+      }
+      ratingScores.value = scores
+      ratingJustifications.value = justifications
     }
   } catch (error) {
     console.error('Failed to load round:', error)
@@ -103,6 +121,17 @@ async function submitFeedback() {
       return
     }
   }
+  for (const c of competencies.value) {
+    const score = ratingScores.value[c.key]
+    if (!score || score < 1 || score > 5) {
+      alert(`Please pick a 1–5 score for "${c.name}".`)
+      return
+    }
+    if (!ratingJustifications.value[c.key]?.trim()) {
+      alert(`Please add a one-line justification for "${c.name}". A score without context isn't useful feedback.`)
+      return
+    }
+  }
 
   submitting.value = true
   try {
@@ -113,6 +142,13 @@ async function submitFeedback() {
     if (!isSelf.value) {
       payload.relationship = relationship.value
       payload.interactionFrequency = interactionFrequency.value
+    }
+    if (competencies.value.length > 0) {
+      payload.ratings = competencies.value.map(c => ({
+        key: c.key,
+        score: ratingScores.value[c.key],
+        justification: ratingJustifications.value[c.key].trim()
+      }))
     }
     await apiClient.post('/submissions', payload)
     alert(isSelf.value
@@ -202,6 +238,39 @@ function formatDate(dateStr: string | null): string {
             class="question__textarea"
           ></textarea>
         </div>
+
+        <fieldset v-if="competencies.length" class="rubric">
+          <legend class="rubric__legend">Competency ratings</legend>
+          <p class="rubric__hint">
+            Rate {{ isSelf ? 'yourself' : 'them' }} on each axis (1 = needs significant growth, 5 = consistently exceeds the bar). A one-line justification is required — a score without context isn't useful feedback.
+          </p>
+          <div v-for="c in competencies" :key="c.key" class="rubric__item">
+            <div class="rubric__header">
+              <h3 class="rubric__name">{{ c.name }}</h3>
+              <p v-if="c.description" class="rubric__desc">{{ c.description }}</p>
+            </div>
+            <div class="rubric__scale" role="radiogroup" :aria-label="c.name">
+              <button
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                class="rubric__score"
+                :class="{ 'rubric__score--selected': ratingScores[c.key] === n }"
+                role="radio"
+                :aria-checked="ratingScores[c.key] === n"
+                @click="ratingScores[c.key] = n"
+              >{{ n }}</button>
+            </div>
+            <input
+              type="text"
+              v-model="ratingJustifications[c.key]"
+              :placeholder="`One concrete behaviour or example that anchors your ${c.name.toLowerCase()} rating…`"
+              required
+              class="rubric__justification"
+              maxlength="240"
+            >
+          </div>
+        </fieldset>
 
         <div class="submit__actions">
           <router-link to="/rounds" class="btn btn--secondary">Cancel</router-link>
@@ -405,6 +474,112 @@ function formatDate(dateStr: string | null): string {
   border-radius: 8px;
   background: var(--bg-primary);
   font-size: 0.95rem;
+  color: var(--text-primary);
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+}
+
+.rubric {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+.rubric__legend {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  padding: 0 0.4rem;
+}
+
+.rubric__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.rubric__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+
+  &:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+}
+
+.rubric__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rubric__name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rubric__desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.rubric__scale {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.rubric__score {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+
+  &--selected {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+}
+
+.rubric__justification {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-family: inherit;
 

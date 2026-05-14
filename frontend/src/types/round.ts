@@ -23,6 +23,12 @@ export interface TemplateQuestion {
   cardTitle: string
 }
 
+export interface TemplateCompetency {
+  key: string
+  name: string
+  description: string
+}
+
 export interface RoundTemplate {
   id: string
   slug: string
@@ -30,8 +36,28 @@ export interface RoundTemplate {
   description: string
   coachingPersona: string
   questions: TemplateQuestion[]
+  competencies?: TemplateCompetency[]
   createdAt: string
   updatedAt: string
+}
+
+export interface CompetencyRating {
+  key: string
+  score: number // 1..5
+  justification: string
+}
+
+export interface CompetencyRatingAggregate {
+  key: string
+  name: string
+  description?: string
+  selfScore?: number
+  peerAverage?: number
+  managerAverage?: number
+  reportAverage?: number
+  othersAverage?: number
+  othersCount: number
+  spread: number
 }
 
 export interface RoundReviewer {

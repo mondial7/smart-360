@@ -198,6 +198,17 @@ const frequencyLabels: Record<string, string> = {
               {{ submission.responsesParsed?.d || 'No response provided' }}
             </div>
           </div>
+
+          <div v-if="submission.ratings?.length" class="submission__ratings">
+            <h3 class="submission__ratings-title">Your ratings</h3>
+            <div v-for="r in submission.ratings" :key="r.key" class="submission__rating">
+              <div class="submission__rating-row">
+                <span class="submission__rating-name">{{ r.key }}</span>
+                <span class="submission__rating-score">{{ r.score }} / 5</span>
+              </div>
+              <p class="submission__rating-just">{{ r.justification }}</p>
+            </div>
+          </div>
         </div>
 
         <div v-else class="submission__edit">
@@ -457,6 +468,50 @@ const frequencyLabels: Record<string, string> = {
   font-size: 0.9rem;
   color: var(--text-primary);
   line-height: 1.5;
+}
+
+.submission__ratings {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.submission__ratings-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.submission__rating {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+}
+
+.submission__rating-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.submission__rating-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.submission__rating-score {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.submission__rating-just {
+  margin: 0.2rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
 }
 
 .response-item {

@@ -138,6 +138,31 @@ func renderConsolidationPDF(subject models.User, round models.FeedbackRound, c m
 		}
 	}
 
+	if len(c.CompetencyRatings) > 0 {
+		writeSectionTitle(pdf, "Competency Ratings")
+		for _, r := range c.CompetencyRatings {
+			pdf.SetFont("Helvetica", "B", 11)
+			pdf.SetTextColor(40, 40, 40)
+			heading := r.Name
+			if r.OthersAverage != nil {
+				heading = fmt.Sprintf("%s — %.1f / 5 avg (%d reviewers)", r.Name, *r.OthersAverage, r.OthersCount)
+			}
+			pdf.CellFormat(0, 6, heading, "", 1, "L", false, 0, "")
+			pdf.SetFont("Helvetica", "", 10)
+			pdf.SetTextColor(60, 60, 60)
+			for _, line := range competencyLines(r) {
+				pdf.MultiCell(0, 5, "  "+line, "", "L", false)
+			}
+			if r.Spread >= 2 {
+				pdf.SetFont("Helvetica", "I", 10)
+				pdf.SetTextColor(150, 75, 0)
+				pdf.MultiCell(0, 5, fmt.Sprintf("  Wide spread (%.1f points) — reviewers disagree on this axis.", r.Spread), "", "L", false)
+				pdf.SetTextColor(60, 60, 60)
+			}
+			pdf.Ln(2)
+		}
+	}
+
 	if c.VoiceBreakdown != nil {
 		writeSectionTitle(pdf, "Voices — Different Vantages, Distinct Signals")
 		writeVoiceBlock(pdf, "Manager voice", c.VoiceBreakdown.ManagerVoice)
@@ -209,6 +234,26 @@ func writeSection(pdf *fpdf.Fpdf, title string, items []string, bullet bool) {
 		pdf.Ln(1)
 	}
 	pdf.Ln(3)
+}
+
+// competencyLines renders one row of the rubric PDF for each voice that
+// actually submitted a rating. Skipping nil pointers keeps the PDF tight when
+// a voice didn't contribute.
+func competencyLines(r models.CompetencyRatingAggregate) []string {
+	var out []string
+	if r.SelfScore != nil {
+		out = append(out, fmt.Sprintf("Self:    %.1f", *r.SelfScore))
+	}
+	if r.ManagerAverage != nil {
+		out = append(out, fmt.Sprintf("Manager: %.1f", *r.ManagerAverage))
+	}
+	if r.PeerAverage != nil {
+		out = append(out, fmt.Sprintf("Peers:   %.1f", *r.PeerAverage))
+	}
+	if r.ReportAverage != nil {
+		out = append(out, fmt.Sprintf("Reports: %.1f", *r.ReportAverage))
+	}
+	return out
 }
 
 func writeVoiceBlock(pdf *fpdf.Fpdf, title string, v *models.Voice) {

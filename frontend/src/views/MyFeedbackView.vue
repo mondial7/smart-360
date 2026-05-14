@@ -17,7 +17,8 @@ import {
   PhEye,
   PhEyeSlash,
   PhScales,
-  PhUsersThree
+  PhUsersThree,
+  PhGauge
 } from '@phosphor-icons/vue'
 
 const consolidations = ref<any[]>([])
@@ -251,6 +252,52 @@ function parseFilename(disposition: string | undefined): string | null {
                 <h4 class="question-card__title">4. {{ cardTitle(consolidation, 'd', 'One experiment to try') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d || 'No summary available' }}</p>
               </div>
+            </div>
+          </section>
+
+          <!-- Competency ratings -->
+          <section v-if="consolidation.competencyRatings?.length" class="feedback-section">
+            <h3 class="feedback-section__title">
+              <PhGauge :size="20" weight="duotone" />
+              <span>Competency Ratings</span>
+            </h3>
+            <p class="feedback-section__summary">
+              Each axis is rated 1–5 by your reviewers (and you, in self-assessment). A wide spread between voices is itself a finding — look at where managers and peers disagree.
+            </p>
+            <div class="rubric-grid">
+              <article v-for="r in consolidation.competencyRatings" :key="r.key" class="rubric-card">
+                <header class="rubric-card__header">
+                  <h4 class="rubric-card__name">{{ r.name }}</h4>
+                  <span v-if="r.othersAverage != null" class="rubric-card__avg">
+                    {{ r.othersAverage.toFixed(1) }}
+                    <small>/ 5 avg ({{ r.othersCount }})</small>
+                  </span>
+                </header>
+                <p v-if="r.description" class="rubric-card__desc">{{ r.description }}</p>
+                <ul class="rubric-card__rows">
+                  <li v-if="r.selfScore != null">
+                    <span class="rubric-card__label">Self</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.selfScore / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.selfScore.toFixed(1) }}</span>
+                  </li>
+                  <li v-if="r.managerAverage != null">
+                    <span class="rubric-card__label">Manager</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.managerAverage / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.managerAverage.toFixed(1) }}</span>
+                  </li>
+                  <li v-if="r.peerAverage != null">
+                    <span class="rubric-card__label">Peers</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.peerAverage / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.peerAverage.toFixed(1) }}</span>
+                  </li>
+                  <li v-if="r.reportAverage != null">
+                    <span class="rubric-card__label">Reports</span>
+                    <span class="rubric-card__bar"><span class="rubric-card__bar-fill" :style="{ width: ((r.reportAverage / 5) * 100) + '%' }"></span></span>
+                    <span class="rubric-card__num">{{ r.reportAverage.toFixed(1) }}</span>
+                  </li>
+                </ul>
+                <p v-if="r.spread >= 2" class="rubric-card__spread">⚠ Wide spread ({{ r.spread.toFixed(1) }} points) — reviewers don't agree on this axis.</p>
+              </article>
             </div>
           </section>
 
@@ -751,6 +798,109 @@ function parseFilename(disposition: string | undefined): string | null {
   display: grid;
   gap: 1rem;
   margin-top: 0.75rem;
+}
+
+.rubric-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.rubric-card {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  border-left: 4px solid var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rubric-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.rubric-card__name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rubric-card__avg {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 1rem;
+
+  small {
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-left: 0.25rem;
+  }
+}
+
+.rubric-card__desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.rubric-card__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rubric-card__rows li {
+  display: grid;
+  grid-template-columns: 4rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.rubric-card__label {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.rubric-card__bar {
+  position: relative;
+  height: 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rubric-card__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+.rubric-card__num {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rubric-card__spread {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #c2410c;
+  font-weight: 500;
 }
 
 .voice {
