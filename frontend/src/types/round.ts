@@ -47,6 +47,13 @@ export interface CompetencyRating {
   justification: string
 }
 
+export interface ManagerOnlyChannel {
+  noteCount: number
+  synthesis: string
+  themes: string[]
+  rawNotes?: string[]
+}
+
 export interface CompetencyRatingAggregate {
   key: string
   name: string

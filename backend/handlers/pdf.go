@@ -54,6 +54,11 @@ func DownloadConsolidationPDF(c *gin.Context) {
 		return
 	}
 
+	// Private manager-only channel must never reach the subject's PDF.
+	if !canSeeManagerOnlyChannel(currentUser, round) {
+		consolidation.ManagerOnlyChannel = nil
+	}
+
 	var subject models.User
 	db.Collection("users").FindOne(ctx, bson.M{"_id": round.SubjectID}).Decode(&subject)
 
@@ -181,6 +186,22 @@ func renderConsolidationPDF(subject models.User, round models.FeedbackRound, c m
 		writeDeltaSubsection(pdf, "Blind spots (peers see, you may not)", c.SelfVsOthersDelta.BlindSpots)
 		writeDeltaSubsection(pdf, "Hidden strengths (you may underestimate)", c.SelfVsOthersDelta.HiddenStrengths)
 		writeDeltaSubsection(pdf, "Aligned themes (self and peers agree)", c.SelfVsOthersDelta.Aligned)
+	}
+
+	if c.ManagerOnlyChannel != nil {
+		writeSectionTitle(pdf, fmt.Sprintf("Manager-Only Channel (%d private note(s))", c.ManagerOnlyChannel.NoteCount))
+		pdf.SetFont("Helvetica", "I", 11)
+		pdf.SetTextColor(150, 75, 0)
+		pdf.MultiCell(0, 6, "⚠ Private — do NOT share with the subject.", "", "L", false)
+		pdf.Ln(2)
+		if c.ManagerOnlyChannel.Synthesis != "" {
+			pdf.SetFont("Helvetica", "", 11)
+			pdf.SetTextColor(60, 60, 60)
+			pdf.MultiCell(0, 6, c.ManagerOnlyChannel.Synthesis, "", "L", false)
+			pdf.Ln(2)
+		}
+		writeDeltaSubsection(pdf, "Themes", c.ManagerOnlyChannel.Themes)
+		writeDeltaSubsection(pdf, "Raw notes (relationship-tagged, anonymous)", c.ManagerOnlyChannel.RawNotes)
 	}
 
 	if c.AdminNotes != "" {

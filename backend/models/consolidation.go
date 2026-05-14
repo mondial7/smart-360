@@ -23,6 +23,10 @@ type Consolidation struct {
 	SelfVsOthersDelta  *SelfVsOthersDelta          `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
 	VoiceBreakdown     *VoiceBreakdown             `bson:"voice_breakdown,omitempty" json:"voiceBreakdown,omitempty"`
 	CompetencyRatings  []CompetencyRatingAggregate `bson:"competency_ratings,omitempty" json:"competencyRatings,omitempty"`
+	// ManagerOnlyChannel is the synthesis of reviewers' private notes — what
+	// they'd say to the manager but not in the room with the subject. Stripped
+	// from the API response (and the PDF) when the subject is the caller.
+	ManagerOnlyChannel *ManagerOnlyChannel `bson:"manager_only_channel,omitempty" json:"managerOnlyChannel,omitempty"`
 	AdminNotes        string             `bson:"admin_notes" json:"adminNotes"`
 	SharedAt          *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
 	CreatedAt         time.Time          `bson:"created_at" json:"createdAt"`
@@ -55,6 +59,16 @@ type VoiceBreakdown struct {
 	ManagerVoice *Voice `bson:"manager_voice,omitempty" json:"managerVoice,omitempty"`
 	PeerVoice    *Voice `bson:"peer_voice,omitempty" json:"peerVoice,omitempty"`
 	ReportVoice  *Voice `bson:"report_voice,omitempty" json:"reportVoice,omitempty"`
+}
+
+// ManagerOnlyChannel is the synthesis of private reviewer notes meant for the
+// manager (round creator / admin) only. The subject must never see these. The
+// raw notes are kept anonymised (relationship-tagged, no reviewer identity).
+type ManagerOnlyChannel struct {
+	NoteCount int      `bson:"note_count" json:"noteCount"`
+	Synthesis string   `bson:"synthesis" json:"synthesis"`
+	Themes    []string `bson:"themes" json:"themes"`
+	RawNotes  []string `bson:"raw_notes,omitempty" json:"rawNotes,omitempty"`
 }
 
 // CompetencyRatingAggregate is the deterministic, server-computed view of

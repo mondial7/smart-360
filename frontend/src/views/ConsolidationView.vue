@@ -17,6 +17,7 @@ import {
   PhScales,
   PhUsersThree,
   PhGauge,
+  PhLockKey,
   PhX,
   PhPlus,
   PhArrowUp,
@@ -553,6 +554,32 @@ const frequencyLabels: Record<string, string> = {
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
               </div>
             </div>
+          </section>
+
+          <!-- Manager-only channel -->
+          <section v-if="consolidation?.managerOnlyChannel" class="section section--private">
+            <h2 class="section__title">
+              <PhLockKey :size="20" weight="duotone" />
+              <span>Manager-Only Channel ({{ consolidation.managerOnlyChannel.noteCount }} private note{{ consolidation.managerOnlyChannel.noteCount === 1 ? '' : 's' }})</span>
+            </h2>
+            <p class="section__hint section__hint--warning">
+              ⚠ Private — the subject does NOT see this section, in-app or in the PDF.
+            </p>
+            <p v-if="consolidation.managerOnlyChannel.synthesis" class="private__synthesis">
+              {{ consolidation.managerOnlyChannel.synthesis }}
+            </p>
+            <div v-if="consolidation.managerOnlyChannel.themes?.length" class="private__themes">
+              <h4 class="private__sub-title">Themes</h4>
+              <ul>
+                <li v-for="(t, i) in consolidation.managerOnlyChannel.themes" :key="`pt-${i}`">{{ t }}</li>
+              </ul>
+            </div>
+            <details v-if="consolidation.managerOnlyChannel.rawNotes?.length" class="private__raw">
+              <summary>Show raw notes ({{ consolidation.managerOnlyChannel.rawNotes.length }})</summary>
+              <ul>
+                <li v-for="(n, i) in consolidation.managerOnlyChannel.rawNotes" :key="`pn-${i}`">{{ n }}</li>
+              </ul>
+            </details>
           </section>
 
           <!-- Competency ratings -->
@@ -1291,6 +1318,70 @@ const frequencyLabels: Record<string, string> = {
   display: grid;
   gap: 1rem;
   margin-top: 0.75rem;
+}
+
+.section--private {
+  border-left: 4px solid #c2410c;
+  background: rgba(194, 65, 12, 0.04);
+}
+
+.section__hint--warning {
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.private {
+  &__synthesis {
+    margin: 0.5rem 0;
+    font-style: italic;
+    color: var(--text-primary);
+    line-height: 1.55;
+  }
+
+  &__sub-title {
+    margin: 0.75rem 0 0.35rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__themes ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+
+    li {
+      margin-bottom: 0.3rem;
+    }
+  }
+
+  &__raw {
+    margin-top: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.1rem;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      line-height: 1.5;
+
+      li {
+        margin-bottom: 0.3rem;
+      }
+    }
+  }
 }
 
 .rubric-grid {

@@ -163,7 +163,26 @@ func GetConsolidation(c *gin.Context) {
 		return
 	}
 
+	// Private manager-only channel is never surfaced to the subject. Only the
+	// round creator and global admins see it. Mutate the in-memory copy before
+	// serialisation — the persisted doc is unchanged.
+	if !canSeeManagerOnlyChannel(currentUser, round) {
+		consolidation.ManagerOnlyChannel = nil
+	}
+
 	c.JSON(http.StatusOK, consolidation)
+}
+
+// canSeeManagerOnlyChannel returns true when the caller is allowed to see the
+// private manager-only synthesis. The subject of the round must not see it,
+// even after the consolidation is shared; the round creator and global admins
+// can. Team admins outside the round's creation lineage can't (they have no
+// reason to read another manager's private channel).
+func canSeeManagerOnlyChannel(user models.User, round models.FeedbackRound) bool {
+	if user.Role == models.RoleAdmin {
+		return true
+	}
+	return user.ID == round.CreatedByID
 }
 
 func UpdateConsolidationNotes(c *gin.Context) {
@@ -387,10 +406,16 @@ func generateGeminiConsolidation(submissions []models.Submission, roundID primit
 	// Segregate the subject's self-assessment from peer feedback so the model
 	// can compute the self-vs-others delta — the highest-signal output of a 360.
 	peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions, template)
+	privateNotes := collectPrivateNotes(submissions)
 
 	selfSection := "No self-assessment submitted — return self_vs_others_delta with self_submitted=false and empty arrays."
 	if hasSelf {
 		selfSection = "Self-assessment from the subject:\n" + selfText
+	}
+
+	managerOnlySection := "No private manager-only notes were submitted — return manager_only_channel with note_count=0, empty synthesis, and empty themes."
+	if len(privateNotes) > 0 {
+		managerOnlySection = "Private notes from reviewers, addressed to the manager only (the subject will NEVER see these):\n" + strings.Join(privateNotes, "\n")
 	}
 
 	// Reviewer counts per voice are deterministic, so compute them server-side
@@ -443,6 +468,13 @@ For the voice_breakdown — separate views by vantage so distinct signals do not
 - For each voice, summary is 1–2 sentences in coaching tone, and themes is at most 5 behaviourally-anchored bullets. Do not duplicate the top-level executive summary verbatim — each voice should add what's distinctive about that vantage.
 %s
 
+For manager_only_channel — the private notes reviewers addressed to the manager and NOT to the subject:
+- note_count is the number of private notes received (we will overwrite this server-side; you can pass back whatever).
+- synthesis: 1–2 sentences naming the pattern across the private notes, written in a coaching tone for the manager. Empty string if there are no private notes.
+- themes: at most 5 short bullets distilling what reviewers want the manager to know privately. Empty array if no notes.
+- This block is for the manager only — it will never be shown to the subject. Speak frankly; you don't need the same diplomatic framing as the subject-facing output.
+%s
+
 Feedback data from peer reviewers:
 %s
 
@@ -468,10 +500,14 @@ Return a single minified JSON object with this exact shape:
     "manager_voice": {"summary": "1–2 sentences from the manager's vantage, or empty string if no manager reviewer", "themes": ["At most 5 themes, or empty array"]},
     "peer_voice":    {"summary": "1–2 sentences from peer/cross-functional vantage, or empty string if no peer reviewer", "themes": ["At most 5 themes, or empty array"]},
     "report_voice":  {"summary": "1–2 sentences from a direct report's vantage, or empty string if no report reviewer", "themes": ["At most 5 themes, or empty array"]}
+  },
+  "manager_only_channel": {
+    "synthesis": "1–2 sentences for the manager only; empty string if no private notes were submitted",
+    "themes": ["Frank, manager-only bullets (at most 5); empty array if no private notes"]
   }
 }
 
-Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, persona, voiceContext, strings.Join(peerTexts, "\n\n"), selfSection, questionSummariesBlock(template))
+Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, persona, voiceContext, managerOnlySection, strings.Join(peerTexts, "\n\n"), selfSection, questionSummariesBlock(template))
 
 	// Initialize Gemini client
 	ctx := context.Background()
@@ -539,8 +575,19 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, p
 				},
 				Required: []string{"manager_voice", "peer_voice", "report_voice"},
 			},
+			"manager_only_channel": &genai.Schema{
+				Type: genai.TypeObject,
+				Properties: map[string]*genai.Schema{
+					"synthesis": &genai.Schema{Type: genai.TypeString},
+					"themes": &genai.Schema{
+						Type:  genai.TypeArray,
+						Items: &genai.Schema{Type: genai.TypeString},
+					},
+				},
+				Required: []string{"synthesis", "themes"},
+			},
 		},
-		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries", "self_vs_others_delta", "voice_breakdown"},
+		Required: []string{"executive_summary", "strengths", "areas_for_improvement", "actionable_insights", "question_summaries", "self_vs_others_delta", "voice_breakdown", "manager_only_channel"},
 	}
 
 	// Generate content
@@ -614,10 +661,46 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, p
 			Aligned:         aiResponse.SelfVsOthersDelta.Aligned,
 			Summary:         aiResponse.SelfVsOthersDelta.Summary,
 		},
-		VoiceBreakdown: buildVoiceBreakdown(aiResponse.VoiceBreakdown, mgrCount, peerCount, reportCount),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		VoiceBreakdown:     buildVoiceBreakdown(aiResponse.VoiceBreakdown, mgrCount, peerCount, reportCount),
+		ManagerOnlyChannel: buildManagerOnlyChannel(aiResponse.ManagerOnlyChannel, privateNotes),
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
 	}, nil
+}
+
+// collectPrivateNotes returns each non-empty private note from peer
+// submissions, tagged with the relationship label so the manager has some
+// context without identifying who wrote what. Self submissions never carry
+// private notes.
+func collectPrivateNotes(submissions []models.Submission) []string {
+	var out []string
+	for _, s := range submissions {
+		if s.IsSelf {
+			continue
+		}
+		note := strings.TrimSpace(s.PrivateNotes)
+		if note == "" {
+			continue
+		}
+		tag := relationshipLabel(s.Relationship)
+		out = append(out, fmt.Sprintf("[%s] %s", tag, note))
+	}
+	return out
+}
+
+// buildManagerOnlyChannel promotes the AI payload into the typed model,
+// attaching the raw notes the AI saw and the server-known note count. Returns
+// nil when there were no private notes (so the API/UI can skip the section).
+func buildManagerOnlyChannel(p aiManagerOnlyPayload, rawNotes []string) *models.ManagerOnlyChannel {
+	if len(rawNotes) == 0 {
+		return nil
+	}
+	return &models.ManagerOnlyChannel{
+		NoteCount: len(rawNotes),
+		Synthesis: p.Synthesis,
+		Themes:    p.Themes,
+		RawNotes:  rawNotes,
+	}
 }
 
 // snapshotQuestionLabels copies the template's CardTitle per question key into
@@ -723,6 +806,12 @@ type aiVoiceBreakdownPayload struct {
 	ReportVoice  aiVoicePayload `json:"report_voice"`
 }
 
+// aiManagerOnlyPayload mirrors the manager_only_channel block.
+type aiManagerOnlyPayload struct {
+	Synthesis string   `json:"synthesis"`
+	Themes    []string `json:"themes"`
+}
+
 // aiPayload is the full JSON shape we expect from Gemini.
 type aiPayload struct {
 	ExecutiveSummary    string                  `json:"executive_summary"`
@@ -732,6 +821,7 @@ type aiPayload struct {
 	QuestionSummaries   map[string]string       `json:"question_summaries"`
 	SelfVsOthersDelta   aiDeltaPayload          `json:"self_vs_others_delta"`
 	VoiceBreakdown      aiVoiceBreakdownPayload `json:"voice_breakdown"`
+	ManagerOnlyChannel  aiManagerOnlyPayload    `json:"manager_only_channel"`
 }
 
 func fallbackAIPayload(hasSelf bool) aiPayload {
@@ -754,6 +844,7 @@ func fallbackAIPayload(hasSelf bool) aiPayload {
 	p.VoiceBreakdown.ManagerVoice.Themes = []string{}
 	p.VoiceBreakdown.PeerVoice.Themes = []string{}
 	p.VoiceBreakdown.ReportVoice.Themes = []string{}
+	p.ManagerOnlyChannel.Themes = []string{}
 	return p
 }
 
@@ -1060,6 +1151,18 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 		}
 	}
 
+	// Without an LLM we can't synthesise the private notes; surface the raw,
+	// relationship-tagged texts so the manager can read them directly.
+	var managerOnly *models.ManagerOnlyChannel
+	if rawNotes := collectPrivateNotes(submissions); len(rawNotes) > 0 {
+		managerOnly = &models.ManagerOnlyChannel{
+			NoteCount: len(rawNotes),
+			Synthesis: "AI synthesis unavailable without GEMINI_API_KEY. Read the raw private notes below.",
+			Themes:    []string{},
+			RawNotes:  rawNotes,
+		}
+	}
+
 	return models.Consolidation{
 		RoundID:             roundID,
 		GeneratedByID:       generatedByID,
@@ -1070,6 +1173,7 @@ func combineFeedbackSubmissions(submissions []models.Submission, roundID primiti
 		QuestionSummaries:   string(questionsJSON),
 		SelfVsOthersDelta:   delta,
 		VoiceBreakdown:      voiceBreakdown,
+		ManagerOnlyChannel:  managerOnly,
 		CreatedAt:           time.Now(),
 		UpdatedAt:           time.Now(),
 	}

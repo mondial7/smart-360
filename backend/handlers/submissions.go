@@ -7,6 +7,7 @@ import (
 	"smart360/database"
 	"smart360/models"
 	"smart360/repositories"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -127,6 +128,7 @@ func SubmitFeedback(c *gin.Context) {
 		Relationship         models.ReviewerRelationship `json:"relationship,omitempty"`
 		InteractionFrequency models.InteractionFrequency `json:"interactionFrequency,omitempty"`
 		Ratings              []models.CompetencyRating   `json:"ratings,omitempty"`
+		PrivateNotes         string                      `json:"privateNotes,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -223,6 +225,10 @@ func SubmitFeedback(c *gin.Context) {
 	if !isSelf {
 		submission.Relationship = req.Relationship
 		submission.InteractionFrequency = req.InteractionFrequency
+		// Private notes are a peer-only channel; we silently drop them if the
+		// subject ever tries to send one — there's no useful semantics for
+		// "private notes from the subject about themselves."
+		submission.PrivateNotes = strings.TrimSpace(req.PrivateNotes)
 	}
 
 	_, err = db.Collection("submissions").InsertOne(ctx, submission)

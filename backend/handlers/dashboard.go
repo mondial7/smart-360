@@ -265,6 +265,11 @@ func GetMyConsolidations(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode consolidations"})
 		return
 	}
+	// This endpoint returns consolidations the *subject* receives. Strip the
+	// manager-only synthesis before serialising — subjects must never see it.
+	for i := range consolidations {
+		consolidations[i].ManagerOnlyChannel = nil
+	}
 
 	c.JSON(http.StatusOK, consolidations)
 }

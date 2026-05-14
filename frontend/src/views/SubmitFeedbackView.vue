@@ -39,6 +39,8 @@ const ratingJustifications = ref<Record<string, string>>({})
 
 const competencies = computed(() => template.value?.competencies || [])
 
+const privateNotes = ref('')
+
 type Relationship = 'manager' | 'report' | 'peer' | 'cross_functional'
 type Frequency = 'daily' | 'weekly' | 'monthly' | 'rarely'
 
@@ -149,6 +151,9 @@ async function submitFeedback() {
         score: ratingScores.value[c.key],
         justification: ratingJustifications.value[c.key].trim()
       }))
+    }
+    if (!isSelf.value && privateNotes.value.trim()) {
+      payload.privateNotes = privateNotes.value.trim()
     }
     await apiClient.post('/submissions', payload)
     alert(isSelf.value
@@ -277,6 +282,20 @@ function formatDate(dateStr: string | null): string {
               maxlength="240"
             >
           </div>
+        </fieldset>
+
+        <fieldset v-if="!isSelf" class="manager-only">
+          <legend class="manager-only__legend">Anything for the manager only? <span class="manager-only__optional">(optional)</span></legend>
+          <p class="manager-only__hint">
+            Anything you'd say to {{ round.subject?.name || 'them' }}'s manager but not in a room with them. This is read by the manager only — the subject will never see it.
+          </p>
+          <textarea
+            v-model="privateNotes"
+            rows="3"
+            class="manager-only__textarea"
+            placeholder="Optional — leave blank if you have nothing to add privately."
+            maxlength="600"
+          ></textarea>
         </fieldset>
 
         <div class="submit__actions">
@@ -514,6 +533,52 @@ function formatDate(dateStr: string | null): string {
   &:focus {
     outline: none;
     border-color: var(--color-primary);
+  }
+}
+
+.manager-only {
+  background: var(--bg-primary);
+  border: 1px dashed #c2410c;
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.manager-only__legend {
+  font-weight: 600;
+  color: #c2410c;
+  padding: 0 0.4rem;
+}
+
+.manager-only__optional {
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 0.25rem;
+}
+
+.manager-only__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.manager-only__textarea {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: #c2410c;
   }
 }
 

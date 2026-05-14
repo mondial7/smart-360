@@ -82,8 +82,12 @@ type Submission struct {
 	Relationship         ReviewerRelationship `bson:"relationship,omitempty" json:"relationship,omitempty"`
 	InteractionFrequency InteractionFrequency `bson:"interaction_frequency,omitempty" json:"interactionFrequency,omitempty"`
 	Ratings              []CompetencyRating   `bson:"ratings,omitempty" json:"ratings,omitempty"`
-	SubmittedAt          time.Time            `bson:"submitted_at" json:"submittedAt"`
-	UpdatedAt            time.Time            `bson:"updated_at" json:"updatedAt"`
+	// PrivateNotes is content the reviewer wants the manager to see but not
+	// the subject — the "anything you'd say to them privately but not in a
+	// room" channel. Peer-only. Never surfaced verbatim to the subject.
+	PrivateNotes string    `bson:"private_notes,omitempty" json:"privateNotes,omitempty"`
+	SubmittedAt  time.Time `bson:"submitted_at" json:"submittedAt"`
+	UpdatedAt    time.Time `bson:"updated_at" json:"updatedAt"`
 }
 
 // CompetencyRating is a single Likert score + one-line justification for one
