@@ -60,6 +60,41 @@ func TestApplyModerationCleaned(t *testing.T) {
 		"changed list reflects exactly the fields whose content was rewritten")
 }
 
+func TestModerationResult_CleanedAsMap(t *testing.T) {
+	t.Run("converts_array_to_map_preserving_keys_and_values", func(t *testing.T) {
+		r := moderationResult{
+			Cleaned: []cleanedField{
+				{Key: "response_a", Value: "scrubbed A"},
+				{Key: "private_notes", Value: "scrubbed notes"},
+				{Key: "rating_0_justification", Value: "scrubbed rating"},
+			},
+		}
+		got := r.cleanedAsMap()
+		assert.Equal(t, "scrubbed A", got["response_a"])
+		assert.Equal(t, "scrubbed notes", got["private_notes"])
+		assert.Equal(t, "scrubbed rating", got["rating_0_justification"])
+		assert.Len(t, got, 3)
+	})
+
+	t.Run("duplicate_keys_last_write_wins", func(t *testing.T) {
+		r := moderationResult{
+			Cleaned: []cleanedField{
+				{Key: "response_a", Value: "first"},
+				{Key: "response_a", Value: "second"},
+			},
+		}
+		assert.Equal(t, "second", r.cleanedAsMap()["response_a"],
+			"if the model duplicates a key, the later entry wins — predictable, no error")
+	})
+
+	t.Run("empty_returns_empty_map_not_nil", func(t *testing.T) {
+		r := moderationResult{}
+		got := r.cleanedAsMap()
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+}
+
 func TestApplyModerationCleaned_NoChanges(t *testing.T) {
 	responsesJSON, _ := json.Marshal(map[string]string{"a": "Solid."})
 	submission := models.Submission{Responses: string(responsesJSON)}

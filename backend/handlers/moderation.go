@@ -108,23 +108,46 @@ Apply these rules to every input field:
 
 Input is a JSON object whose keys are field identifiers and values are the reviewer's text. Output a single minified JSON object with exactly this shape:
 {
-  "cleaned": {"<same keys as input>": "<scrubbed text for that key>"},
+  "cleaned": [
+    {"key": "<one input field id>", "value": "<scrubbed text for that field>"}
+  ],
   "flagged": <boolean — true if you removed or rewrote anything in any field>,
   "reasons": ["short bullets — one per rule applied, naming WHICH field was scrubbed and WHY"]
 }
 
-Return ONLY the minified JSON object. No code fences, no markdown, no prose.
+Include one "cleaned" entry per input field, preserving the original key. Return ONLY the minified JSON object. No code fences, no markdown, no prose.
 
 Input:
 %s`
 
+// cleanedField is a single key/value record in the moderation response.
+// Surfacing it as a struct with concrete property names (rather than an
+// unconstrained map) lets Gemini's structured-output engine accept the
+// response schema without fighting it; see #48 for why this matters.
+type cleanedField struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 // moderationResult is what the model returns. The reasons array is what we
-// persist in the audit log; the cleaned map is what the consolidation prompt
-// will then see.
+// persist in the audit log; the cleaned array is what the consolidation
+// prompt will then see (we convert to map[string]string at the call site).
 type moderationResult struct {
-	Cleaned map[string]string `json:"cleaned"`
-	Flagged bool              `json:"flagged"`
-	Reasons []string          `json:"reasons"`
+	Cleaned []cleanedField `json:"cleaned"`
+	Flagged bool           `json:"flagged"`
+	Reasons []string       `json:"reasons"`
+}
+
+// asMap rolls the cleaned array into the map[string]string shape the rest
+// of the moderation pipeline expects. Later entries with the same key win
+// — the model occasionally repeats keys; treating last-wins keeps behaviour
+// predictable.
+func (r moderationResult) cleanedAsMap() map[string]string {
+	m := make(map[string]string, len(r.Cleaned))
+	for _, f := range r.Cleaned {
+		m[f.Key] = f.Value
+	}
+	return m
 }
 
 // moderateSubmission runs the scrub pass on a single submission and returns
@@ -173,7 +196,21 @@ func moderateSubmission(ctx context.Context, client *genai.Client, submission mo
 	model.ResponseSchema = &genai.Schema{
 		Type: genai.TypeObject,
 		Properties: map[string]*genai.Schema{
-			"cleaned": &genai.Schema{Type: genai.TypeObject},
+			// `cleaned` is an array of {key, value} objects so the schema has
+			// concrete property declarations all the way down. A free-form
+			// `TypeObject` here causes Gemini to occasionally stall or reject
+			// the call (#48); the array shape is reliably accepted.
+			"cleaned": &genai.Schema{
+				Type: genai.TypeArray,
+				Items: &genai.Schema{
+					Type: genai.TypeObject,
+					Properties: map[string]*genai.Schema{
+						"key":   &genai.Schema{Type: genai.TypeString},
+						"value": &genai.Schema{Type: genai.TypeString},
+					},
+					Required: []string{"key", "value"},
+				},
+			},
 			"flagged": &genai.Schema{Type: genai.TypeBoolean},
 			"reasons": &genai.Schema{
 				Type:  genai.TypeArray,
@@ -204,7 +241,7 @@ func moderateSubmission(ctx context.Context, client *genai.Client, submission mo
 		return submission, log
 	}
 
-	scrubbed, fields := applyModerationCleaned(&submission, result.Cleaned)
+	scrubbed, fields := applyModerationCleaned(&submission, result.cleanedAsMap())
 	log.Flagged = result.Flagged || len(fields) > 0
 	log.Reasons = result.Reasons
 	log.FieldsScrubbed = fields
