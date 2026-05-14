@@ -28,6 +28,7 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		Responses            string                      `json:"responses" binding:"required"`
 		Relationship         models.ReviewerRelationship `json:"relationship,omitempty"`
 		InteractionFrequency models.InteractionFrequency `json:"interactionFrequency,omitempty"`
+		Ratings              []models.CompetencyRating   `json:"ratings,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -94,6 +95,7 @@ func (h *testSubmissionHandler) SubmitFeedback(c *gin.Context) {
 		ReviewerID:  currentUser.ID,
 		Responses:   req.Responses,
 		IsSelf:      isSelf,
+		Ratings:     req.Ratings,
 		SubmittedAt: time.Now(),
 		UpdatedAt:   time.Now(),
 	}

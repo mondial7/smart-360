@@ -103,6 +103,12 @@ func ConsolidateFeedback(c *gin.Context) {
 	if consolidation.QuestionLabels == nil {
 		consolidation.QuestionLabels = snapshotQuestionLabels(template)
 	}
+	// Likert aggregates are deterministic — compute them here regardless of
+	// which generator ran. The AI prompt also saw the raw per-reviewer scores
+	// so its synthesis can reference them qualitatively.
+	if consolidation.CompetencyRatings == nil {
+		consolidation.CompetencyRatings = aggregateCompetencyRatings(submissions, template)
+	}
 
 	fmt.Printf("Created consolidation: %+v\n", consolidation)
 
@@ -418,6 +424,10 @@ Weight reviewer signals by relationship and interaction frequency:
 - Direct reports (subjects who manage them) carry distinct, high-value signal for leadership and feedback behaviours — weight them heavily for those themes.
 - Cross-functional collaborators with rare interaction provide thin signal — only surface their themes if they appear in at least one other reviewer's input, otherwise treat them as a hypothesis rather than a finding.
 - If a theme appears in only one rarely-interacting reviewer's input, frame it cautiously ("one cross-functional partner observed …") instead of stating it as fact.
+
+Use the Likert ratings (when present) as quantitative anchors for your synthesis:
+- A wide spread (e.g., one reviewer at 2 and another at 5 on the same competency) is itself a finding — surface it as a calibration gap to investigate.
+- Don't restate the average numbers in the executive summary — the UI shows them. Instead, name the underlying *behaviours* the scores point at.
 
 For the self-vs-others delta:
 - blind_spots: things peers consistently flagged that the self-assessment does not acknowledge. Frame as opportunities, not accusations.
@@ -786,6 +796,18 @@ func buildFeedbackPrompts(submissions []models.Submission, template *models.Temp
 			}
 		}
 
+		if len(submission.Ratings) > 0 {
+			block += "Ratings (1–5):\n"
+			names := competencyNamesByKey(template)
+			for _, r := range submission.Ratings {
+				name := names[r.Key]
+				if name == "" {
+					name = r.Key
+				}
+				block += fmt.Sprintf("  • %s — %d. %s\n", name, r.Score, strings.TrimSpace(r.Justification))
+			}
+		}
+
 		if submission.IsSelf {
 			selfText = block
 			hasSelf = true
@@ -794,6 +816,17 @@ func buildFeedbackPrompts(submissions []models.Submission, template *models.Temp
 		}
 	}
 	return peerTexts, selfText, hasSelf
+}
+
+func competencyNamesByKey(template *models.Template) map[string]string {
+	if template == nil {
+		return nil
+	}
+	out := make(map[string]string, len(template.Competencies))
+	for _, c := range template.Competencies {
+		out[c.Key] = c.Name
+	}
+	return out
 }
 
 // questionLabelsFromTemplate maps each question key to a short label used to

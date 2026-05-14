@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"smart360/database"
 	"smart360/models"
+	"smart360/repositories"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -125,6 +126,7 @@ func SubmitFeedback(c *gin.Context) {
 		Responses            string                      `json:"responses" binding:"required"`
 		Relationship         models.ReviewerRelationship `json:"relationship,omitempty"`
 		InteractionFrequency models.InteractionFrequency `json:"interactionFrequency,omitempty"`
+		Ratings              []models.CompetencyRating   `json:"ratings,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -183,6 +185,21 @@ func SubmitFeedback(c *gin.Context) {
 		}
 	}
 
+	// Validate ratings against the round's template. If the template defines
+	// competencies, every submission (peer or self) must cover all of them
+	// with a 1–5 score and a non-empty justification. Templates with an empty
+	// Competencies slice skip the rubric entirely.
+	templateRepo := repositories.NewMongoTemplateRepository(db)
+	template, err := resolveTemplate(ctx, templateRepo, round.TemplateID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load round template"})
+		return
+	}
+	if err := validateRatings(req.Ratings, template); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var existing models.Submission
 	err = db.Collection("submissions").FindOne(ctx, bson.M{
 		"round_id":    roundObjID,
@@ -199,6 +216,7 @@ func SubmitFeedback(c *gin.Context) {
 		ReviewerID:  currentUser.ID,
 		Responses:   req.Responses,
 		IsSelf:      isSelf,
+		Ratings:     req.Ratings,
 		SubmittedAt: time.Now(),
 		UpdatedAt:   time.Now(),
 	}

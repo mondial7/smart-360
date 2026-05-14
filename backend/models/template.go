@@ -15,14 +15,15 @@ const DefaultTemplateSlug = "default"
 // the frontend and prompt) lets us tailor rounds per role family — engineering
 // vs product vs design — without changing code.
 type Template struct {
-	ID              primitive.ObjectID  `bson:"_id,omitempty" json:"id"`
-	Slug            string              `bson:"slug" json:"slug"`
-	Name            string              `bson:"name" json:"name"`
-	Description     string              `bson:"description" json:"description"`
-	CoachingPersona string              `bson:"coaching_persona" json:"coachingPersona"`
-	Questions       []TemplateQuestion  `bson:"questions" json:"questions"`
-	CreatedAt       time.Time           `bson:"created_at" json:"createdAt"`
-	UpdatedAt       time.Time           `bson:"updated_at" json:"updatedAt"`
+	ID              primitive.ObjectID    `bson:"_id,omitempty" json:"id"`
+	Slug            string                `bson:"slug" json:"slug"`
+	Name            string                `bson:"name" json:"name"`
+	Description     string                `bson:"description" json:"description"`
+	CoachingPersona string                `bson:"coaching_persona" json:"coachingPersona"`
+	Questions       []TemplateQuestion    `bson:"questions" json:"questions"`
+	Competencies    []TemplateCompetency  `bson:"competencies,omitempty" json:"competencies,omitempty"`
+	CreatedAt       time.Time             `bson:"created_at" json:"createdAt"`
+	UpdatedAt       time.Time             `bson:"updated_at" json:"updatedAt"`
 }
 
 // TemplateQuestion is one slot in a 360 round. The Key is the storage key on
@@ -34,4 +35,14 @@ type TemplateQuestion struct {
 	PeerText  string `bson:"peer_text" json:"peerText"`
 	SelfText  string `bson:"self_text" json:"selfText"`
 	CardTitle string `bson:"card_title" json:"cardTitle"`
+}
+
+// TemplateCompetency is one axis of the Likert rubric attached to a template.
+// Reviewers (and the subject, in self-assessment mode) rate the subject 1–5
+// on each competency the template defines, with a one-line justification.
+// Templates with an empty Competencies slice skip the rubric entirely.
+type TemplateCompetency struct {
+	Key         string `bson:"key" json:"key"`
+	Name        string `bson:"name" json:"name"`
+	Description string `bson:"description" json:"description"`
 }

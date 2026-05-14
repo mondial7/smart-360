@@ -81,6 +81,16 @@ type Submission struct {
 	IsSelf               bool                 `bson:"is_self,omitempty" json:"isSelf,omitempty"`
 	Relationship         ReviewerRelationship `bson:"relationship,omitempty" json:"relationship,omitempty"`
 	InteractionFrequency InteractionFrequency `bson:"interaction_frequency,omitempty" json:"interactionFrequency,omitempty"`
+	Ratings              []CompetencyRating   `bson:"ratings,omitempty" json:"ratings,omitempty"`
 	SubmittedAt          time.Time            `bson:"submitted_at" json:"submittedAt"`
 	UpdatedAt            time.Time            `bson:"updated_at" json:"updatedAt"`
+}
+
+// CompetencyRating is a single Likert score + one-line justification for one
+// of the template's competencies. The justification is what stops reviewers
+// from defaulting to lazy 5s.
+type CompetencyRating struct {
+	Key           string `bson:"key" json:"key"`
+	Score         int    `bson:"score" json:"score"` // 1..5
+	Justification string `bson:"justification" json:"justification"`
 }

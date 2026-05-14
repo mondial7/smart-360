@@ -47,6 +47,12 @@ func SeedDefaultTemplates() {
 					CardTitle: "One experiment to try",
 				},
 			},
+			Competencies: []models.TemplateCompetency{
+				{Key: "execution", Name: "Execution", Description: "Consistently turns plans into shipped, working outcomes."},
+				{Key: "collaboration", Name: "Collaboration", Description: "Makes the people around them more effective; communicates honestly and early."},
+				{Key: "ownership", Name: "Ownership", Description: "Takes responsibility past the line of their stated scope."},
+				{Key: "technical_judgement", Name: "Technical judgement", Description: "Picks the right thing to build and the right way to build it given the trade-offs."},
+			},
 		},
 		{
 			Slug:        "engineering-leadership",
@@ -80,6 +86,12 @@ func SeedDefaultTemplates() {
 					SelfText:  "What's one specific habit, ritual, or experiment you want to try in the next 30–60 days that would unlock impact?",
 					CardTitle: "One experiment to try",
 				},
+			},
+			Competencies: []models.TemplateCompetency{
+				{Key: "scope_judgement", Name: "Scope & judgement", Description: "Operates at and slightly beyond the scope expected of their level; picks the right problems."},
+				{Key: "multiplier", Name: "Multiplier effect", Description: "Makes the team measurably more effective — not just an individual contributor."},
+				{Key: "technical_depth", Name: "Technical depth", Description: "Brings deep technical credibility to design and review decisions."},
+				{Key: "coaching", Name: "Coaching others", Description: "Grows the people around them through feedback, pairing, and clarity."},
 			},
 		},
 	}

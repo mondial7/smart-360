@@ -19,9 +19,10 @@ type Consolidation struct {
 	// question key at generation time. We snapshot rather than join so the UI
 	// always renders labels consistent with the answers actually collected,
 	// even if the template is later edited.
-	QuestionLabels    map[string]string  `bson:"question_labels,omitempty" json:"questionLabels,omitempty"`
-	SelfVsOthersDelta *SelfVsOthersDelta `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
-	VoiceBreakdown    *VoiceBreakdown    `bson:"voice_breakdown,omitempty" json:"voiceBreakdown,omitempty"`
+	QuestionLabels     map[string]string           `bson:"question_labels,omitempty" json:"questionLabels,omitempty"`
+	SelfVsOthersDelta  *SelfVsOthersDelta          `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
+	VoiceBreakdown     *VoiceBreakdown             `bson:"voice_breakdown,omitempty" json:"voiceBreakdown,omitempty"`
+	CompetencyRatings  []CompetencyRatingAggregate `bson:"competency_ratings,omitempty" json:"competencyRatings,omitempty"`
 	AdminNotes        string             `bson:"admin_notes" json:"adminNotes"`
 	SharedAt          *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
 	CreatedAt         time.Time          `bson:"created_at" json:"createdAt"`
@@ -54,4 +55,21 @@ type VoiceBreakdown struct {
 	ManagerVoice *Voice `bson:"manager_voice,omitempty" json:"managerVoice,omitempty"`
 	PeerVoice    *Voice `bson:"peer_voice,omitempty" json:"peerVoice,omitempty"`
 	ReportVoice  *Voice `bson:"report_voice,omitempty" json:"reportVoice,omitempty"`
+}
+
+// CompetencyRatingAggregate is the deterministic, server-computed view of
+// Likert ratings across submissions for one competency on a round. We compute
+// it ourselves (rather than asking the AI) so the numbers are reproducible
+// and the AI is free to focus on synthesis.
+type CompetencyRatingAggregate struct {
+	Key            string   `bson:"key" json:"key"`
+	Name           string   `bson:"name" json:"name"`
+	Description    string   `bson:"description,omitempty" json:"description,omitempty"`
+	SelfScore      *float64 `bson:"self_score,omitempty" json:"selfScore,omitempty"`           // nil if no self submission
+	PeerAverage    *float64 `bson:"peer_average,omitempty" json:"peerAverage,omitempty"`       // nil if no peer rated
+	ManagerAverage *float64 `bson:"manager_average,omitempty" json:"managerAverage,omitempty"` // nil if no manager rated
+	ReportAverage  *float64 `bson:"report_average,omitempty" json:"reportAverage,omitempty"`   // nil if no report rated
+	OthersAverage  *float64 `bson:"others_average,omitempty" json:"othersAverage,omitempty"`   // nil if no non-self rated
+	OthersCount    int      `bson:"others_count" json:"othersCount"`
+	Spread         float64  `bson:"spread" json:"spread"` // max - min across non-self
 }
