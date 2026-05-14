@@ -205,6 +205,13 @@ function formatDate(dateStr: string | null): string {
         </span>
       </div>
 
+      <aside class="submit__recency">
+        <span class="submit__recency-icon">🕐</span>
+        <span class="submit__recency-text">
+          Anchor your feedback on the <strong>last 3–6 months</strong>. Recall is biased toward the past few weeks — a longer window produces signal worth acting on.
+        </span>
+      </aside>
+
       <form @submit.prevent="submitFeedback" class="submit__form">
         <fieldset v-if="!isSelf" class="submit__context">
           <legend class="submit__context-legend">Your vantage point</legend>
@@ -395,6 +402,33 @@ function formatDate(dateStr: string | null): string {
 
     @media (min-width: 768px) {
       font-size: 1rem;
+    }
+  }
+
+  &__recency {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    background: var(--bg-secondary);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  &__recency-icon {
+    font-size: 1.05rem;
+    flex-shrink: 0;
+  }
+
+  &__recency-text {
+    color: var(--text-secondary);
+
+    strong {
+      color: var(--text-primary);
     }
   }
 

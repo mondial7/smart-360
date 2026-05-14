@@ -281,6 +281,7 @@ function formatDateTimeLocal(dateStr: string): string {
           <ol class="review-section__questions">
             <li v-for="q in selectedTemplate.questions" :key="q.key">{{ q.peerText }}</li>
           </ol>
+          <p class="review-section__note">🕐 Reviewers will be asked to anchor their feedback to the last 3–6 months.</p>
         </div>
       </div>
     </div>
@@ -786,6 +787,16 @@ function formatDateTimeLocal(dateStr: string): string {
     li {
       margin-bottom: 0.5rem;
     }
+  }
+
+  &__note {
+    margin: 0.75rem 0 0;
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.45;
   }
 }
 </style>
