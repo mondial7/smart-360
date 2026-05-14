@@ -8,11 +8,30 @@ export interface FeedbackRound {
   subject?: User
   createdById: string  // Changed from number to string for ObjectID
   createdBy?: User
+  templateId?: string
   deadline: string | null
   status: RoundStatus
   createdAt: string
   updatedAt: string
   reviewers?: RoundReviewer[]
+}
+
+export interface TemplateQuestion {
+  key: string
+  peerText: string
+  selfText: string
+  cardTitle: string
+}
+
+export interface RoundTemplate {
+  id: string
+  slug: string
+  name: string
+  description: string
+  coachingPersona: string
+  questions: TemplateQuestion[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface RoundReviewer {

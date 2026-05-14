@@ -357,7 +357,7 @@ func TestBuildFeedbackPrompts(t *testing.T) {
 			{Responses: string(selfResponses), IsSelf: true},
 		}
 
-		peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions)
+		peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions, nil)
 
 		require.Len(t, peerTexts, 1)
 		assert.Contains(t, peerTexts[0], "Relationship to subject: manager")
@@ -376,12 +376,48 @@ func TestBuildFeedbackPrompts(t *testing.T) {
 			{Responses: string(peerResponses)}, // no Relationship / InteractionFrequency
 		}
 
-		peerTexts, _, _ := buildFeedbackPrompts(submissions)
+		peerTexts, _, _ := buildFeedbackPrompts(submissions, nil)
 
 		require.Len(t, peerTexts, 1)
 		assert.Contains(t, peerTexts[0], "Relationship to subject: unspecified")
 		assert.Contains(t, peerTexts[0], "Interaction frequency: unspecified")
 	})
+
+	t.Run("template_card_titles_override_default_question_labels", func(t *testing.T) {
+		peerResponses, _ := json.Marshal(map[string]string{"a": "answer A"})
+		submissions := []models.Submission{
+			{
+				Responses:            string(peerResponses),
+				Relationship:         models.RelationshipManager,
+				InteractionFrequency: models.InteractionDaily,
+			},
+		}
+		template := &models.Template{
+			Questions: []models.TemplateQuestion{
+				{Key: "a", CardTitle: "Where they multiply"},
+			},
+		}
+
+		peerTexts, _, _ := buildFeedbackPrompts(submissions, template)
+
+		require.Len(t, peerTexts, 1)
+		assert.Contains(t, peerTexts[0], "Where they multiply: answer A",
+			"template CardTitle should drive the prompt label for the question key")
+	})
+}
+
+func TestQuestionSummariesBlock_UsesTemplateLabels(t *testing.T) {
+	template := &models.Template{
+		Questions: []models.TemplateQuestion{
+			{Key: "a", CardTitle: "Continue"},
+			{Key: "b", CardTitle: "Unlock"},
+		},
+	}
+
+	block := questionSummariesBlock(template)
+
+	assert.Contains(t, block, `"a": "Synthesis across reviewers about: Continue"`)
+	assert.Contains(t, block, `"b": "Synthesis across reviewers about: Unlock"`)
 }
 
 func TestCountByVoice(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"os"
 	"smart360/database"
 	"smart360/models"
+	"smart360/repositories"
 	"strings"
 	"time"
 
@@ -66,11 +67,25 @@ func ConsolidateFeedback(c *gin.Context) {
 		return
 	}
 
+	// Look up the round so we can resolve its template. The template carries
+	// the persona and per-question labels we want the consolidation to use.
+	var round models.FeedbackRound
+	if err := db.Collection("feedback_rounds").FindOne(ctx, bson.M{"_id": roundObjID}).Decode(&round); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Round not found"})
+		return
+	}
+	template, err := resolveTemplate(ctx, repositories.NewMongoTemplateRepository(db), round.TemplateID)
+	if err != nil {
+		fmt.Printf("Error resolving template for round: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load round template"})
+		return
+	}
+
 	var consolidation models.Consolidation
 
 	if hasGemini {
 		// Use Gemini for AI consolidation
-		consolidation, err = generateGeminiConsolidation(submissions, roundObjID, currentUser.ID, geminiKey)
+		consolidation, err = generateGeminiConsolidation(submissions, roundObjID, currentUser.ID, geminiKey, template)
 		if err != nil {
 			fmt.Printf("Error generating Gemini consolidation: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate AI consolidation"})
@@ -80,6 +95,13 @@ func ConsolidateFeedback(c *gin.Context) {
 		// Combine actual feedback submissions
 		fmt.Printf("Using real feedback combination\n")
 		consolidation = combineFeedbackSubmissions(submissions, roundObjID, currentUser.ID)
+	}
+
+	// Snapshot the per-question display labels from the template onto the
+	// consolidation so the UI doesn't have to do a separate round-trip. We do
+	// this regardless of which generator path was taken.
+	if consolidation.QuestionLabels == nil {
+		consolidation.QuestionLabels = snapshotQuestionLabels(template)
 	}
 
 	fmt.Printf("Created consolidation: %+v\n", consolidation)
@@ -355,10 +377,10 @@ func GetMyConsolidatedFeedback(c *gin.Context) {
 	c.JSON(http.StatusOK, consolidations)
 }
 
-func generateGeminiConsolidation(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID, apiKey string) (models.Consolidation, error) {
+func generateGeminiConsolidation(submissions []models.Submission, roundID primitive.ObjectID, generatedByID primitive.ObjectID, apiKey string, template *models.Template) (models.Consolidation, error) {
 	// Segregate the subject's self-assessment from peer feedback so the model
 	// can compute the self-vs-others delta — the highest-signal output of a 360.
-	peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions)
+	peerTexts, selfText, hasSelf := buildFeedbackPrompts(submissions, template)
 
 	selfSection := "No self-assessment submitted — return self_vs_others_delta with self_submitted=false and empty arrays."
 	if hasSelf {
@@ -375,7 +397,12 @@ func generateGeminiConsolidation(submissions []models.Submission, roundID primit
 		mgrCount, peerCount, reportCount,
 	)
 
-	prompt := fmt.Sprintf(`You are a thoughtful coach helping someone grow over the next 6 months.
+	persona := "a thoughtful coach helping someone grow over the next 6 months"
+	if template != nil && strings.TrimSpace(template.CoachingPersona) != "" {
+		persona = strings.TrimSpace(template.CoachingPersona)
+	}
+
+	prompt := fmt.Sprintf(`You are %s.
 You are reviewing 360 feedback from multiple peers AND a self-assessment from the subject, and synthesising it for them.
 
 Apply these guidelines strictly:
@@ -418,10 +445,7 @@ Return a single minified JSON object with this exact shape:
   "areas_for_improvement": ["Growth-oriented opportunities, NOT deficits (at most 5)"],
   "actionable_insights": ["The TOP 1–3 focus areas the subject should act on first. Never more than 3. Each should be a concrete next step, not advice in the abstract."],
   "question_summaries": {
-    "a": "Synthesis across reviewers of what this person should continue doing",
-    "b": "Synthesis across reviewers of what's blocking their next level of impact",
-    "c": "Synthesis across reviewers of the one strength to double down on",
-    "d": "Synthesis across reviewers of concrete experiments for the next 30–60 days"
+%s
   },
   "self_vs_others_delta": {
     "self_submitted": true,
@@ -437,7 +461,7 @@ Return a single minified JSON object with this exact shape:
   }
 }
 
-Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, voiceContext, strings.Join(peerTexts, "\n\n"), selfSection)
+Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, persona, voiceContext, strings.Join(peerTexts, "\n\n"), selfSection, questionSummariesBlock(template))
 
 	// Initialize Gemini client
 	ctx := context.Background()
@@ -572,6 +596,7 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, v
 		AreasForImprovement: string(improvementsJSON),
 		ActionableInsights:  string(insightsJSON),
 		QuestionSummaries:   string(questionsJSON),
+		QuestionLabels:      snapshotQuestionLabels(template),
 		SelfVsOthersDelta: &models.SelfVsOthersDelta{
 			SelfSubmitted:   aiResponse.SelfVsOthersDelta.SelfSubmitted,
 			BlindSpots:      aiResponse.SelfVsOthersDelta.BlindSpots,
@@ -583,6 +608,20 @@ Return ONLY the minified JSON object. No code fences, no markdown, no prose.`, v
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}, nil
+}
+
+// snapshotQuestionLabels copies the template's CardTitle per question key into
+// a flat map, ready to persist on the Consolidation. Returns nil for a nil
+// template so callers can rely on the omitempty BSON tag.
+func snapshotQuestionLabels(template *models.Template) map[string]string {
+	if template == nil || len(template.Questions) == 0 {
+		return nil
+	}
+	labels := make(map[string]string, len(template.Questions))
+	for _, q := range template.Questions {
+		labels[q.Key] = q.CardTitle
+	}
+	return labels
 }
 
 // countByVoice counts peer submissions per vantage. The "peer" voice covers
@@ -712,7 +751,10 @@ func fallbackAIPayload(hasSelf bool) aiPayload {
 // subject's self-assessment block. Peer blocks are tagged with the reviewer's
 // relationship and interaction frequency so the model can down-weight thin
 // signals (a rare cross-functional contact) versus rich ones (a daily peer).
-func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, selfText string, hasSelf bool) {
+// The template (if non-nil) drives the human-readable label for each question
+// key so the model knows what each line is about.
+func buildFeedbackPrompts(submissions []models.Submission, template *models.Template) (peerTexts []string, selfText string, hasSelf bool) {
+	labels := questionLabelsFromTemplate(template)
 	for _, submission := range submissions {
 		var responses map[string]string
 		if err := json.Unmarshal([]byte(submission.Responses), &responses); err != nil {
@@ -728,17 +770,20 @@ func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, 
 			block += fmt.Sprintf("Relationship to subject: %s\n", relationshipLabel(submission.Relationship))
 			block += fmt.Sprintf("Interaction frequency: %s\n", frequencyLabel(submission.InteractionFrequency))
 		}
-		if continueDoing, ok := responses["a"]; ok && continueDoing != "" {
-			block += fmt.Sprintf("What to continue (biggest positive impact, with example): %s\n", continueDoing)
-		}
-		if blockers, ok := responses["b"]; ok && blockers != "" {
-			block += fmt.Sprintf("What's blocking growth (last 3–6 months): %s\n", blockers)
-		}
-		if amplify, ok := responses["c"]; ok && amplify != "" {
-			block += fmt.Sprintf("Where to double down (one strength to amplify): %s\n", amplify)
-		}
-		if experiment, ok := responses["d"]; ok && experiment != "" {
-			block += fmt.Sprintf("Suggested experiment (next 30–60 days): %s\n", experiment)
+		// Iterate template questions in order so the prompt block reads
+		// consistently across rounds even if a template defines a custom shape.
+		if template != nil && len(template.Questions) > 0 {
+			for _, q := range template.Questions {
+				if ans, ok := responses[q.Key]; ok && ans != "" {
+					block += fmt.Sprintf("%s: %s\n", labels[q.Key], ans)
+				}
+			}
+		} else {
+			for _, key := range []string{"a", "b", "c", "d"} {
+				if ans, ok := responses[key]; ok && ans != "" {
+					block += fmt.Sprintf("%s: %s\n", labels[key], ans)
+				}
+			}
 		}
 
 		if submission.IsSelf {
@@ -749,6 +794,51 @@ func buildFeedbackPrompts(submissions []models.Submission) (peerTexts []string, 
 		}
 	}
 	return peerTexts, selfText, hasSelf
+}
+
+// questionLabelsFromTemplate maps each question key to a short label used to
+// tag the line in the AI prompt. Falls back to the legacy a/b/c/d wording so
+// rounds without a template still produce readable prompts in tests.
+func questionLabelsFromTemplate(template *models.Template) map[string]string {
+	labels := map[string]string{
+		"a": "What to continue (biggest positive impact, with example)",
+		"b": "What's blocking growth (last 3–6 months)",
+		"c": "Where to double down (one strength to amplify)",
+		"d": "Suggested experiment (next 30–60 days)",
+	}
+	if template == nil {
+		return labels
+	}
+	for _, q := range template.Questions {
+		if q.CardTitle != "" {
+			labels[q.Key] = q.CardTitle
+		}
+	}
+	return labels
+}
+
+// questionSummariesBlock emits the per-question instruction lines for the
+// "question_summaries" object in the prompt's expected JSON shape. Each line
+// reads `    "a": "Synthesis across reviewers about: <CardTitle>",`.
+func questionSummariesBlock(template *models.Template) string {
+	keys := []string{"a", "b", "c", "d"}
+	if template != nil && len(template.Questions) > 0 {
+		keys = nil
+		for _, q := range template.Questions {
+			keys = append(keys, q.Key)
+		}
+	}
+	labels := questionLabelsFromTemplate(template)
+
+	var lines []string
+	for i, key := range keys {
+		comma := ","
+		if i == len(keys)-1 {
+			comma = ""
+		}
+		lines = append(lines, fmt.Sprintf(`    "%s": "Synthesis across reviewers about: %s"%s`, key, labels[key], comma))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func relationshipLabel(r models.ReviewerRelationship) string {

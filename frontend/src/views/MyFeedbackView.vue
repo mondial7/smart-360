@@ -74,6 +74,11 @@ function toggleExpanded(id: string) {
   }
 }
 
+function cardTitle(consolidation: any, key: string, fallback: string): string {
+  const fromTemplate = consolidation?.questionLabels?.[key]
+  return (fromTemplate && fromTemplate.trim()) ? fromTemplate : fallback
+}
+
 function isExpanded(id: string): boolean {
   return expandedIds.value.has(id)
 }
@@ -231,19 +236,19 @@ function parseFilename(disposition: string | undefined): string | null {
             </h3>
             <div class="questions">
               <div class="question-card">
-                <h4 class="question-card__title">1. What to continue</h4>
+                <h4 class="question-card__title">1. {{ cardTitle(consolidation, 'a', 'What to continue') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.a || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">2. What's blocking growth</h4>
+                <h4 class="question-card__title">2. {{ cardTitle(consolidation, 'b', "What's blocking growth") }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.b || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">3. Where to double down</h4>
+                <h4 class="question-card__title">3. {{ cardTitle(consolidation, 'c', 'Where to double down') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.c || 'No summary available' }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">4. One experiment to try</h4>
+                <h4 class="question-card__title">4. {{ cardTitle(consolidation, 'd', 'One experiment to try') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d || 'No summary available' }}</p>
               </div>
             </div>

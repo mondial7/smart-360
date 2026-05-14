@@ -30,6 +30,7 @@ export interface TeamRoundSubject {
 
 export interface CreateTeamRoundsRequest {
   subjects: TeamRoundSubject[]
+  templateId?: string
 }
 
 export interface CreateTeamRoundsResponse {

@@ -261,6 +261,11 @@ function parseResponses(responsesStr: string): Record<string, string> {
   }
 }
 
+function cardTitle(key: string, fallback: string): string {
+  const fromTemplate = consolidation.value?.questionLabels?.[key]
+  return (fromTemplate && fromTemplate.trim()) ? fromTemplate : fallback
+}
+
 const relationshipLabels: Record<string, string> = {
   manager: 'Manager',
   report: 'Direct report',
@@ -508,19 +513,19 @@ const frequencyLabels: Record<string, string> = {
             <div v-if="editingSection === 'questions'" class="section__edit">
               <div class="questions-editor">
                 <div class="question-card">
-                  <h4 class="question-card__title">1. What to continue</h4>
+                  <h4 class="question-card__title">1. {{ cardTitle('a', 'What to continue') }}</h4>
                   <textarea v-model="editForm.questionSummaries.a" placeholder="Synthesis of what reviewers think this person should keep doing..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4 class="question-card__title">2. What's blocking growth</h4>
+                  <h4 class="question-card__title">2. {{ cardTitle('b', "What's blocking growth") }}</h4>
                   <textarea v-model="editForm.questionSummaries.b" placeholder="Synthesis of what's holding them back (skill, habit, environment)..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4 class="question-card__title">3. Where to double down</h4>
+                  <h4 class="question-card__title">3. {{ cardTitle('c', 'Where to double down') }}</h4>
                   <textarea v-model="editForm.questionSummaries.c" placeholder="Synthesis of the one strength to amplify over the next 6 months..." class="section__textarea"></textarea>
                 </div>
                 <div class="question-card">
-                  <h4 class="question-card__title">4. One experiment to try</h4>
+                  <h4 class="question-card__title">4. {{ cardTitle('d', 'One experiment to try') }}</h4>
                   <textarea v-model="editForm.questionSummaries.d" placeholder="Synthesis of suggested experiments for the next 30–60 days..." class="section__textarea"></textarea>
                 </div>
               </div>
@@ -531,19 +536,19 @@ const frequencyLabels: Record<string, string> = {
             </div>
             <div v-else class="questions">
               <div class="question-card">
-                <h4 class="question-card__title">1. What to continue</h4>
+                <h4 class="question-card__title">1. {{ cardTitle('a', 'What to continue') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.a }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">2. What's blocking growth</h4>
+                <h4 class="question-card__title">2. {{ cardTitle('b', "What's blocking growth") }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.b }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">3. Where to double down</h4>
+                <h4 class="question-card__title">3. {{ cardTitle('c', 'Where to double down') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.c }}</p>
               </div>
               <div class="question-card">
-                <h4 class="question-card__title">4. One experiment to try</h4>
+                <h4 class="question-card__title">4. {{ cardTitle('d', 'One experiment to try') }}</h4>
                 <p class="question-card__text">{{ consolidation.questionSummaries?.d }}</p>
               </div>
             </div>

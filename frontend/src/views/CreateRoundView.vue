@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { User } from '@/types/user'
-import type { CreateRoundRequest } from '@/types/round'
+import type { RoundTemplate } from '@/types/round'
 import { PhCheck } from '@phosphor-icons/vue'
 
 const router = useRouter()
@@ -13,17 +13,21 @@ const auth = useAuthStore()
 const step = ref(1)
 const loading = ref(false)
 const users = ref<User[]>([])
+const templates = ref<RoundTemplate[]>([])
 
 // Form data — User.id is a string (Mongo ObjectID hex).
 const subjectId = ref<string | null>(null)
 const reviewerIds = ref<string[]>([])
+const templateId = ref<string | null>(null)
 const deadline = ref('')
+
+const selectedTemplate = computed(() => templates.value.find(t => t.id === templateId.value) || null)
 
 // Validation errors
 const errors = ref<string[]>([])
 
 onMounted(async () => {
-  await loadUsers()
+  await Promise.all([loadUsers(), loadTemplates()])
   // Set default deadline to 2 weeks from now
   const twoWeeks = new Date()
   twoWeeks.setDate(twoWeeks.getDate() + 14)
@@ -36,6 +40,18 @@ async function loadUsers() {
     users.value = response.data
   } catch (error) {
     console.error('Failed to load users:', error)
+  }
+}
+
+async function loadTemplates() {
+  try {
+    const response = await apiClient.get('/templates')
+    templates.value = response.data || []
+    // Default to the "default" slug so admins who don't care never have to pick.
+    const def = templates.value.find(t => t.slug === 'default')
+    templateId.value = (def ?? templates.value[0])?.id || null
+  } catch (error) {
+    console.error('Failed to load templates:', error)
   }
 }
 
@@ -97,13 +113,16 @@ async function createRound() {
   
   // Filter out subject from reviewers
   const validReviewerIds = reviewerIds.value.filter(id => id !== subjectId.value)
-  
-  const request: CreateRoundRequest = {
+
+  const request: Record<string, unknown> = {
     subjectId: subjectId.value!,
     reviewerIds: validReviewerIds,
     deadline: new Date(deadline.value).toISOString()
   }
-  
+  if (templateId.value) {
+    request.templateId = templateId.value
+  }
+
   try {
     await apiClient.post('/rounds', request)
     router.push('/rounds')
@@ -188,12 +207,29 @@ function formatDateTimeLocal(dateStr: string): string {
       <p class="wizard__selection-count">{{ reviewers().length }} reviewer(s) selected</p>
     </div>
 
-    <!-- Step 3: Set Deadline -->
+    <!-- Step 3: Template & Deadline -->
     <div v-if="step === 3" class="wizard__step">
-      <h2 class="wizard__step-title">When is the deadline?</h2>
-      <p class="wizard__step-hint">Set a clear deadline so reviewers know when to submit their feedback.</p>
+      <h2 class="wizard__step-title">Round details</h2>
+      <p class="wizard__step-hint">Pick the question template and the deadline. The template shapes the prompts reviewers see and how the AI consolidation is framed.</p>
+
+      <fieldset class="wizard__template" v-if="templates.length">
+        <legend class="wizard__template-legend">Question template</legend>
+        <div class="wizard__template-grid">
+          <label
+            v-for="t in templates"
+            :key="t.id"
+            class="wizard__template-card"
+            :class="{ 'wizard__template-card--selected': templateId === t.id }"
+          >
+            <input type="radio" name="template" :value="t.id" v-model="templateId" class="wizard__template-radio">
+            <span class="wizard__template-name">{{ t.name }}</span>
+            <span class="wizard__template-desc">{{ t.description }}</span>
+          </label>
+        </div>
+      </fieldset>
 
       <div class="wizard__deadline-input">
+        <label class="wizard__deadline-label">Deadline</label>
         <input
           type="datetime-local"
           v-model="deadline"
@@ -235,13 +271,15 @@ function formatDateTimeLocal(dateStr: string): string {
           <p class="review-section__text">{{ formatDateTimeLocal(deadline) }}</p>
         </div>
 
-        <div class="review-section">
+        <div class="review-section" v-if="selectedTemplate">
+          <h4 class="review-section__title">Template: {{ selectedTemplate.name }}</h4>
+          <p class="review-section__text">{{ selectedTemplate.description }}</p>
+        </div>
+
+        <div class="review-section" v-if="selectedTemplate">
           <h4 class="review-section__title">Feedback Questions</h4>
           <ol class="review-section__questions">
-            <li>What are this person's key strengths?</li>
-            <li>What areas could this person improve?</li>
-            <li>What specific behaviors or actions have you observed that stood out?</li>
-            <li>What advice would you give to help this person grow?</li>
+            <li v-for="q in selectedTemplate.questions" :key="q.key">{{ q.peerText }}</li>
           </ol>
         </div>
       </div>
@@ -412,9 +450,77 @@ function formatDateTimeLocal(dateStr: string): string {
     }
   }
 
+  &__template {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    background: var(--bg-primary);
+  }
+
+  &__template-legend {
+    font-weight: 600;
+    padding: 0 0.4rem;
+    color: var(--text-primary);
+  }
+
+  &__template-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  &__template-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.9rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &--selected {
+      border-color: var(--color-primary);
+      background: rgba(102, 126, 234, 0.06);
+    }
+  }
+
+  &__template-radio {
+    display: none;
+  }
+
+  &__template-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+  }
+
+  &__template-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
   &__deadline-input {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  &__deadline-label {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.95rem;
   }
 
   &__datetime-picker {

@@ -108,11 +108,19 @@ func renderConsolidationPDF(subject models.User, round models.FeedbackRound, c m
 	writeSection(pdf, "Actionable Insights", parseJSONList(c.ActionableInsights), true)
 
 	if summaries := parseJSONStringMap(c.QuestionSummaries); len(summaries) > 0 {
+		// Prefer the labels snapshotted from the template at generation time;
+		// fall back to the conceptual defaults so legacy consolidations still
+		// render readable headings.
 		labels := map[string]string{
 			"a": "What to continue",
 			"b": "What's blocking growth",
 			"c": "Where to double down",
 			"d": "One experiment to try (30–60 days)",
+		}
+		for k, v := range c.QuestionLabels {
+			if strings.TrimSpace(v) != "" {
+				labels[k] = v
+			}
 		}
 		writeSectionTitle(pdf, "Question-by-Question Summary")
 		for _, key := range []string{"a", "b", "c", "d"} {

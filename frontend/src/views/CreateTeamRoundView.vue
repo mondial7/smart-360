@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import type { Team } from '@/types/team'
 import type { CreateTeamRoundsRequest } from '@/types/team'
+import type { RoundTemplate } from '@/types/round'
 import { PhCheck } from '@phosphor-icons/vue'
 
 const route = useRoute()
@@ -14,18 +15,33 @@ const auth = useAuthStore()
 const step = ref(1)
 const loading = ref(false)
 const team = ref<Team | null>(null)
+const templates = ref<RoundTemplate[]>([])
+const templateId = ref<string | null>(null)
 const selectedSubjectIds = ref<string[]>([])
 const deadlines = ref<Record<string, string>>({}) // subjectId -> deadline string
 
 // Errors
 const errors = ref<string[]>([])
 
+const selectedTemplate = computed(() => templates.value.find(t => t.id === templateId.value) || null)
+
 onMounted(async () => {
   const teamId = route.params.teamId as string
   if (teamId) {
-    await loadTeam(teamId)
+    await Promise.all([loadTeam(teamId), loadTemplates()])
   }
 })
+
+async function loadTemplates() {
+  try {
+    const response = await apiClient.get('/templates')
+    templates.value = response.data || []
+    const def = templates.value.find(t => t.slug === 'default')
+    templateId.value = (def ?? templates.value[0])?.id || null
+  } catch (error) {
+    console.error('Failed to load templates:', error)
+  }
+}
 
 async function loadTeam(id: string) {
   try {
@@ -132,7 +148,8 @@ async function createRounds() {
     }))
 
     const request: CreateTeamRoundsRequest = {
-      subjects
+      subjects,
+      ...(templateId.value ? { templateId: templateId.value } : {})
     }
 
     const response = await apiClient.post(`/teams/${team.value.id}/rounds/create-batch`, request)
@@ -236,10 +253,26 @@ function formatDate(dateStr: string): string {
       <p class="wizard__selection-count">{{ selectedSubjects.length }} member(s) selected</p>
     </div>
 
-    <!-- Step 3: Set Deadlines -->
+    <!-- Step 3: Template & Deadlines -->
     <div v-if="step === 3" class="wizard__step">
-      <h2 class="wizard__step-title">Set Deadlines</h2>
-      <p class="wizard__step-hint">Set individual deadlines for each person's round, or use the same deadline for all.</p>
+      <h2 class="wizard__step-title">Round details</h2>
+      <p class="wizard__step-hint">Pick the question template (applied to every round in this batch) and set deadlines.</p>
+
+      <fieldset class="wizard__template" v-if="templates.length">
+        <legend class="wizard__template-legend">Question template</legend>
+        <div class="wizard__template-grid">
+          <label
+            v-for="t in templates"
+            :key="t.id"
+            class="wizard__template-card"
+            :class="{ 'wizard__template-card--selected': templateId === t.id }"
+          >
+            <input type="radio" name="team-template" :value="t.id" v-model="templateId" class="wizard__template-radio">
+            <span class="wizard__template-name">{{ t.name }}</span>
+            <span class="wizard__template-desc">{{ t.description }}</span>
+          </label>
+        </div>
+      </fieldset>
 
       <div class="wizard__deadline-actions">
         <label class="wizard__deadline-label">Set same deadline for all:</label>
@@ -298,6 +331,11 @@ function formatDate(dateStr: string): string {
         <div class="review-section">
           <h4 class="review-section__title">Auto-assigned Reviewers</h4>
           <p class="review-section__text">All team members except the subject and you will be assigned as reviewers for each round.</p>
+        </div>
+
+        <div class="review-section" v-if="selectedTemplate">
+          <h4 class="review-section__title">Template: {{ selectedTemplate.name }}</h4>
+          <p class="review-section__text">{{ selectedTemplate.description }}</p>
         </div>
       </div>
     </div>
@@ -503,6 +541,66 @@ function formatDate(dateStr: string): string {
     @media (min-width: 768px) {
       font-size: 1rem;
     }
+  }
+
+  &__template {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    background: var(--bg-primary);
+  }
+
+  &__template-legend {
+    font-weight: 600;
+    padding: 0 0.4rem;
+    color: var(--text-primary);
+  }
+
+  &__template-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  &__template-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.9rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &--selected {
+      border-color: var(--color-primary);
+      background: rgba(102, 126, 234, 0.06);
+    }
+  }
+
+  &__template-radio {
+    display: none;
+  }
+
+  &__template-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+  }
+
+  &__template-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
   }
 
   &__deadline-actions {

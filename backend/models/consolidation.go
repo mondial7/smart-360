@@ -15,12 +15,17 @@ type Consolidation struct {
 	AreasForImprovement string             `bson:"areas_for_improvement" json:"areasForImprovement"` // JSON array
 	ActionableInsights  string             `bson:"actionable_insights" json:"actionableInsights"`    // JSON array
 	QuestionSummaries   string             `bson:"question_summaries" json:"questionSummaries"`      // JSON object
-	SelfVsOthersDelta   *SelfVsOthersDelta `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
-	VoiceBreakdown      *VoiceBreakdown    `bson:"voice_breakdown,omitempty" json:"voiceBreakdown,omitempty"`
-	AdminNotes          string             `bson:"admin_notes" json:"adminNotes"`
-	SharedAt            *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
-	CreatedAt           time.Time          `bson:"created_at" json:"createdAt"`
-	UpdatedAt           time.Time          `bson:"updated_at" json:"updatedAt"`
+	// QuestionLabels is a denormalised copy of the template's CardTitle per
+	// question key at generation time. We snapshot rather than join so the UI
+	// always renders labels consistent with the answers actually collected,
+	// even if the template is later edited.
+	QuestionLabels    map[string]string  `bson:"question_labels,omitempty" json:"questionLabels,omitempty"`
+	SelfVsOthersDelta *SelfVsOthersDelta `bson:"self_vs_others_delta,omitempty" json:"selfVsOthersDelta,omitempty"`
+	VoiceBreakdown    *VoiceBreakdown    `bson:"voice_breakdown,omitempty" json:"voiceBreakdown,omitempty"`
+	AdminNotes        string             `bson:"admin_notes" json:"adminNotes"`
+	SharedAt          *time.Time         `bson:"shared_at,omitempty" json:"sharedAt"`
+	CreatedAt         time.Time          `bson:"created_at" json:"createdAt"`
+	UpdatedAt         time.Time          `bson:"updated_at" json:"updatedAt"`
 }
 
 // SelfVsOthersDelta captures how the subject's self-assessment compares to peer

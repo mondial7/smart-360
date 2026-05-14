@@ -3,7 +3,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import type { FeedbackRound } from '@/types/round'
+import type { FeedbackRound, RoundTemplate } from '@/types/round'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,34 +11,25 @@ const auth = useAuthStore()
 const roundId = route.params.id as string  // Changed from parseInt to string
 
 const round = ref<FeedbackRound | null>(null)
+const template = ref<RoundTemplate | null>(null)
 const loading = ref(true)
 const submitting = ref(false)
 const alreadySubmitted = ref(false)
 
 const isSelf = computed(() => !!round.value && round.value.subjectId === auth.user?.id)
 
-const peerQuestions = [
-  { key: 'a', text: 'What does this person do that has the biggest positive impact on the team or product? Where possible, share one concrete example (Situation → Behaviour → Impact).' },
-  { key: 'b', text: 'Looking at the last 3–6 months, what\'s currently holding this person back from their next level of impact (skill, habit, or environment)?' },
-  { key: 'c', text: 'If this person doubled down on one strength over the next 6 months, what should it be — and what would change for the team?' },
-  { key: 'd', text: 'What\'s one concrete experiment or focus area you\'d suggest they try in the next 30–60 days?' }
-]
-
-const selfQuestions = [
-  { key: 'a', text: 'What do you do that has the biggest positive impact on the team or product? Share one concrete example (Situation → Behaviour → Impact).' },
-  { key: 'b', text: 'Looking at the last 3–6 months, what\'s holding you back from your next level of impact (skill, habit, or environment)?' },
-  { key: 'c', text: 'If you doubled down on one of your strengths over the next 6 months, what would it be — and what would change for the team?' },
-  { key: 'd', text: 'What\'s one concrete experiment or focus area you\'d like to try in the next 30–60 days?' }
-]
-
-const questions = computed(() => isSelf.value ? selfQuestions : peerQuestions)
-
-const responses = ref<Record<string, string>>({
-  a: '',
-  b: '',
-  c: '',
-  d: ''
+// Question prompts come from the round's template. We render whatever the
+// template defines — including its `key` — so a template can ship with a
+// custom number or ordering of questions without code changes here.
+const questions = computed(() => {
+  if (!template.value) return []
+  return template.value.questions.map(q => ({
+    key: q.key,
+    text: isSelf.value ? q.selfText : q.peerText
+  }))
 })
+
+const responses = ref<Record<string, string>>({})
 
 type Relationship = 'manager' | 'report' | 'peer' | 'cross_functional'
 type Frequency = 'daily' | 'weekly' | 'monthly' | 'rarely'
@@ -74,6 +65,19 @@ async function loadRound() {
       // Load round details
       const roundRes = await apiClient.get(`/rounds/${roundId}`)
       round.value = roundRes.data
+
+      // Load the template referenced by the round — falls back to the default
+      // slug if the round predates configurable templates.
+      const templateKey = round.value?.templateId || 'default'
+      const templateRes = await apiClient.get(`/templates/${templateKey}`)
+      template.value = templateRes.data
+
+      // Seed an empty response slot for every question key defined by the template.
+      const slots: Record<string, string> = {}
+      for (const q of template.value?.questions || []) {
+        slots[q.key] = ''
+      }
+      responses.value = slots
     }
   } catch (error) {
     console.error('Failed to load round:', error)
