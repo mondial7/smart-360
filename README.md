@@ -43,49 +43,92 @@ or from source — pick whichever fits your environment.
 
 ## What it does
 
-Smart 360 runs anonymous, structured peer-feedback rounds and uses
-Google Gemini to turn the raw answers into something a person can
-actually act on.
+Smart 360 runs structured peer-feedback rounds and uses Google Gemini to
+turn the raw answers into something a person can actually act on. Designed
+for scaleup engineering / product teams where calibrated, growth-oriented
+feedback matters more than a pile of platitudes.
 
-- **Anonymous, structured feedback** — four prompts per reviewer,
-  identity never linked to a submission, never exposed to the subject.
-- **AI consolidation** — Gemini produces an executive summary, key
-  strengths, growth areas, and concrete next steps from the raw answers.
-- **PDF export** — branded, print-ready PDF of any shared consolidation.
-- **Personal & admin analytics** — per-user radar charts and trend
-  bars, plus an org-wide dashboard with completion rates, theme
-  extraction, and per-team activity.
+- **Growth-framed, behaviourally anchored questions** — the default
+  template uses Continue / Block / Amplify / Experiment framing. Question
+  text is stored in a `templates` collection, so you can ship one template
+  per role family (engineering leadership, IC, PM, design, …) without
+  changing code.
+- **Self-assessment + delta** — the subject answers the same questions in
+  first-person. The AI surfaces a `self_vs_others_delta` block with blind
+  spots (peers see, self doesn't), hidden strengths (self underplays), and
+  aligned themes — the single highest-signal output of a 360.
+- **Voice breakdown** — manager, peer, and direct-report inputs are
+  synthesised as distinct streams so a manager's "ready for next level"
+  doesn't average into a peer's "easy to work with".
+- **Competency rubric (Likert)** — templates can declare competencies;
+  reviewers rate 1–5 with a one-line justification. The consolidation
+  shows per-voice averages, spread, and a wide-spread warning for
+  calibration gaps.
+- **Private-to-manager channel** — optional textarea on peer submissions
+  feeds a manager-only synthesis. Stripped from the subject's API
+  response, in-app view, and PDF.
+- **Dedicated moderation pass** — a separate Gemini call scrubs identity-
+  targeted / personality-attack / off-topic content before the synthesis
+  sees it. Every pass is recorded in `moderation_logs` for the audit
+  trail.
+- **AI consolidation** — executive summary, top 3 focus areas, growth
+  opportunities, per-question summaries.
+- **PDF export** — branded, print-ready PDF of any shared consolidation
+  (with the manager-only section omitted from the subject's copy).
+- **Personal & admin analytics** — per-user radar charts and trend bars,
+  plus an org-wide dashboard with completion rates and theme extraction.
 - **Role-based access + audit log** — Admin, Team Admin, Member; every
   status transition (`draft → active → closed → shared`) is recorded.
 - **Single-binary deploy option** — the Vue SPA is embedded in the Go
   server, so Homebrew installs the whole app as one ~30 MB file.
 
+Reviewer identity is anonymised to the subject (the per-reviewer
+breakdown only shows relationship + frequency tags); the admin / round
+creator can see whose submission is whose for accountability and audit.
+
 ## How a round works
 
 1. **Admin (or Team Admin) creates a round** — picks the subject,
-   assigns 3–8 reviewers, sets a deadline. The subject and the creator
-   are automatically excluded from the reviewer list.
-2. **Reviewers submit anonymously** — each sees the four standard
-   questions, one submission per reviewer per round, anonymous to both
-   admin and subject.
-3. **Round closes at the deadline** — no further submissions; the admin
-   can now trigger consolidation.
-4. **AI consolidates** — Gemini reads the aggregated submissions and
-   emits an executive summary + strengths + growth areas + actionable
-   insights + a per-question summary.
-5. **Admin reviews, optionally adds notes, shares** — sharing flips the
-   round to `shared` and unlocks the consolidation (in-app + PDF) for
-   the subject.
-6. **Subject reads, tracks progress** — sees the consolidation in
-   "My Feedback" and a radar/trend chart of every round they've
-   received so far.
+   chooses a template, assigns 3–8 reviewers, sets a deadline. The
+   creator is automatically excluded from the reviewer list.
+2. **The subject does a self-assessment** — same questions, first-person
+   wording. Surfaces as a delta against peer answers in the final report.
+3. **Reviewers submit** — each declares their relationship to the
+   subject (manager / report / peer / cross-functional) and interaction
+   frequency (daily / weekly / monthly / rarely), answers the template's
+   questions, rates the subject 1–5 on each competency the template
+   defines with a one-line justification, and can optionally leave a
+   private note for the manager.
+4. **Round closes at the deadline** — no further submissions.
+5. **Moderation scrub** — when an admin triggers consolidation, every
+   submission goes through a dedicated Gemini call that strips identity-
+   targeted / personality-attack / off-topic content. Logged to
+   `moderation_logs` for the audit trail.
+6. **AI synthesis** — a second Gemini call produces the executive
+   summary, top 1–3 focus areas, growth opportunities, per-question
+   summaries, the self-vs-peers delta, the manager / peer / report voice
+   streams, and a manager-only synthesis of the private notes.
+7. **Server-side aggregates** — competency averages per voice, spread,
+   and reviewer counts are computed deterministically (not via the AI).
+8. **Admin reviews, optionally adds notes, shares** — sharing flips the
+   round to `shared` and unlocks the consolidation for the subject.
+9. **Subject reads, tracks progress** — sees everything **except** the
+   manager-only channel (stripped on both API and PDF).
 
-**The four standard questions:**
+**Default-template questions (Growth-Framed 360):**
 
-1. What are this person's key strengths?
-2. What areas could they improve?
-3. What specific behaviors or actions have you observed that stood out?
-4. What advice would you give to help them grow?
+1. What does this person do that has the biggest positive impact on the
+   team or product? — *one Situation → Behaviour → Impact example.*
+2. Looking at the last 3–6 months, what's currently holding this person
+   back from their next level of impact?
+3. If this person doubled down on one strength over the next 6 months,
+   what should it be — and what would change for the team?
+4. What's one concrete experiment or focus area you'd suggest they try
+   in the next 30–60 days?
+
+The bundled "Engineering Leadership 360" template ships with
+multiplier / scope-and-judgement / technical-depth / coaching framing
+for tech leads, EMs, and staff+ engineers.
 
 ## Who can do what
 

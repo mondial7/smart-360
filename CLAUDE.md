@@ -98,14 +98,16 @@ Open <http://localhost:5173>. Use OAuth, or in dev mode hit
 | `users` | `email`, `name`, `role` (admin/team_admin/member), `team_id`, `photo_url`, `created_at`, `last_login` |
 | `teams` | `name`, `description`, `team_admin_id` |
 | `team_members` | `team_id`, `user_id` |
-| `feedback_rounds` | `subject_id`, `created_by_id`, `status` (draft/active/closed/shared), `deadline`, `reviewers[]` |
-| `submissions` | `round_id`, `reviewer_id`, `responses` (JSON `{a,b,c,d}`) |
-| `consolidations` | `round_id`, `executive_summary`, `strengths`, `areas_for_improvement`, `actionable_insights`, `question_summaries`, `admin_notes`, `shared_at` |
+| `templates` | `slug` (unique), `name`, `description`, `coaching_persona`, `questions[]` (key, peer_text, self_text, card_title), `competencies[]` (key, name, description). Seeded on every boot by `database.SeedDefaultTemplates` — see `templates_seed.go`. |
+| `feedback_rounds` | `subject_id`, `created_by_id`, `template_id`, `status` (draft/active/closed/shared), `deadline`, `reviewers[]` |
+| `submissions` | `round_id`, `reviewer_id`, `responses` (JSON string keyed by template question keys), `is_self`, `relationship` (manager/report/peer/cross_functional — required for peer), `interaction_frequency` (daily/weekly/monthly/rarely — required for peer), `ratings[]` (key, score 1–5, justification — required if template has competencies), `private_notes` (peer-only, manager-only audience) |
+| `consolidations` | `round_id`, `executive_summary`, `strengths`, `areas_for_improvement`, `actionable_insights`, `question_summaries`, `question_labels` (snapshot from template), `self_vs_others_delta`, `voice_breakdown` (manager / peer / report streams), `competency_ratings[]` (per-axis aggregates with per-voice averages + spread), `manager_only_channel` (synthesis + raw notes; stripped from API/PDF whenever the caller isn't the round creator or a global admin), `admin_notes`, `shared_at` |
+| `moderation_logs` | `round_id`, `submission_id`, `model`, `flagged`, `reasons[]` (sanitised — see `sanitiseErr`), `fields_scrubbed[]`, `moderated_at`. Best-effort audit trail of the per-submission Gemini scrub pass. |
 | `audit_logs` | `actor_id`, `action`, `round_id`, `description`, `old_value`, `new_value` |
 
-Note: array/object fields on `consolidations` are stored as JSON strings in Mongo for legacy reasons. Parse before use.
+Note: array/object fields on `consolidations` (`strengths`, `areas_for_improvement`, `actionable_insights`, `question_summaries`) are stored as JSON strings in Mongo for legacy reasons. Parse before use. Newer fields (`question_labels`, `self_vs_others_delta`, `voice_breakdown`, `competency_ratings`, `manager_only_channel`) are typed BSON sub-docs.
 
-Indexes are defined in `backend/database/indexes.go`.
+Indexes are defined in `backend/database/indexes.go` (unique on `templates.slug`; round + timestamp on `moderation_logs`).
 
 ---
 
@@ -113,13 +115,14 @@ Indexes are defined in `backend/database/indexes.go`.
 
 `draft` → `active` → `closed` → `shared`
 
-- Admin / team admin creates a round (draft).
-- Starting it activates submission collection.
+- Admin / team admin creates a round (draft), picking a template (default falls back to the `default`-slug template).
+- Starting it activates submission collection. Both peers AND the subject can submit — the subject's submission is flagged `is_self=true` and feeds the self-vs-peers delta.
 - Closing freezes submissions and unlocks consolidation.
-- AI consolidation generates structured insights; admin may edit notes.
-- Sharing flips status to `shared` and exposes the consolidation to the subject (in-app + PDF).
+- Consolidation runs two Gemini passes: a per-submission **moderation scrub** (strips identity-targeted / personality-attack content; persists `moderation_logs`) followed by the **synthesis** (executive summary, strengths, growth areas, top focus areas, question summaries, self-vs-peers delta, voice breakdown, manager-only channel synthesis).
+- Server-side computes deterministic aggregates: `competency_ratings` (per-voice averages + spread) and the voice reviewer counts.
+- Admin may edit notes. Sharing flips status to `shared` and exposes the consolidation to the subject (in-app + PDF) — but the `manager_only_channel` is stripped from anything the subject sees.
 
-Status transitions are recorded in `audit_logs`.
+Status transitions are recorded in `audit_logs`. Moderation passes are recorded in `moderation_logs`.
 
 ---
 
@@ -150,15 +153,19 @@ The first user to sign up automatically becomes admin (see `handlers/auth.go`).
 | Method & Path | Notes |
 |---------------|-------|
 | `GET /api/me` | Current user |
+| `GET /api/templates` | List available round templates |
+| `GET /api/templates/:idOrSlug` | Fetch a single template by ObjectID hex or slug |
 | `GET /api/dashboard/stats` | Per-user dashboard counters |
 | `GET /api/analytics/me` | Personal analytics (radar + per-round trend) |
 | `GET /api/analytics/admin` | Admin analytics (counters, status breakdown, completion trend, team activity, top themes) |
-| `GET /api/rounds-for-me` | Rounds the user must review |
-| `POST /api/submissions` | Submit feedback |
+| `GET /api/rounds-for-me` | Rounds the user must review (includes the user's own active rounds for self-assessment) |
+| `POST /api/rounds` | Create round (accepts `templateId`; defaults to default slug if absent) |
+| `POST /api/submissions` | Submit feedback (peer: requires `relationship`, `interactionFrequency`, and `ratings` if template has competencies; supports `privateNotes`. Self: skips relationship/frequency/private notes) |
 | `POST /api/rounds/:id/consolidate` | Generate AI consolidation (admin) |
-| `GET /api/consolidations/:roundId` | Fetch consolidation JSON |
-| `GET /api/consolidations/:roundId/pdf` | Download PDF (admin / subject after share / round creator) |
+| `GET /api/consolidations/:roundId` | Fetch consolidation JSON (`manager_only_channel` stripped for the subject) |
+| `GET /api/consolidations/:roundId/pdf` | Download PDF (admin / subject after share / round creator — manager-only section omitted for the subject) |
 | `POST /api/consolidations/:id/share` | Share with subject (admin) |
+| `GET /api/rounds/:id/moderation-logs` | Audit trail of the per-submission scrub pass — admin / round creator only |
 
 See `backend/main.go` for the full route map.
 
