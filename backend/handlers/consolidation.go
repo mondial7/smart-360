@@ -81,6 +81,14 @@ func ConsolidateFeedback(c *gin.Context) {
 		return
 	}
 
+	// Run the dedicated moderation pass before the synthesis prompt sees the
+	// content. Each submission is scrubbed individually so the audit log can
+	// point precisely at which fields were rewritten and why. If GEMINI_API_KEY
+	// is unset, this is a no-op and the originals continue to the fallback.
+	moderatedSubmissions, moderationLogs := moderateSubmissions(ctx, submissions, roundObjID, geminiKey)
+	persistModerationLogs(ctx, db, moderationLogs)
+	submissions = moderatedSubmissions
+
 	var consolidation models.Consolidation
 
 	if hasGemini {
@@ -440,9 +448,9 @@ Apply these guidelines strictly:
 - Use behavioural, observable language. Avoid trait or personality labels (do not say "they ARE …"). Prefer "they often DO X, which leads to Y".
 - Use growth-oriented framing. Replace deficit language ("weakness", "bad at", "lacks") with forward-looking framing ("opportunity to amplify", "would unlock impact by", "next-level habit to build").
 - Never reproduce direct quotes that could identify a specific reviewer. Synthesise across reviewers.
-- If any reviewer input contains personal attacks, identity-targeted comments, or content unrelated to professional behaviour, omit it entirely from the consolidation. Do not surface it to the subject and do not reference that it was filtered.
 - Be specific. Vague compliments ("good communicator", "team player") are useless — ground every point in observable behaviour or impact.
 - Anchor your analysis on this person's last 3–6 months.
+- Content has already been scrubbed by a separate moderation pass; you should not see identity-targeted or personality-attack language. If you do, drop the offending content silently and proceed.
 
 Weight reviewer signals by relationship and interaction frequency:
 - Daily peers and the subject's manager have the richest signal — give their themes more weight, especially for execution and collaboration behaviours.

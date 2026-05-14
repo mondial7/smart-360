@@ -72,5 +72,16 @@ func CreateIndexes(db *mongo.Database) error {
 	}
 	log.Println("Created templates indexes")
 
+	// Moderation logs indexes - we read by round to surface the audit trail.
+	moderationIndexes := []mongo.IndexModel{
+		{Keys: bson.D{{Key: "round_id", Value: 1}, {Key: "moderated_at", Value: -1}}},
+		{Keys: bson.D{{Key: "submission_id", Value: 1}}},
+	}
+	if _, err = db.Collection("moderation_logs").Indexes().CreateMany(ctx, moderationIndexes); err != nil {
+		log.Printf("Failed to create moderation_logs indexes: %v", err)
+		return err
+	}
+	log.Println("Created moderation_logs indexes")
+
 	return nil
 }

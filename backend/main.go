@@ -144,6 +144,7 @@ func main() {
 
 		// Consolidations (admin only for generation)
 		authorized.POST("/rounds/:id/consolidate", middleware.AdminOnly(), handlers.ConsolidateFeedback)
+		authorized.GET("/rounds/:id/moderation-logs", handlers.GetModerationLogsForRound)
 		authorized.GET("/consolidations/:roundId", handlers.GetConsolidation)
 		authorized.GET("/consolidations/:roundId/pdf", handlers.DownloadConsolidationPDF)
 		authorized.PUT("/consolidations/:id", middleware.AdminOnly(), handlers.UpdateConsolidation)
