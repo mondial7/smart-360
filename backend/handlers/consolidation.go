@@ -122,11 +122,17 @@ func ConsolidateFeedback(c *gin.Context) {
 
 	fmt.Printf("Created consolidation: %+v\n", consolidation)
 
-	_, err = db.Collection("consolidations").InsertOne(ctx, consolidation)
+	res, err := db.Collection("consolidations").InsertOne(ctx, consolidation)
 	if err != nil {
 		fmt.Printf("Error inserting consolidation: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create consolidation"})
 		return
+	}
+	// Write the inserted ObjectID back onto the struct so the response body
+	// carries a real id (without this the client sees "000…00" and has to
+	// re-fetch by roundId to do anything useful with the consolidation).
+	if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
+		consolidation.ID = oid
 	}
 
 	fmt.Printf("Successfully created consolidation with ID: %s\n", consolidation.ID.Hex())
