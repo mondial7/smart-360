@@ -22,7 +22,8 @@ type TeamRoundSubject struct {
 
 // CreateTeamRoundsRequest is the request body for creating team rounds
 type CreateTeamRoundsRequest struct {
-	Subjects []TeamRoundSubject `json:"subjects" binding:"required,min=1"`
+	Subjects   []TeamRoundSubject `json:"subjects" binding:"required,min=1"`
+	TemplateID primitive.ObjectID `json:"templateId,omitempty"`
 }
 
 // CreateTeamRoundsResponse is the response for team round creation
@@ -68,6 +69,13 @@ func CreateTeamRounds(c *gin.Context) {
 		return
 	}
 
+	// All rounds in a batch share the same template — the wizard picks once.
+	templateID, err := resolveTemplateIDForCreate(ctx, req.TemplateID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	response := CreateTeamRoundsResponse{
 		CreatedRounds:  make([]primitive.ObjectID, 0),
 		FailedSubjects: make([]string, 0),
@@ -102,6 +110,7 @@ func CreateTeamRounds(c *gin.Context) {
 		round := models.FeedbackRound{
 			SubjectID:   subject.SubjectID,
 			CreatedByID: currentUser.ID,
+			TemplateID:  templateID,
 			Deadline:    subject.Deadline,
 			Status:      models.RoundDraft,
 			CreatedAt:   time.Now(),

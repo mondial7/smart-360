@@ -55,6 +55,11 @@ func main() {
 	// Initialize database
 	database.InitDB()
 
+	// Round templates are seeded on every boot so the bundled defaults stay
+	// in sync with the current code. Cheap (one upsert per template) and
+	// safe to run in production.
+	database.SeedDefaultTemplates()
+
 	// Seed development data (only in development mode)
 	if os.Getenv("DEV_MODE") == "true" {
 		log.Println("WARNING: Development mode enabled - seeding test data")
@@ -111,6 +116,12 @@ func main() {
 		authorized.POST("/teams/:id/members", middleware.TeamAdminOrGlobalAdmin(), handlers.AddTeamMembers)
 		authorized.DELETE("/teams/:id/members/:userId", middleware.TeamAdminOrGlobalAdmin(), handlers.RemoveTeamMember)
 		authorized.POST("/teams/:id/rounds/create-batch", middleware.TeamAdminOrGlobalAdmin(), handlers.CreateTeamRounds)
+
+		// Round templates - readable by any authenticated user (question wording
+		// is public to reviewers anyway). Mutation handlers are not exposed yet;
+		// templates ship via the seeded default(s).
+		authorized.GET("/templates", handlers.ListTemplates)
+		authorized.GET("/templates/:idOrSlug", handlers.GetTemplate)
 
 		// Rounds - admin and team admin can create / manage
 		authorized.POST("/rounds", middleware.AdminOrTeamAdminRole(), handlers.CreateFeedbackRound)

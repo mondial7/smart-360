@@ -18,8 +18,9 @@ func CreateFeedbackRound(c *gin.Context) {
 	currentUser := user.(models.User)
 
 	var req struct {
-		SubjectID primitive.ObjectID `json:"subjectId" binding:"required"`
-		Deadline  *time.Time         `json:"deadline"`
+		SubjectID  primitive.ObjectID `json:"subjectId" binding:"required"`
+		TemplateID primitive.ObjectID `json:"templateId,omitempty"`
+		Deadline   *time.Time         `json:"deadline"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -53,9 +54,16 @@ func CreateFeedbackRound(c *gin.Context) {
 		}
 	}
 
+	templateID, err := resolveTemplateIDForCreate(ctx, req.TemplateID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	round := models.FeedbackRound{
 		SubjectID:   req.SubjectID,
 		CreatedByID: currentUser.ID,
+		TemplateID:  templateID,
 		Deadline:    req.Deadline,
 		Status:      models.RoundDraft,
 		CreatedAt:   time.Now(),

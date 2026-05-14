@@ -59,5 +59,18 @@ func CreateIndexes(db *mongo.Database) error {
 	}
 	log.Println("Created submissions indexes")
 
+	// Templates indexes - slug is the public, stable identifier and must be unique.
+	templateIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "slug", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+	if _, err = db.Collection("templates").Indexes().CreateMany(ctx, templateIndexes); err != nil {
+		log.Printf("Failed to create templates indexes: %v", err)
+		return err
+	}
+	log.Println("Created templates indexes")
+
 	return nil
 }

@@ -19,6 +19,7 @@ type FeedbackRound struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	SubjectID   primitive.ObjectID `bson:"subject_id" json:"subjectId"`
 	CreatedByID primitive.ObjectID `bson:"created_by_id" json:"createdById"`
+	TemplateID  primitive.ObjectID `bson:"template_id,omitempty" json:"templateId,omitempty"`
 	Deadline    *time.Time         `bson:"deadline,omitempty" json:"deadline"`
 	Status      RoundStatus        `bson:"status" json:"status"`
 	CreatedAt   time.Time          `bson:"created_at" json:"createdAt"`

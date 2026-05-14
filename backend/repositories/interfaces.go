@@ -39,6 +39,14 @@ type SubmissionRepository interface {
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Submission, error)
 }
 
+// TemplateRepository defines the interface for round-template data access.
+type TemplateRepository interface {
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Template, error)
+	FindBySlug(ctx context.Context, slug string) (*models.Template, error)
+	FindAll(ctx context.Context) ([]models.Template, error)
+	Upsert(ctx context.Context, template *models.Template) error
+}
+
 // ConsolidationRepository defines the interface for consolidation data access
 type ConsolidationRepository interface {
 	FindByRoundID(ctx context.Context, roundID primitive.ObjectID) (*models.Consolidation, error)
