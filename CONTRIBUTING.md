@@ -80,8 +80,10 @@ The backend follows a three-layer test pyramid:
 `go test ./...` runs all three. `go test -short ./...` skips the
 gateway layer.
 
-Frontend has no automated test suite yet; that's tracked in
-[#28](https://github.com/mondial7/smart-360/issues/28).
+The frontend has Vitest + `@vue/test-utils` component and store tests
+(`*.spec.ts` next to the code). Run them with `npm test`. There's no
+browser/E2E layer and none is planned — the Vitest suite is the
+frontend test strategy. Add specs next to any code you change.
 
 ## Pull request process
 
