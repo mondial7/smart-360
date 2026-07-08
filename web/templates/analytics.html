@@ -1,0 +1,25 @@
+{{define "analytics_content"}}
+<div class="page-head"><div><h1>Analytics</h1><p class="muted-text">Company-wide activity.</p></div></div>
+
+<div class="grid grid--stats">
+  <div class="card stat"><div class="stat__value">{{.TotalUsers}}</div><div class="stat__label">Users</div></div>
+  <div class="card stat"><div class="stat__value">{{.TotalTeams}}</div><div class="stat__label">Teams</div></div>
+  <div class="card stat"><div class="stat__value">{{.TotalRounds}}</div><div class="stat__label">Rounds</div></div>
+  <div class="card stat"><div class="stat__value">{{.CompletedPct}}%</div><div class="stat__label">Completed</div></div>
+</div>
+
+<h2>Rounds by status</h2>
+<div class="card card--pad-lg">
+  <div class="donut">
+    {{ donutSVG .StatusSlices 180.0 24.0 "rounds" }}
+    <ul class="legend">
+      {{range .StatusSlices}}
+      <li style="display:contents">
+        <span class="legend__chip" style="background:{{.Color}}"></span>
+        <span>{{.Label}}</span><span>{{.Value}}</span>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+</div>
+{{end}}

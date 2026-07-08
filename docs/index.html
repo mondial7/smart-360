@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Smart 360 — AI-powered anonymous 360° feedback</title>
-  <meta name="description" content="Smart 360 turns anonymous peer feedback into clear, actionable insights using Google Gemini. Self-host in minutes via Homebrew, Docker, or source." />
+  <meta name="description" content="Smart 360 turns anonymous peer feedback into clear, actionable insights using Google Gemini. A single self-hosted Go binary — Docker, Homebrew, or source." />
   <meta property="og:title" content="Smart 360 — AI-powered anonymous 360° feedback" />
   <meta property="og:description" content="Self-hostable 360° feedback platform with AI consolidation, role-based access, and PDF export." />
   <meta property="og:type" content="website" />
@@ -82,7 +82,7 @@
         <article class="feature">
           <span class="feature-icon">🕶</span>
           <h3>Truly anonymous</h3>
-          <p>Reviewers answer four structured prompts. The subject never sees who wrote what, only the consolidated insight.</p>
+          <p>Reviewers answer the template's structured prompts. The subject never sees who wrote what, only the consolidated insight.</p>
         </article>
         <article class="feature">
           <span class="feature-icon">✨</span>
@@ -97,7 +97,7 @@
         <article class="feature">
           <span class="feature-icon">📊</span>
           <h3>Personal & admin analytics</h3>
-          <p>Radar charts per round, completion trends, theme extraction, team activity — all rendered with zero chart-library bloat.</p>
+          <p>Radar and donut charts rendered as server-side SVG — zero chart-library bloat, no client JS framework.</p>
         </article>
         <article class="feature">
           <span class="feature-icon">🛡️</span>
@@ -123,12 +123,12 @@
         <li>
           <span class="step-num">2</span>
           <h3>Collect feedback</h3>
-          <p>Reviewers answer four structured prompts. Submissions are anonymous and editable until the deadline.</p>
+          <p>Reviewers answer the template's prompts and rate competencies. Submissions are anonymous and editable until the deadline.</p>
         </li>
         <li>
           <span class="step-num">3</span>
           <h3>Consolidate with AI</h3>
-          <p>On close, an admin triggers consolidation. Gemini identifies themes and proposes actionable next steps.</p>
+          <p>On close, an admin triggers consolidation and watches the moderation + synthesis progress stream live over SSE.</p>
         </li>
         <li>
           <span class="step-num">4</span>
@@ -148,8 +148,9 @@
             <span class="install-tag">Recommended for LAN / personal use</span>
             <h3>🍺 Homebrew</h3>
           </header>
-          <pre><code>brew install mongodb-community
-brew services start mongodb-community
+          <pre><code>brew install postgresql@16
+brew services start postgresql@16
+createdb smart360
 
 brew tap mondial7/tap
 brew install smart360
@@ -168,8 +169,8 @@ brew services start smart360</code></pre>
 cd smart-360
 cp .env.example .env
 $EDITOR .env
-docker compose up -d</code></pre>
-          <p>Bundles MongoDB, the Go API, and the nginx-served SPA. Open <code>http://localhost</code>.</p>
+docker compose up -d --build</code></pre>
+          <p>Brings up PostgreSQL and the app. Open <code>http://localhost:8080</code>.</p>
         </article>
 
         <article class="install-card">
@@ -179,47 +180,47 @@ docker compose up -d</code></pre>
           </header>
           <pre><code>git clone https://github.com/mondial7/smart-360.git
 cd smart-360
-make build         # frontend + embedded Go binary
+docker compose up -d postgres
 cp .env.example .env
-$EDITOR .env
-./smart360</code></pre>
-          <p>Requires Go 1.25, Node 20, and a running MongoDB. Great for hacking on the code.</p>
+go run ./cmd/server</code></pre>
+          <p>Requires Go 1.26 and a reachable PostgreSQL. Great for hacking on the code.</p>
         </article>
       </div>
     </section>
 
     <section class="architecture" id="architecture">
       <h2>Architecture at a glance</h2>
-      <p class="lede center">Two deployment shapes from the same codebase.</p>
+      <p class="lede center">One server-rendered Go binary, backed by Postgres.</p>
 
       <div class="arch-grid">
         <div class="arch-card">
-          <h3>Single-binary</h3>
-          <svg viewBox="0 0 360 220" role="img" aria-label="Single binary architecture">
-            <rect x="20" y="20" width="320" height="80" rx="10" class="box-primary" />
-            <text x="180" y="55" text-anchor="middle" class="box-title">smart360 (Go)</text>
-            <text x="180" y="78" text-anchor="middle" class="box-sub">REST API + embedded Vue SPA</text>
-            <line x1="180" y1="100" x2="180" y2="135" class="link" />
-            <rect x="120" y="140" width="120" height="60" rx="10" class="box-secondary" />
-            <text x="180" y="165" text-anchor="middle" class="box-title">MongoDB</text>
-            <text x="180" y="185" text-anchor="middle" class="box-sub">:27017</text>
+          <h3>The app</h3>
+          <svg viewBox="0 0 360 240" role="img" aria-label="Application architecture">
+            <rect x="20" y="20" width="320" height="100" rx="10" class="box-primary" />
+            <text x="180" y="52" text-anchor="middle" class="box-title">smart360 (Go)</text>
+            <text x="180" y="74" text-anchor="middle" class="box-sub">chi · html/template · htmx · SSE</text>
+            <text x="180" y="96" text-anchor="middle" class="box-sub">Gemini · PDF · embedded assets</text>
+            <line x1="180" y1="120" x2="180" y2="155" class="link" />
+            <rect x="110" y="160" width="140" height="60" rx="10" class="box-secondary" />
+            <text x="180" y="185" text-anchor="middle" class="box-title">PostgreSQL</text>
+            <text x="180" y="205" text-anchor="middle" class="box-sub">:5432</text>
           </svg>
         </div>
 
         <div class="arch-card">
-          <h3>Docker Compose</h3>
-          <svg viewBox="0 0 360 280" role="img" aria-label="Docker compose architecture">
-            <rect x="20" y="10" width="320" height="60" rx="10" class="box-accent" />
-            <text x="180" y="38" text-anchor="middle" class="box-title">nginx (frontend)</text>
-            <text x="180" y="58" text-anchor="middle" class="box-sub">SPA + /api proxy</text>
-            <line x1="180" y1="70" x2="180" y2="100" class="link" />
-            <rect x="20" y="105" width="320" height="60" rx="10" class="box-primary" />
-            <text x="180" y="133" text-anchor="middle" class="box-title">backend (Go)</text>
-            <text x="180" y="153" text-anchor="middle" class="box-sub">Gin · JWT · Gemini</text>
-            <line x1="180" y1="165" x2="180" y2="195" class="link" />
-            <rect x="20" y="200" width="320" height="60" rx="10" class="box-secondary" />
-            <text x="180" y="228" text-anchor="middle" class="box-title">MongoDB</text>
-            <text x="180" y="248" text-anchor="middle" class="box-sub">named volume</text>
+          <h3>Request flow</h3>
+          <svg viewBox="0 0 360 280" role="img" aria-label="Request flow">
+            <rect x="20" y="10" width="320" height="55" rx="10" class="box-accent" />
+            <text x="180" y="35" text-anchor="middle" class="box-title">Browser</text>
+            <text x="180" y="54" text-anchor="middle" class="box-sub">HTML · htmx swaps · SSE</text>
+            <line x1="180" y1="65" x2="180" y2="95" class="link" />
+            <rect x="20" y="100" width="320" height="70" rx="10" class="box-primary" />
+            <text x="180" y="128" text-anchor="middle" class="box-title">handlers → repo</text>
+            <text x="180" y="150" text-anchor="middle" class="box-sub">session cookie auth · CSRF</text>
+            <line x1="180" y1="170" x2="180" y2="200" class="link" />
+            <rect x="20" y="205" width="320" height="60" rx="10" class="box-secondary" />
+            <text x="180" y="233" text-anchor="middle" class="box-title">PostgreSQL</text>
+            <text x="180" y="253" text-anchor="middle" class="box-sub">named volume</text>
           </svg>
         </div>
       </div>
@@ -237,7 +238,7 @@ $EDITOR .env
 
   <footer class="site-footer">
     <p>
-      Built with Go, Vue, and Google Gemini.
+      Built with Go, htmx, and Google Gemini.
       Source on <a href="https://github.com/mondial7/smart-360" rel="noopener">GitHub</a>.
       MIT licensed.
     </p>

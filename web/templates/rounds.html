@@ -1,0 +1,13 @@
+{{define "rounds_content"}}
+<div class="page-head">
+  <div><h1>Rounds</h1><p class="muted-text">Feedback rounds you can see.</p></div>
+  {{if .CanCreate}}<a class="btn" href="/rounds/new">New round</a>{{end}}
+</div>
+{{if .Cards}}
+<div class="grid grid--cards">
+  {{range .Cards}}{{template "round_card" .}}{{end}}
+</div>
+{{else}}
+<div class="card"><p class="muted-text" style="margin:0">No rounds yet.</p></div>
+{{end}}
+{{end}}

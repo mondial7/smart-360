@@ -1,0 +1,28 @@
+{{define "team_new_content"}}
+<div class="page-head"><div><h1>New team</h1><p class="muted-text">Name the team, pick an admin and members.</p></div></div>
+<form method="post" action="/teams" class="card card--pad-lg" style="max-width:640px">
+  <div class="field">
+    <label for="name">Team name</label>
+    <input type="text" name="name" id="name" required>
+  </div>
+  <div class="field">
+    <label for="team_admin_id">Team admin</label>
+    <select name="team_admin_id" id="team_admin_id" required>
+      <option value="">Select…</option>
+      {{range .Users}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label>Members</label>
+    <div style="max-height:260px;overflow:auto;border:1px solid var(--border-color);border-radius:var(--radius);padding:0.6rem">
+      {{range .Users}}
+      <label class="checkbox-row"><input type="checkbox" name="member_ids" value="{{.ID}}"> {{.Name}} <small>{{.Email}}</small></label>
+      {{end}}
+    </div>
+  </div>
+  <div style="display:flex;gap:0.5rem">
+    <button class="btn" type="submit">Create team</button>
+    <a class="btn btn--ghost" href="/teams">Cancel</a>
+  </div>
+</form>
+{{end}}

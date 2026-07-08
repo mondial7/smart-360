@@ -1,0 +1,43 @@
+{{define "round_details_content"}}
+<div class="page-head">
+  <div>
+    <h1>{{if .SubjectName}}{{.SubjectName}}{{else}}Round{{end}}</h1>
+    <p class="muted-text">Created by {{.CreatorName}} ·
+      <span class="badge badge--{{statusTone .Status}}">{{.Status}}</span></p>
+  </div>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+    {{if .IsManager}}
+      {{if eq .Status "draft"}}
+        <button class="btn" hx-post="/rounds/{{.Round.ID}}/start">Start round</button>
+      {{else if eq .Status "active"}}
+        <button class="btn" hx-post="/rounds/{{.Round.ID}}/close">Close round</button>
+      {{end}}
+      {{if or (eq .Status "closed") (eq .Status "shared")}}
+        <a class="btn" href="/rounds/{{.Round.ID}}/consolidation">
+          {{if .HasConsolidation}}View consolidation{{else}}Consolidate{{end}}</a>
+      {{end}}
+    {{end}}
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+  <div class="card"><div class="stat__value">{{.SubmittedCount}}/{{len .Reviewers}}</div><div class="stat__label">Submitted</div></div>
+  {{if .Round.Deadline}}<div class="card"><div class="stat__value" style="font-size:1.1rem">{{date .Round.Deadline}}</div><div class="stat__label">Deadline</div></div>{{end}}
+</div>
+
+{{if .IsManager}}
+<h2>Reviewers</h2>
+<div class="card">
+  {{if .Reviewers}}
+  <table>
+    <thead><tr><th>Reviewer</th><th>Status</th></tr></thead>
+    <tbody>
+      {{range .Reviewers}}
+      <tr><td>{{.Name}}</td><td>{{if .Submitted}}<span class="badge badge--ok">Submitted</span>{{else}}<span class="badge badge--muted">Pending</span>{{end}}</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted-text" style="margin:0">No reviewers assigned.</p>{{end}}
+</div>
+{{end}}
+{{end}}

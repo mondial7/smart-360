@@ -1,0 +1,20 @@
+{{define "audit_content"}}
+<div class="page-head"><div><h1>Audit log</h1><p class="muted-text">Who changed what, most recent first.</p></div></div>
+<div class="card">
+  {{if .Logs}}
+  <table>
+    <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody>
+      {{range .Logs}}
+      <tr>
+        <td><small>{{datetime .CreatedAt}}</small></td>
+        <td>{{.ActorName}}</td>
+        <td><span class="badge">{{.Action}}</span></td>
+        <td>{{.Description}}{{if .RoundSubject}} · {{.RoundSubject}}{{end}}{{if .TeamName}} · {{.TeamName}}{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted-text" style="margin:0">No audit entries.</p>{{end}}
+</div>
+{{end}}

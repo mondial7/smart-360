@@ -1,0 +1,42 @@
+{{define "base.html" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{if .Title}}{{.Title}} · {{end}}Smart 360</title>
+  <meta name="csrf-token" content="{{.CSRF}}">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/sse.js" defer></script>
+</head>
+<body hx-boost="true" hx-headers='{"X-CSRF-Token": "{{.CSRF}}"}'>
+  {{if .User}}
+  <header class="nav">
+    <a class="nav__brand" href="/">Smart&nbsp;360</a>
+    <nav class="nav__links">
+      {{$a := .Active}}
+      <a href="/" class="nav__link {{if eq $a "dashboard"}}is-active{{end}}">Dashboard</a>
+      <a href="/rounds" class="nav__link {{if eq $a "rounds"}}is-active{{end}}">Rounds</a>
+      <a href="/my-feedback" class="nav__link {{if eq $a "my-feedback"}}is-active{{end}}">My&nbsp;Feedback</a>
+      <a href="/team" class="nav__link {{if eq $a "team"}}is-active{{end}}">Team</a>
+      {{if eq .User.Role "admin"}}
+      <a href="/teams" class="nav__link {{if eq $a "teams"}}is-active{{end}}">Teams</a>
+      <a href="/analytics" class="nav__link {{if eq $a "analytics"}}is-active{{end}}">Analytics</a>
+      <a href="/audit-logs" class="nav__link {{if eq $a "audit"}}is-active{{end}}">Audit</a>
+      {{end}}
+    </nav>
+    <div class="nav__user">
+      <span class="nav__whoami">{{.User.Name}}<small>{{.User.Role}}</small></span>
+      <a href="/logout" class="btn btn--ghost btn--sm" hx-boost="false">Log out</a>
+    </div>
+  </header>
+  {{end}}
+
+  <main class="main">
+    {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+    {{ partial .Content .Data }}
+  </main>
+</body>
+</html>
+{{- end}}

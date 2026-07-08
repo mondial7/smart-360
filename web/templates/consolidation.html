@@ -1,0 +1,106 @@
+{{define "consolidation_empty_content"}}
+<div class="page-head"><div><h1>Consolidation</h1>
+  <p class="muted-text">Synthesize the round's feedback into a shareable summary.</p></div></div>
+{{if .CanGenerate}}
+<div class="card card--pad-lg">
+  <p>The round is closed. Generate the AI consolidation — you'll see progress live.</p>
+  <button class="btn" hx-post="/rounds/{{.Round.ID}}/consolidate" hx-target="#gen" hx-swap="innerHTML">
+    Generate consolidation</button>
+  <div id="gen" style="margin-top:1rem"></div>
+</div>
+{{else}}
+<div class="card"><p class="muted-text" style="margin:0">
+  No consolidation yet. The round must be closed by a manager first.</p></div>
+{{end}}
+{{end}}
+
+
+{{define "consolidation_stream_panel"}}
+<div hx-ext="sse" sse-connect="/rounds/{{.RoundID}}/consolidate/stream">
+  <div class="progress" sse-swap="progress"><span class="spinner"></span><span>Starting…</span></div>
+  <div sse-swap="done" style="margin-top:0.75rem"></div>
+</div>
+{{end}}
+
+
+{{define "consolidation_content"}}
+<div class="page-head">
+  <div>
+    <h1>Consolidated feedback{{if .SubjectName}} · {{.SubjectName}}{{end}}</h1>
+    <p class="muted-text">{{if .Shared}}Shared with the subject.{{else}}Draft — not yet shared.{{end}}</p>
+  </div>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+    <a class="btn btn--ghost" href="/consolidations/{{.Round.ID}}/pdf" hx-boost="false">Download PDF</a>
+    {{if .CanShare}}<button class="btn" hx-post="/consolidations/{{.Cons.ID}}/share">Share with subject</button>{{end}}
+  </div>
+</div>
+
+{{with .Cons}}
+{{if .ExecutiveSummary}}<div class="card card--pad-lg"><h3>Executive summary</h3><p style="margin:0">{{.ExecutiveSummary}}</p></div>{{end}}
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:1rem">
+  {{if .Strengths}}<div class="card"><h3>Key strengths</h3><ul class="bullets">{{range .Strengths}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+  {{if .AreasForImprovement}}<div class="card"><h3>Areas for improvement</h3><ul class="bullets">{{range .AreasForImprovement}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+  {{if .ActionableInsights}}<div class="card"><h3>Focus areas</h3><ul class="bullets">{{range .ActionableInsights}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+</div>
+
+{{if .CompetencyRatings}}
+<h2>Competency ratings</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Competency</th><th>Self</th><th>Manager</th><th>Peers</th><th>Reports</th><th>Others avg</th></tr></thead>
+    <tbody>
+      {{range .CompetencyRatings}}
+      <tr>
+        <td>{{.Name}}{{if ge .Spread 2.0}} <span class="badge badge--warn">wide spread</span>{{end}}</td>
+        <td>{{deref .SelfScore}}</td><td>{{deref .ManagerAverage}}</td>
+        <td>{{deref .PeerAverage}}</td><td>{{deref .ReportAverage}}</td>
+        <td><strong>{{deref .OthersAverage}}</strong></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+{{if .SelfVsOthersDelta}}{{if .SelfVsOthersDelta.SelfSubmitted}}
+<h2>Self vs peers</h2>
+<div class="card">
+  {{if .SelfVsOthersDelta.Summary}}<p><em>{{.SelfVsOthersDelta.Summary}}</em></p>{{end}}
+  {{if .SelfVsOthersDelta.BlindSpots}}<h3>Blind spots</h3><ul class="bullets">{{range .SelfVsOthersDelta.BlindSpots}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  {{if .SelfVsOthersDelta.HiddenStrengths}}<h3>Hidden strengths</h3><ul class="bullets">{{range .SelfVsOthersDelta.HiddenStrengths}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  {{if .SelfVsOthersDelta.Aligned}}<h3>Aligned</h3><ul class="bullets">{{range .SelfVsOthersDelta.Aligned}}<li>{{.}}</li>{{end}}</ul>{{end}}
+</div>
+{{end}}{{end}}
+
+{{if .VoiceBreakdown}}
+<h2>Voices</h2>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+  {{template "voice_card" (dict "Title" "Manager voice" "Voice" .VoiceBreakdown.ManagerVoice)}}
+  {{template "voice_card" (dict "Title" "Peer voice" "Voice" .VoiceBreakdown.PeerVoice)}}
+  {{template "voice_card" (dict "Title" "Report voice" "Voice" .VoiceBreakdown.ReportVoice)}}
+</div>
+{{end}}
+
+{{if .ManagerOnlyChannel}}
+<div class="card manager-only" style="margin-top:1rem">
+  <h3>Manager-only channel ({{.ManagerOnlyChannel.NoteCount}} private note{{if ne .ManagerOnlyChannel.NoteCount 1}}s{{end}})</h3>
+  <p><strong>Private — do not share with the subject.</strong></p>
+  {{if .ManagerOnlyChannel.Synthesis}}<p>{{.ManagerOnlyChannel.Synthesis}}</p>{{end}}
+  {{if .ManagerOnlyChannel.Themes}}<ul class="bullets">{{range .ManagerOnlyChannel.Themes}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  {{if .ManagerOnlyChannel.RawNotes}}<h3>Raw notes</h3><ul class="bullets">{{range .ManagerOnlyChannel.RawNotes}}<li>{{.}}</li>{{end}}</ul>{{end}}
+</div>
+{{end}}
+{{end}}
+{{end}}
+
+
+{{define "voice_card"}}
+{{if .Voice}}
+<div class="card">
+  <h3>{{.Title}} <small>· {{.Voice.ReviewerCount}} reviewer{{if ne .Voice.ReviewerCount 1}}s{{end}}</small></h3>
+  {{if .Voice.Summary}}<p>{{.Voice.Summary}}</p>{{end}}
+  {{if .Voice.Themes}}<ul class="bullets">{{range .Voice.Themes}}<li>{{.}}</li>{{end}}</ul>{{end}}
+</div>
+{{end}}
+{{end}}
