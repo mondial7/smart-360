@@ -12,6 +12,9 @@ func (h *Handlers) MountAppRoutes(r chi.Router) {
 	r.Get("/rounds/{id}", h.RoundDetails)
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/start", h.StartRound)
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/close", h.CloseRound)
+	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/edit", h.UpdateRoundMeta)
+	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/reviewers", h.AddRoundReviewer)
+	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/reviewers/{reviewerId}/remove", h.RemoveRoundReviewer)
 
 	// Submissions
 	r.Get("/rounds/{id}/submit", h.SubmitForm)
@@ -23,6 +26,7 @@ func (h *Handlers) MountAppRoutes(r chi.Router) {
 	r.With(h.Auth.RequireAdmin).Post("/rounds/{id}/consolidate", h.StartConsolidation)
 	r.With(h.Auth.RequireAdmin).Get("/rounds/{id}/consolidate/stream", h.ConsolidationStream)
 	r.Get("/rounds/{id}/consolidation", h.ConsolidationView)
+	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/consolidations/{id}", h.UpdateConsolidation)
 	r.With(h.Auth.RequireAdmin).Post("/consolidations/{id}/share", h.ShareConsolidation)
 	r.Get("/consolidations/{roundId}/pdf", h.DownloadPDF)
 
@@ -39,6 +43,12 @@ func (h *Handlers) MountAppRoutes(r chi.Router) {
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Get("/teams/{id}", h.TeamDetails)
 	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Post("/teams/{id}/members", h.AddTeamMember)
 	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Post("/teams/{id}/members/{userId}/remove", h.RemoveTeamMember)
+	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Get("/teams/{id}/create-round", h.NewTeamRoundForm)
+	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Post("/teams/{id}/rounds", h.CreateTeamRounds)
+
+	// Users & roles (admin)
+	r.With(h.Auth.RequireAdmin).Get("/users", h.UsersList)
+	r.With(h.Auth.RequireAdmin).Post("/users/{id}/role", h.UpdateUserRole)
 
 	// Analytics + audit (admin)
 	r.With(h.Auth.RequireAdmin).Get("/analytics", h.Analytics)

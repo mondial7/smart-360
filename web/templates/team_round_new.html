@@ -1,0 +1,33 @@
+{{define "team_round_new_content"}}
+<div class="page-head">
+  <div><h1>New rounds · {{.Team.Name}}</h1>
+    <p class="muted-text">Create a draft round for each selected member. Add reviewers per round afterward.</p></div>
+  <a class="btn btn--ghost" href="/teams/{{.Team.ID}}">Back to team</a>
+</div>
+<form method="post" action="/teams/{{.Team.ID}}/rounds" class="card card--pad-lg" style="max-width:640px">
+  <div class="field">
+    <label>Subjects <span class="hint">one round is created per person</span></label>
+    <div style="max-height:260px;overflow:auto;border:1px solid var(--border-color);border-radius:var(--radius);padding:0.6rem">
+      {{if .Members}}
+      {{range .Members}}
+      <label class="checkbox-row"><input type="checkbox" name="subject_ids" value="{{.ID}}" checked> {{.Name}} <small>{{.Email}}</small></label>
+      {{end}}
+      {{else}}<p class="muted-text" style="margin:0">This team has no members yet.</p>{{end}}
+    </div>
+  </div>
+  <div class="field">
+    <label for="template_id">Template</label>
+    <select name="template_id" id="template_id">
+      {{range .Templates}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label for="deadline">Deadline <span class="hint">optional</span></label>
+    <input type="date" name="deadline" id="deadline">
+  </div>
+  <div style="display:flex;gap:0.5rem">
+    <button class="btn" type="submit">Create rounds</button>
+    <a class="btn btn--ghost" href="/teams/{{.Team.ID}}">Cancel</a>
+  </div>
+</form>
+{{end}}

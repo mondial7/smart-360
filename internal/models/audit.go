@@ -20,6 +20,9 @@ const (
 	AuditConsolidationShared  AuditAction = "consolidation.shared"
 	AuditConsolidationEdited  AuditAction = "consolidation.edited"
 
+	// Users
+	AuditUserRoleChanged AuditAction = "user.role_changed"
+
 	// Teams
 	AuditTeamCreated       AuditAction = "team.created"
 	AuditTeamUpdated       AuditAction = "team.updated"

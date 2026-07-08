@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mondial7/smart-360/internal/models"
@@ -43,6 +44,7 @@ func NewRenderer(fsys fs.FS) (*Renderer, error) {
 		},
 		"dict":       dict,
 		"list":       func(items ...any) []any { return items },
+		"lines":      func(xs []string) string { return joinLines(xs) },
 		"date":       formatDate,
 		"datetime":   formatDateTime,
 		"since":      humanizeSince,
@@ -117,6 +119,10 @@ func dict(pairs ...any) (map[string]any, error) {
 		m[key] = pairs[i+1]
 	}
 	return m, nil
+}
+
+func joinLines(xs []string) string {
+	return strings.Join(xs, "\n")
 }
 
 func formatDate(t time.Time) string {

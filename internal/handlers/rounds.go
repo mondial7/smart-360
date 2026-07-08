@@ -130,6 +130,7 @@ func (h *Handlers) RoundDetails(w http.ResponseWriter, r *http.Request) {
 	isManager := u.Role == models.RoleAdmin || u.ID == round.CreatedByID
 
 	type reviewerRow struct {
+		ID        string
 		Name      string
 		Submitted bool
 	}
@@ -140,7 +141,7 @@ func (h *Handlers) RoundDetails(w http.ResponseWriter, r *http.Request) {
 		if n > 0 {
 			submittedCount++
 		}
-		reviewers = append(reviewers, reviewerRow{Name: users[rev.ReviewerID].Name, Submitted: n > 0})
+		reviewers = append(reviewers, reviewerRow{ID: rev.ReviewerID, Name: users[rev.ReviewerID].Name, Submitted: n > 0})
 	}
 
 	// The round owner (and global admins) can read every raw submission. The AI
@@ -163,6 +164,28 @@ func (h *Handlers) RoundDetails(w http.ResponseWriter, r *http.Request) {
 		submissions = buildSubmissionDetails(raw, tmpl, users)
 	}
 
+	// Candidates for adding as reviewers: everyone except the subject and the
+	// people already reviewing. Used by the manage panel when the round is editable.
+	var candidates []models.User
+	var allUsers []models.User
+	if isManager && roundEditable(round.Status) {
+		existing := map[string]bool{round.SubjectID: true}
+		for _, rev := range round.Reviewers {
+			existing[rev.ReviewerID] = true
+		}
+		all, err := h.Repos.Users.FindAll(ctx)
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		allUsers = all
+		for _, usr := range all {
+			if !existing[usr.ID] {
+				candidates = append(candidates, usr)
+			}
+		}
+	}
+
 	_, consErr := h.Repos.Consolidations.FindByRoundID(ctx, round.ID)
 	data := map[string]any{
 		"Round":            round,
@@ -175,6 +198,11 @@ func (h *Handlers) RoundDetails(w http.ResponseWriter, r *http.Request) {
 		"IsAdmin":          u.Role == models.RoleAdmin,
 		"Status":           string(round.Status),
 		"HasConsolidation": consErr == nil,
+		"Editable":         isManager && roundEditable(round.Status),
+		"IsDraft":          round.Status == models.RoundDraft,
+		"Candidates":       candidates,
+		"AllUsers":         allUsers,
+		"DeadlineValue":    fmtDeadline(round.Deadline),
 	}
 	h.View.Page(w, http.StatusOK, h.page(r, "Round details", "rounds", "round_details_content", data))
 }
@@ -334,4 +362,121 @@ func nameOf(u *models.User) string {
 		return ""
 	}
 	return u.Name
+}
+
+// roundEditable reports whether a round's composition can still be changed
+// (reviewers, deadline): true while collecting or before it starts.
+func roundEditable(status models.RoundStatus) bool {
+	return status == models.RoundDraft || status == models.RoundActive
+}
+
+// loadEditableRound is the shared preamble for round-edit handlers: it loads the
+// round, enforces manager access, and checks the round is still editable.
+func (h *Handlers) loadEditableRound(w http.ResponseWriter, r *http.Request) (*models.FeedbackRound, *models.User, bool) {
+	u := h.user(r)
+	round, err := h.Repos.Rounds.FindByID(r.Context(), chi.URLParam(r, "id"))
+	if errors.Is(err, repo.ErrNotFound) {
+		notFound(w)
+		return nil, nil, false
+	}
+	if err != nil {
+		serverError(w, err)
+		return nil, nil, false
+	}
+	if u.Role != models.RoleAdmin && u.ID != round.CreatedByID {
+		forbidden(w)
+		return nil, nil, false
+	}
+	if !roundEditable(round.Status) {
+		http.Error(w, "This round can no longer be edited", http.StatusBadRequest)
+		return nil, nil, false
+	}
+	return round, u, true
+}
+
+// AddRoundReviewer adds a reviewer to an editable round.
+func (h *Handlers) AddRoundReviewer(w http.ResponseWriter, r *http.Request) {
+	round, u, ok := h.loadEditableRound(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	_ = r.ParseForm()
+	reviewerID := r.FormValue("reviewer_id")
+	if reviewerID == "" || reviewerID == round.SubjectID {
+		redirect(w, r, "/rounds/"+round.ID)
+		return
+	}
+	if err := h.Repos.Rounds.AddReviewer(ctx, round.ID, models.RoundReviewer{ReviewerID: reviewerID}); err != nil {
+		serverError(w, err)
+		return
+	}
+	subject, _ := h.Repos.Users.FindByID(ctx, round.SubjectID)
+	reviewer, _ := h.Repos.Users.FindByID(ctx, reviewerID)
+	h.audit(ctx, auditParams{Action: models.AuditReviewerAdded, Actor: u, RoundID: round.ID,
+		RoundSubject: nameOf(subject), Description: "Added reviewer " + nameOf(reviewer)})
+	redirect(w, r, "/rounds/"+round.ID)
+}
+
+// RemoveRoundReviewer removes a reviewer from an editable round.
+func (h *Handlers) RemoveRoundReviewer(w http.ResponseWriter, r *http.Request) {
+	round, u, ok := h.loadEditableRound(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	reviewerID := chi.URLParam(r, "reviewerId")
+	if err := h.Repos.Rounds.RemoveReviewer(ctx, round.ID, reviewerID); err != nil {
+		serverError(w, err)
+		return
+	}
+	subject, _ := h.Repos.Users.FindByID(ctx, round.SubjectID)
+	reviewer, _ := h.Repos.Users.FindByID(ctx, reviewerID)
+	h.audit(ctx, auditParams{Action: models.AuditReviewerRemoved, Actor: u, RoundID: round.ID,
+		RoundSubject: nameOf(subject), Description: "Removed reviewer " + nameOf(reviewer)})
+	redirect(w, r, "/rounds/"+round.ID)
+}
+
+// UpdateRoundMeta changes a round's deadline (any editable state) and subject
+// (draft only, before any feedback is collected).
+func (h *Handlers) UpdateRoundMeta(w http.ResponseWriter, r *http.Request) {
+	round, u, ok := h.loadEditableRound(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	_ = r.ParseForm()
+
+	oldDeadline := round.Deadline
+	round.Deadline = parseDate(r.FormValue("deadline"))
+
+	subjectChanged := false
+	if round.Status == models.RoundDraft {
+		if newSubject := r.FormValue("subject_id"); newSubject != "" && newSubject != round.SubjectID {
+			round.SubjectID = newSubject
+			subjectChanged = true
+		}
+	}
+
+	if err := h.Repos.Rounds.Update(ctx, round); err != nil {
+		serverError(w, err)
+		return
+	}
+	subject, _ := h.Repos.Users.FindByID(ctx, round.SubjectID)
+	action := models.AuditRoundDeadlineChanged
+	desc := "Updated deadline"
+	if subjectChanged {
+		action = models.AuditRoundSubjectChanged
+		desc = "Changed subject"
+	}
+	h.audit(ctx, auditParams{Action: action, Actor: u, RoundID: round.ID, RoundSubject: nameOf(subject),
+		Description: desc, OldValue: fmtDeadline(oldDeadline), NewValue: fmtDeadline(round.Deadline)})
+	redirect(w, r, "/rounds/"+round.ID)
+}
+
+func fmtDeadline(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
 }

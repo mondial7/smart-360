@@ -30,15 +30,61 @@
 <div class="card">
   {{if .Reviewers}}
   <table>
-    <thead><tr><th>Reviewer</th><th>Status</th></tr></thead>
+    <thead><tr><th>Reviewer</th><th>Status</th>{{if .Editable}}<th style="width:1%"></th>{{end}}</tr></thead>
     <tbody>
+      {{$editable := .Editable}}{{$rid := .Round.ID}}
       {{range .Reviewers}}
-      <tr><td>{{.Name}}</td><td>{{if .Submitted}}<span class="badge badge--ok">Submitted</span>{{else}}<span class="badge badge--muted">Pending</span>{{end}}</td></tr>
+      <tr>
+        <td>{{.Name}}</td>
+        <td>{{if .Submitted}}<span class="badge badge--ok">Submitted</span>{{else}}<span class="badge badge--muted">Pending</span>{{end}}</td>
+        {{if $editable}}<td style="text-align:right">
+          <button class="btn btn--danger btn--sm" hx-post="/rounds/{{$rid}}/reviewers/{{.ID}}/remove"
+                  hx-confirm="Remove {{.Name}} as a reviewer?">Remove</button>
+        </td>{{end}}
+      </tr>
       {{end}}
     </tbody>
   </table>
   {{else}}<p class="muted-text" style="margin:0">No reviewers assigned.</p>{{end}}
 </div>
+
+{{if .Editable}}
+<h2>Manage round</h2>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+  <div class="card">
+    <h3>Add a reviewer</h3>
+    <form method="post" action="/rounds/{{.Round.ID}}/reviewers" style="display:flex;gap:0.5rem;align-items:end">
+      <div class="field" style="flex:1;margin:0">
+        <label for="add_reviewer">Person</label>
+        <select name="reviewer_id" id="add_reviewer" required>
+          <option value="">Select…</option>
+          {{range .Candidates}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{end}}
+        </select>
+      </div>
+      <button class="btn" type="submit">Add</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3>Deadline{{if .IsDraft}} &amp; subject{{end}}</h3>
+    <form method="post" action="/rounds/{{.Round.ID}}/edit" class="stack">
+      {{if .IsDraft}}
+      <div class="field" style="margin:0">
+        <label for="edit_subject">Subject</label>
+        <select name="subject_id" id="edit_subject">
+          {{$sid := .Round.SubjectID}}
+          {{range .AllUsers}}<option value="{{.ID}}" {{if eq .ID $sid}}selected{{end}}>{{.Name}}</option>{{end}}
+        </select>
+      </div>
+      {{end}}
+      <div class="field" style="margin:0">
+        <label for="edit_deadline">Deadline</label>
+        <input type="date" name="deadline" id="edit_deadline" value="{{.DeadlineValue}}">
+      </div>
+      <div><button class="btn" type="submit">Save</button></div>
+    </form>
+  </div>
+</div>
+{{end}}
 
 <h2>Feedback submissions</h2>
 <p class="muted-text" style="margin-top:-0.4rem">The raw feedback, in each reviewer's own words. The AI consolidation summarizes this — it doesn't replace it.</p>

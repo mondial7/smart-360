@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -182,4 +183,84 @@ func teamNameOf(t *models.Team) string {
 		return ""
 	}
 	return t.Name
+}
+
+// NewTeamRoundForm renders the bulk round-creation form for a team.
+func (h *Handlers) NewTeamRoundForm(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := chi.URLParam(r, "id")
+	team, err := h.Repos.Teams.FindByID(ctx, id)
+	if err != nil {
+		notFound(w)
+		return
+	}
+	index, err := h.allUsersIndex(ctx)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	members := make([]models.User, 0, len(team.MemberIDs))
+	for _, mid := range team.MemberIDs {
+		members = append(members, index[mid])
+	}
+	templates, err := h.Repos.Templates.FindAll(ctx)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	data := map[string]any{"Team": team, "Members": members, "Templates": templates}
+	h.View.Page(w, http.StatusOK, h.page(r, "New team rounds", "teams", "team_round_new_content", data))
+}
+
+// CreateTeamRounds creates one draft round per selected team member, all with
+// the same template and deadline. Reviewers are added afterwards per round.
+func (h *Handlers) CreateTeamRounds(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	u := h.user(r)
+	id := chi.URLParam(r, "id")
+	team, err := h.Repos.Teams.FindByID(ctx, id)
+	if err != nil {
+		notFound(w)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+
+	var templateID *string
+	if t := r.FormValue("template_id"); t != "" {
+		templateID = &t
+	}
+	deadline := parseDate(r.FormValue("deadline"))
+
+	// Only allow subjects that are actually members of this team.
+	member := map[string]bool{}
+	for _, mid := range team.MemberIDs {
+		member[mid] = true
+	}
+
+	created := 0
+	for _, subjectID := range r.Form["subject_ids"] {
+		if subjectID == "" || !member[subjectID] {
+			continue
+		}
+		round := &models.FeedbackRound{
+			SubjectID:   subjectID,
+			CreatedByID: u.ID,
+			TemplateID:  templateID,
+			Deadline:    deadline,
+			Status:      models.RoundDraft,
+		}
+		if err := h.Repos.Rounds.Create(ctx, round); err != nil {
+			serverError(w, err)
+			return
+		}
+		created++
+	}
+
+	h.audit(ctx, auditParams{Action: models.AuditTeamRoundCreated, Actor: u, TeamID: team.ID,
+		TeamName: team.Name, Description: fmt.Sprintf("Created %d round(s) for team members", created)})
+
+	redirect(w, r, "/rounds")
 }

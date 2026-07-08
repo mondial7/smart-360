@@ -221,6 +221,61 @@ func (h *Handlers) ShareConsolidation(w http.ResponseWriter, r *http.Request) {
 	redirect(w, r, "/rounds/"+round.ID+"/consolidation")
 }
 
+// UpdateConsolidation lets the round owner correct the AI-generated sections
+// and record private admin notes. The AI output is a starting point, not the
+// final word — the manager owns the round.
+func (h *Handlers) UpdateConsolidation(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	u := h.user(r)
+	id := chi.URLParam(r, "id")
+
+	cons, err := h.Repos.Consolidations.FindByID(ctx, id)
+	if err != nil {
+		notFound(w)
+		return
+	}
+	round, err := h.Repos.Rounds.FindByID(ctx, cons.RoundID)
+	if err != nil {
+		notFound(w)
+		return
+	}
+	if u.Role != models.RoleAdmin && u.ID != round.CreatedByID {
+		forbidden(w)
+		return
+	}
+
+	_ = r.ParseForm()
+	cons.ExecutiveSummary = strings.TrimSpace(r.FormValue("executive_summary"))
+	cons.Strengths = splitLines(r.FormValue("strengths"))
+	cons.AreasForImprovement = splitLines(r.FormValue("areas_for_improvement"))
+	cons.ActionableInsights = splitLines(r.FormValue("actionable_insights"))
+	cons.AdminNotes = strings.TrimSpace(r.FormValue("admin_notes"))
+
+	if err := h.Repos.Consolidations.Update(ctx, cons); err != nil {
+		serverError(w, err)
+		return
+	}
+	subject, _ := h.Repos.Users.FindByID(ctx, round.SubjectID)
+	h.audit(ctx, auditParams{Action: models.AuditConsolidationEdited, Actor: u, RoundID: round.ID,
+		RoundSubject: nameOf(subject), Description: "Edited consolidation"})
+
+	redirect(w, r, "/rounds/"+round.ID+"/consolidation")
+}
+
+// splitLines turns a textarea value into a trimmed, non-empty slice of lines.
+func splitLines(s string) []string {
+	var out []string
+	for _, line := range strings.Split(s, "\n") {
+		if t := strings.TrimSpace(line); t != "" {
+			out = append(out, t)
+		}
+	}
+	if out == nil {
+		return []string{}
+	}
+	return out
+}
+
 // progressHTML renders the inner content for the SSE progress element.
 func progressHTML(ev ai.ProgressEvent) string {
 	msg := ev.Message

@@ -35,6 +35,36 @@
   </div>
 </div>
 
+{{if .IsManager}}
+<details class="card" style="margin-bottom:1rem">
+  <summary style="cursor:pointer;font-weight:600">Edit consolidation &amp; admin notes</summary>
+  <p class="muted-text" style="margin-top:0.5rem">The AI output is a starting point. Correct it in your own words before sharing. One item per line for the lists.</p>
+  <form method="post" action="/consolidations/{{.Cons.ID}}" class="stack">
+    <div class="field">
+      <label>Executive summary</label>
+      <textarea name="executive_summary">{{.Cons.ExecutiveSummary}}</textarea>
+    </div>
+    <div class="field">
+      <label>Key strengths <span class="hint">one per line</span></label>
+      <textarea name="strengths">{{lines .Cons.Strengths}}</textarea>
+    </div>
+    <div class="field">
+      <label>Areas for improvement <span class="hint">one per line</span></label>
+      <textarea name="areas_for_improvement">{{lines .Cons.AreasForImprovement}}</textarea>
+    </div>
+    <div class="field">
+      <label>Focus areas <span class="hint">one per line</span></label>
+      <textarea name="actionable_insights">{{lines .Cons.ActionableInsights}}</textarea>
+    </div>
+    <div class="field">
+      <label>Admin notes <span class="hint">private to admins/round owner; not shown to the subject</span></label>
+      <textarea name="admin_notes">{{.Cons.AdminNotes}}</textarea>
+    </div>
+    <div><button class="btn" type="submit">Save changes</button></div>
+  </form>
+</details>
+{{end}}
+
 {{with .Cons}}
 {{if .ExecutiveSummary}}<div class="card card--pad-lg"><h3>Executive summary</h3><p style="margin:0">{{.ExecutiveSummary}}</p></div>{{end}}
 

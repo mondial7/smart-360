@@ -22,6 +22,7 @@
       <a href="/team" class="nav__link {{if eq $a "team"}}is-active{{end}}">Team</a>
       {{if eq .User.Role "admin"}}
       <a href="/teams" class="nav__link {{if eq $a "teams"}}is-active{{end}}">Teams</a>
+      <a href="/users" class="nav__link {{if eq $a "users"}}is-active{{end}}">Users</a>
       <a href="/analytics" class="nav__link {{if eq $a "analytics"}}is-active{{end}}">Analytics</a>
       <a href="/audit-logs" class="nav__link {{if eq $a "audit"}}is-active{{end}}">Audit</a>
       {{end}}

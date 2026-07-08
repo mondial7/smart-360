@@ -1,7 +1,10 @@
 {{define "team_details_content"}}
 <div class="page-head">
   <div><h1>{{.Team.Name}}</h1><p class="muted-text">Admin: {{.AdminName}}</p></div>
-  <a class="btn btn--ghost" href="/teams">All teams</a>
+  <div style="display:flex;gap:0.5rem">
+    <a class="btn" href="/teams/{{.Team.ID}}/create-round">Create rounds</a>
+    <a class="btn btn--ghost" href="/teams">All teams</a>
+  </div>
 </div>
 
 <h2>Members</h2>
