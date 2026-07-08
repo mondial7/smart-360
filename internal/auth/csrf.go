@@ -19,6 +19,24 @@ func (s *Service) CSRFToken(r *http.Request) string {
 	return s.sign("csrf:" + id)
 }
 
+// StreamToken returns a session-derived token for authorizing a state-changing
+// SSE GET (which cannot carry the CSRF header). It is derived from a different
+// label than the form CSRF token, so exposure of one (e.g. in a URL or access
+// log) cannot be replayed as the other.
+func (s *Service) StreamToken(r *http.Request) string {
+	id, ok := s.readSessionID(r)
+	if !ok {
+		return ""
+	}
+	return s.sign("sse:" + id)
+}
+
+// ValidStreamToken reports whether token matches the request's stream token.
+func (s *Service) ValidStreamToken(r *http.Request, token string) bool {
+	expected := s.StreamToken(r)
+	return expected != "" && constantTimeEqual(token, expected)
+}
+
 // ProtectCSRF rejects unsafe requests whose CSRF token doesn't match the
 // session. Safe methods (GET/HEAD/OPTIONS) pass through untouched.
 func (s *Service) ProtectCSRF(next http.Handler) http.Handler {

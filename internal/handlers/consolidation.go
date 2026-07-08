@@ -86,7 +86,8 @@ func (h *Handlers) StartConsolidation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "The round must be closed before consolidating", http.StatusBadRequest)
 		return
 	}
-	h.View.Fragment(w, http.StatusOK, "consolidation_stream_panel", map[string]any{"RoundID": id})
+	h.View.Fragment(w, http.StatusOK, "consolidation_stream_panel",
+		map[string]any{"RoundID": id, "Token": h.Auth.StreamToken(r)})
 }
 
 // ConsolidationStream runs the consolidation pipeline and streams progress as
@@ -95,6 +96,15 @@ func (h *Handlers) ConsolidationStream(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	u := h.user(r)
 	id := chi.URLParam(r, "id")
+
+	// The SSE stream generates and persists the consolidation, so it is a
+	// state-changing GET. GETs bypass the CSRF middleware and SameSite=Lax lets
+	// a cross-site top-level navigation carry the session cookie — so require a
+	// session-derived token that a cross-site attacker cannot know.
+	if !h.Auth.ValidStreamToken(r, r.URL.Query().Get("t")) {
+		forbidden(w)
+		return
+	}
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {

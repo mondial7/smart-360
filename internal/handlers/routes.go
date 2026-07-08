@@ -40,7 +40,7 @@ func (h *Handlers) MountAppRoutes(r chi.Router) {
 	r.With(h.Auth.RequireAdmin).Get("/teams", h.TeamsList)
 	r.With(h.Auth.RequireAdmin).Get("/teams/new", h.NewTeamForm)
 	r.With(h.Auth.RequireAdmin).Post("/teams", h.CreateTeam)
-	r.With(h.Auth.RequireTeamAdminOrAdmin).Get("/teams/{id}", h.TeamDetails)
+	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Get("/teams/{id}", h.TeamDetails)
 	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Post("/teams/{id}/members", h.AddTeamMember)
 	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Post("/teams/{id}/members/{userId}/remove", h.RemoveTeamMember)
 	r.With(h.Auth.RequireTeamAdminOrAdmin, h.Auth.RequireTeamScope).Get("/teams/{id}/create-round", h.NewTeamRoundForm)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -69,7 +70,8 @@ func NewRenderer(fsys fs.FS) (*Renderer, error) {
 func (r *Renderer) Page(w http.ResponseWriter, status int, p PageData) {
 	var buf bytes.Buffer
 	if err := r.root.ExecuteTemplate(&buf, "base.html", p); err != nil {
-		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("template render error (page %q): %v", p.Content, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -81,7 +83,8 @@ func (r *Renderer) Page(w http.ResponseWriter, status int, p PageData) {
 func (r *Renderer) Fragment(w http.ResponseWriter, status int, name string, data any) {
 	var buf bytes.Buffer
 	if err := r.root.ExecuteTemplate(&buf, name, data); err != nil {
-		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("template render error (fragment %q): %v", name, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

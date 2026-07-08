@@ -16,7 +16,7 @@
 
 
 {{define "consolidation_stream_panel"}}
-<div hx-ext="sse" sse-connect="/rounds/{{.RoundID}}/consolidate/stream">
+<div hx-ext="sse" sse-connect="/rounds/{{.RoundID}}/consolidate/stream?t={{.Token}}">
   <div class="progress" sse-swap="progress"><span class="spinner"></span><span>Starting…</span></div>
   <div sse-swap="done" style="margin-top:0.75rem"></div>
 </div>

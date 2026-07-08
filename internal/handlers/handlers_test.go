@@ -158,6 +158,26 @@ func TestRoundOwnerSeesRawSubmissionsButReviewerDoesNot(t *testing.T) {
 	}
 }
 
+func TestConsolidationStreamRequiresToken(t *testing.T) {
+	srv, client, repos := newTestServer(t)
+	ctx := t.Context()
+	_, _ = get(t, client, srv.URL+"/auth/dev-login?email=admin@example.com")
+	admin, _ := repos.Users.FindByEmail(ctx, "admin@example.com")
+	round := &models.FeedbackRound{SubjectID: admin.ID, CreatedByID: admin.ID, Status: models.RoundClosed}
+	_ = repos.Rounds.Create(ctx, round)
+
+	// The SSE stream is a state-changing GET; without the session-derived token
+	// it must be refused (CSRF defense), even for an authenticated admin.
+	code, _ := get(t, client, srv.URL+"/rounds/"+round.ID+"/consolidate/stream")
+	if code != http.StatusForbidden {
+		t.Fatalf("stream without token: expected 403, got %d", code)
+	}
+	code, _ = get(t, client, srv.URL+"/rounds/"+round.ID+"/consolidate/stream?t=bogus")
+	if code != http.StatusForbidden {
+		t.Fatalf("stream with bad token: expected 403, got %d", code)
+	}
+}
+
 func TestNonAdminCannotAccessTeams(t *testing.T) {
 	srv, client, repos := newTestServer(t)
 	// First user (admin) provisioned separately so the second is a member.
