@@ -39,5 +39,46 @@
   </table>
   {{else}}<p class="muted-text" style="margin:0">No reviewers assigned.</p>{{end}}
 </div>
+
+<h2>Feedback submissions</h2>
+<p class="muted-text" style="margin-top:-0.4rem">The raw feedback, in each reviewer's own words. The AI consolidation summarizes this — it doesn't replace it.</p>
+{{if .Submissions}}
+<div class="stack">
+  {{range .Submissions}}
+  <details class="card" {{if .IsSelf}}open{{end}}>
+    <summary style="cursor:pointer;font-weight:600">
+      {{.ReviewerName}}
+      {{if .IsSelf}}<span class="badge badge--info">Self-assessment</span>
+      {{else}}<span class="badge">{{.Relationship}}</span>{{if .Frequency}}<span class="badge badge--muted">{{.Frequency}}</span>{{end}}{{end}}
+      <small style="font-weight:400"> · {{datetime .SubmittedAt}}</small>
+    </summary>
+    <div style="margin-top:0.75rem">
+      {{range .Answers}}
+      <div style="margin-bottom:0.75rem">
+        <div style="font-weight:600">{{.Label}}</div>
+        <div style="white-space:pre-wrap">{{.Text}}</div>
+      </div>
+      {{end}}
+      {{if .Ratings}}
+      <table style="margin-top:0.5rem">
+        <thead><tr><th>Competency</th><th>Score</th><th>Justification</th></tr></thead>
+        <tbody>
+          {{range .Ratings}}<tr><td>{{.Name}}</td><td><strong>{{.Score}}</strong>/5</td><td>{{.Justification}}</td></tr>{{end}}
+        </tbody>
+      </table>
+      {{end}}
+      {{if .PrivateNotes}}
+      <div class="manager-only" style="margin-top:0.75rem;padding:0.6rem 0.8rem;border-radius:var(--radius)">
+        <strong>Private note (manager-only):</strong>
+        <div style="white-space:pre-wrap">{{.PrivateNotes}}</div>
+      </div>
+      {{end}}
+    </div>
+  </details>
+  {{end}}
+</div>
+{{else}}
+<div class="card"><p class="muted-text" style="margin:0">No submissions yet.</p></div>
+{{end}}
 {{end}}
 {{end}}

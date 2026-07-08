@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -142,12 +143,33 @@ func (h *Handlers) RoundDetails(w http.ResponseWriter, r *http.Request) {
 		reviewers = append(reviewers, reviewerRow{Name: users[rev.ReviewerID].Name, Submitted: n > 0})
 	}
 
+	// The round owner (and global admins) can read every raw submission. The AI
+	// consolidation is an aid, not a replacement for the manager's own reading
+	// of the feedback — so we surface the full content here, including reviewer
+	// identity (managers see who said what for accountability) and the private
+	// manager-only notes.
+	var submissions []submissionDetail
+	if isManager {
+		tmpl, err := h.resolveTemplate(r, round.TemplateID)
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		raw, err := h.Repos.Submissions.FindByRoundID(ctx, round.ID)
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		submissions = buildSubmissionDetails(raw, tmpl, users)
+	}
+
 	_, consErr := h.Repos.Consolidations.FindByRoundID(ctx, round.ID)
 	data := map[string]any{
 		"Round":            round,
 		"SubjectName":      users[round.SubjectID].Name,
 		"CreatorName":      users[round.CreatedByID].Name,
 		"Reviewers":        reviewers,
+		"Submissions":      submissions,
 		"SubmittedCount":   submittedCount,
 		"IsManager":        isManager,
 		"IsAdmin":          u.Role == models.RoleAdmin,
@@ -155,6 +177,113 @@ func (h *Handlers) RoundDetails(w http.ResponseWriter, r *http.Request) {
 		"HasConsolidation": consErr == nil,
 	}
 	h.View.Page(w, http.StatusOK, h.page(r, "Round details", "rounds", "round_details_content", data))
+}
+
+// submissionDetail is the manager-facing view of one raw submission.
+type submissionDetail struct {
+	ReviewerName string
+	IsSelf       bool
+	Relationship string
+	Frequency    string
+	Answers      []answerRow
+	Ratings      []ratingRow
+	PrivateNotes string
+	SubmittedAt  time.Time
+}
+
+type answerRow struct {
+	Label string
+	Text  string
+}
+
+type ratingRow struct {
+	Name          string
+	Score         int
+	Justification string
+}
+
+// buildSubmissionDetails turns raw submissions into manager-facing view models,
+// resolving reviewer names, question labels, and competency names from the
+// template, and ordering answers by the template's question order.
+func buildSubmissionDetails(subs []models.Submission, tmpl *models.Template, users map[string]models.User) []submissionDetail {
+	// Question label + order.
+	type q struct{ key, label string }
+	var questions []q
+	if tmpl != nil && len(tmpl.Questions) > 0 {
+		for _, tq := range tmpl.Questions {
+			label := tq.CardTitle
+			if label == "" {
+				label = tq.Key
+			}
+			questions = append(questions, q{tq.Key, label})
+		}
+	} else {
+		for _, k := range []string{"a", "b", "c", "d"} {
+			questions = append(questions, q{k, k})
+		}
+	}
+	compName := map[string]string{}
+	if tmpl != nil {
+		for _, c := range tmpl.Competencies {
+			compName[c.Key] = c.Name
+		}
+	}
+
+	out := make([]submissionDetail, 0, len(subs))
+	for _, s := range subs {
+		d := submissionDetail{
+			ReviewerName: users[s.ReviewerID].Name,
+			IsSelf:       s.IsSelf,
+			PrivateNotes: s.PrivateNotes,
+			SubmittedAt:  s.SubmittedAt,
+		}
+		if !s.IsSelf {
+			d.Relationship = relationshipText(s.Relationship)
+			d.Frequency = frequencyText(s.InteractionFrequency)
+		}
+		for _, qq := range questions {
+			if text := s.Responses[qq.key]; text != "" {
+				d.Answers = append(d.Answers, answerRow{Label: qq.label, Text: text})
+			}
+		}
+		for _, rt := range s.Ratings {
+			name := compName[rt.Key]
+			if name == "" {
+				name = rt.Key
+			}
+			d.Ratings = append(d.Ratings, ratingRow{Name: name, Score: rt.Score, Justification: rt.Justification})
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+func relationshipText(r models.ReviewerRelationship) string {
+	switch r {
+	case models.RelationshipManager:
+		return "Manager"
+	case models.RelationshipReport:
+		return "Direct report"
+	case models.RelationshipPeer:
+		return "Peer"
+	case models.RelationshipCrossFunctional:
+		return "Cross-functional"
+	}
+	return "Unspecified"
+}
+
+func frequencyText(f models.InteractionFrequency) string {
+	switch f {
+	case models.InteractionDaily:
+		return "Daily"
+	case models.InteractionWeekly:
+		return "Weekly"
+	case models.InteractionMonthly:
+		return "Monthly"
+	case models.InteractionRarely:
+		return "Rarely"
+	}
+	return ""
 }
 
 // StartRound transitions a draft round to active.

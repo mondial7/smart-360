@@ -13,6 +13,7 @@ import (
 	"github.com/mondial7/smart-360/internal/auth"
 	"github.com/mondial7/smart-360/internal/config"
 	"github.com/mondial7/smart-360/internal/handlers"
+	"github.com/mondial7/smart-360/internal/models"
 	"github.com/mondial7/smart-360/internal/repo"
 	"github.com/mondial7/smart-360/internal/view"
 	"github.com/mondial7/smart-360/web"
@@ -102,6 +103,58 @@ func TestDevLoginThenDashboard(t *testing.T) {
 		if code, _ := get(t, client, srv.URL+path); code != http.StatusOK {
 			t.Fatalf("GET %s: expected 200, got %d", path, code)
 		}
+	}
+}
+
+func TestRoundOwnerSeesRawSubmissionsButReviewerDoesNot(t *testing.T) {
+	srv, client, repos := newTestServer(t)
+	ctx := t.Context()
+
+	// admin (round owner) logs in.
+	_, _ = get(t, client, srv.URL+"/auth/dev-login?email=admin@example.com")
+	admin, _ := repos.Users.FindByEmail(ctx, "admin@example.com")
+
+	subject := &models.User{Email: "subject@example.com", Name: "Subject"}
+	_ = repos.Users.Create(ctx, subject)
+	reviewer := &models.User{Email: "rev@example.com", Name: "Reviewer Rita"}
+	_ = repos.Users.Create(ctx, reviewer)
+
+	round := &models.FeedbackRound{SubjectID: subject.ID, CreatedByID: admin.ID, Status: models.RoundClosed}
+	_ = repos.Rounds.Create(ctx, round)
+	_ = repos.Rounds.AddReviewer(ctx, round.ID, models.RoundReviewer{ReviewerID: reviewer.ID})
+	_ = repos.Submissions.Create(ctx, &models.Submission{
+		RoundID:      round.ID,
+		ReviewerID:   reviewer.ID,
+		Relationship: models.RelationshipPeer,
+		Responses:    map[string]string{"a": "unblocks the team constantly"},
+		Ratings:      []models.CompetencyRating{{Key: "execution", Score: 4, Justification: "ships reliably"}},
+		PrivateNotes: "confidential note for the manager",
+	})
+
+	// Owner sees the raw content.
+	code, body := get(t, client, srv.URL+"/rounds/"+round.ID)
+	if code != http.StatusOK {
+		t.Fatalf("owner round details: %d", code)
+	}
+	for _, want := range []string{"Feedback submissions", "unblocks the team constantly", "ships reliably", "confidential note for the manager"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("owner should see %q in round details", want)
+		}
+	}
+
+	// The reviewer (a participant but not the round owner) must not see the raw
+	// submissions section or anyone's private notes on the round details page.
+	jar2, _ := cookiejar.New(nil)
+	rita := &http.Client{Jar: jar2}
+	if code, _ := get(t, rita, srv.URL+"/auth/dev-login?email=rev@example.com"); code != http.StatusOK {
+		t.Fatalf("reviewer dev-login: %d", code)
+	}
+	code, body = get(t, rita, srv.URL+"/rounds/"+round.ID)
+	if code != http.StatusOK {
+		t.Fatalf("reviewer round details: %d", code)
+	}
+	if strings.Contains(body, "confidential note for the manager") || strings.Contains(body, "Feedback submissions") {
+		t.Fatal("a non-owner must not see raw submissions or private notes")
 	}
 }
 
