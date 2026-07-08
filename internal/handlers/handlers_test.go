@@ -39,7 +39,8 @@ func newTestServer(t *testing.T) (*httptest.Server, *http.Client, repo.Repositor
 		r.Use(authSvc.RequireAuth)
 		r.Use(authSvc.ProtectCSRF)
 		r.Get("/", h.Dashboard)
-		h.MountAppRoutes(r)
+		// No-op rate limiter for tests.
+		h.MountAppRoutes(r, func(next http.Handler) http.Handler { return next })
 	})
 
 	srv := httptest.NewServer(r)

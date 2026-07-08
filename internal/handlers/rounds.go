@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -10,6 +11,55 @@ import (
 	"github.com/mondial7/smart-360/internal/models"
 	"github.com/mondial7/smart-360/internal/repo"
 )
+
+// allowedSubjects returns the users the actor may create a round for: every user
+// for a global admin, or their own team's members for a team admin.
+func (h *Handlers) allowedSubjects(ctx context.Context, actor *models.User) ([]models.User, error) {
+	all, err := h.Repos.Users.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if actor.Role == models.RoleAdmin {
+		return all, nil
+	}
+	if actor.Role == models.RoleTeamAdmin && actor.TeamID != nil {
+		ids, err := h.Repos.Teams.GetMemberIDs(ctx, *actor.TeamID)
+		if err != nil {
+			return nil, err
+		}
+		member := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			member[id] = true
+		}
+		var out []models.User
+		for _, u := range all {
+			if member[u.ID] {
+				out = append(out, u)
+			}
+		}
+		return out, nil
+	}
+	return nil, nil
+}
+
+// canManageSubject reports whether the actor may create/own a round for subjectID.
+func (h *Handlers) canManageSubject(ctx context.Context, actor *models.User, subjectID string) bool {
+	if actor.Role == models.RoleAdmin {
+		return true
+	}
+	if actor.Role == models.RoleTeamAdmin && actor.TeamID != nil {
+		ids, err := h.Repos.Teams.GetMemberIDs(ctx, *actor.TeamID)
+		if err != nil {
+			return false
+		}
+		for _, id := range ids {
+			if id == subjectID {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // RoundsList shows all rounds (admin) or the rounds relevant to the user.
 func (h *Handlers) RoundsList(w http.ResponseWriter, r *http.Request) {
@@ -42,10 +92,17 @@ func (h *Handlers) RoundsList(w http.ResponseWriter, r *http.Request) {
 	h.View.Page(w, http.StatusOK, h.page(r, "Rounds", "rounds", "rounds_content", data))
 }
 
-// NewRoundForm renders the round creation form.
+// NewRoundForm renders the round creation form. Team admins can only pick a
+// subject from their own team; reviewers may still be anyone.
 func (h *Handlers) NewRoundForm(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	u := h.user(r)
 	users, err := h.Repos.Users.FindAll(ctx)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	subjects, err := h.allowedSubjects(ctx, u)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -55,7 +112,7 @@ func (h *Handlers) NewRoundForm(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	data := map[string]any{"Users": users, "Templates": templates}
+	data := map[string]any{"Users": users, "Subjects": subjects, "Templates": templates}
 	h.View.Page(w, http.StatusOK, h.page(r, "New round", "rounds", "round_new_content", data))
 }
 
@@ -72,6 +129,11 @@ func (h *Handlers) CreateRound(w http.ResponseWriter, r *http.Request) {
 	subjectID := r.FormValue("subject_id")
 	if subjectID == "" {
 		http.Error(w, "A subject is required", http.StatusBadRequest)
+		return
+	}
+	// A team admin may only create rounds for members of their own team.
+	if !h.canManageSubject(ctx, u, subjectID) {
+		forbidden(w)
 		return
 	}
 	var templateID *string

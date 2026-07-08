@@ -5,7 +5,7 @@
     <label for="subject_id">Subject <span class="hint">the person receiving feedback</span></label>
     <select name="subject_id" id="subject_id" required>
       <option value="">Select a person…</option>
-      {{range .Users}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{end}}
+      {{range .Subjects}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{end}}
     </select>
   </div>
   <div class="field">

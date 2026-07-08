@@ -12,6 +12,7 @@ import (
 // TeamDirectory lists every member grouped for a company-wide view.
 func (h *Handlers) TeamDirectory(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	u := h.user(r)
 	users, err := h.Repos.Users.FindAll(ctx)
 	if err != nil {
 		serverError(w, err)
@@ -40,7 +41,10 @@ func (h *Handlers) TeamDirectory(w http.ResponseWriter, r *http.Request) {
 		}
 		rows = append(rows, row{User: usr, Team: name})
 	}
-	h.View.Page(w, http.StatusOK, h.page(r, "Team", "team", "team_directory_content", map[string]any{"Rows": rows}))
+	// Emails are PII; only admins and team admins see them in the directory.
+	canSeeEmail := u.Role == models.RoleAdmin || u.Role == models.RoleTeamAdmin
+	h.View.Page(w, http.StatusOK, h.page(r, "Team", "team", "team_directory_content",
+		map[string]any{"Rows": rows, "ShowEmail": canSeeEmail}))
 }
 
 // TeamsList shows all teams (admin).

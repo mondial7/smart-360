@@ -1,10 +1,15 @@
 package handlers
 
-import "github.com/go-chi/chi/v5"
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+)
 
 // MountAppRoutes registers every authenticated application route. It runs inside
-// the RequireAuth + ProtectCSRF group in the router.
-func (h *Handlers) MountAppRoutes(r chi.Router) {
+// the RequireAuth + ProtectCSRF group in the router. submitLimit is a per-IP
+// rate-limit middleware applied to the feedback-submission endpoints.
+func (h *Handlers) MountAppRoutes(r chi.Router, submitLimit func(http.Handler) http.Handler) {
 	// Rounds
 	r.Get("/rounds", h.RoundsList)
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Get("/rounds/new", h.NewRoundForm)
@@ -16,11 +21,11 @@ func (h *Handlers) MountAppRoutes(r chi.Router) {
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/reviewers", h.AddRoundReviewer)
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Post("/rounds/{id}/reviewers/{reviewerId}/remove", h.RemoveRoundReviewer)
 
-	// Submissions
+	// Submissions (writes are rate-limited per IP)
 	r.Get("/rounds/{id}/submit", h.SubmitForm)
-	r.Post("/rounds/{id}/submit", h.CreateSubmission)
+	r.With(submitLimit).Post("/rounds/{id}/submit", h.CreateSubmission)
 	r.Get("/rounds/{id}/submission", h.EditSubmissionForm)
-	r.Post("/rounds/{id}/submission", h.UpdateSubmission)
+	r.With(submitLimit).Post("/rounds/{id}/submission", h.UpdateSubmission)
 
 	// Consolidation + SSE
 	r.With(h.Auth.RequireAdmin).Post("/rounds/{id}/consolidate", h.StartConsolidation)
