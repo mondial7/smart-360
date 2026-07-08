@@ -63,7 +63,16 @@ Run all of them with:
 cd backend && go test ./...
 ```
 
-The frontend currently has no automated test suite — tracked in [#28](https://github.com/mondial7/smart-360/issues/28).
+## Test Suite (frontend)
+
+Component and store/unit tests run on [Vitest](https://vitest.dev) + `@vue/test-utils` (jsdom environment). Specs live next to the code as `*.spec.ts`; shared setup is in `src/test/setup.ts`.
+
+```bash
+cd frontend && npm test          # vitest run (CI uses this)
+cd frontend && npm run test:watch # watch mode
+```
+
+There is intentionally **no browser/E2E layer** — the Vitest unit + component suite is the frontend test strategy for this repo. Add specs alongside the code you touch.
 
 ---
 
