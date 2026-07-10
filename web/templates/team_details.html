@@ -1,0 +1,41 @@
+{{define "team_details_content"}}
+<div class="page-head">
+  <div><h1>{{.Team.Name}}</h1><p class="muted-text">Admin: {{.AdminName}}</p></div>
+  <div style="display:flex;gap:0.5rem">
+    <a class="btn" href="/teams/{{.Team.ID}}/create-round">Create rounds</a>
+    <a class="btn btn--ghost" href="/teams">All teams</a>
+  </div>
+</div>
+
+<h2>Members</h2>
+<div class="card">
+  {{if .Members}}
+  <table>
+    <tbody>
+      {{$teamID := .Team.ID}}
+      {{range .Members}}
+      <tr>
+        <td>{{.Name}}</td><td><small>{{.Email}}</small></td>
+        <td style="text-align:right">
+          <button class="btn btn--danger btn--sm" hx-post="/teams/{{$teamID}}/members/{{.ID}}/remove"
+                  hx-confirm="Remove {{.Name}} from this team?">Remove</button>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted-text" style="margin:0">No members yet.</p>{{end}}
+</div>
+
+<h2>Add a member</h2>
+<form method="post" action="/teams/{{.Team.ID}}/members" class="card" style="display:flex;gap:0.5rem;align-items:end;flex-wrap:wrap">
+  <div class="field" style="flex:1;margin:0;min-width:220px">
+    <label for="user_id">Person</label>
+    <select name="user_id" id="user_id" required>
+      <option value="">Select…</option>
+      {{range .Candidates}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{end}}
+    </select>
+  </div>
+  <button class="btn" type="submit">Add</button>
+</form>
+{{end}}

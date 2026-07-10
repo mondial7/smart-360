@@ -1,0 +1,29 @@
+{{define "dashboard_content"}}
+<div class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted-text">
+      {{if .PendingCount}}You have {{.PendingCount}} review{{if ne .PendingCount 1}}s{{end}} waiting.{{else}}You're all caught up.{{end}}
+    </p>
+  </div>
+  {{if .IsAdmin}}<a class="btn" href="/rounds/new">New round</a>{{end}}
+</div>
+
+{{if .IsAdmin}}
+<div class="grid grid--stats">
+  <div class="card stat"><div class="stat__value">{{.TotalUsers}}</div><div class="stat__label">Users</div></div>
+  <div class="card stat"><div class="stat__value">{{.TotalRounds}}</div><div class="stat__label">Rounds</div></div>
+  <div class="card stat"><div class="stat__value">{{.ActiveRounds}}</div><div class="stat__label">Active</div></div>
+  <div class="card stat"><div class="stat__value">{{.PendingCount}}</div><div class="stat__label">My pending</div></div>
+</div>
+{{end}}
+
+<h2>Waiting on you</h2>
+{{if .PendingReviews}}
+<div class="grid grid--cards">
+  {{range .PendingReviews}}{{template "round_card" .}}{{end}}
+</div>
+{{else}}
+<div class="card"><p class="muted-text" style="margin:0">Nothing to review right now.</p></div>
+{{end}}
+{{end}}

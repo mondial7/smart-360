@@ -1,0 +1,34 @@
+{{define "round_new_content"}}
+<div class="page-head"><div><h1>New round</h1><p class="muted-text">Pick a subject, reviewers, and a template.</p></div></div>
+<form method="post" action="/rounds" class="card card--pad-lg" style="max-width:640px">
+  <div class="field">
+    <label for="subject_id">Subject <span class="hint">the person receiving feedback</span></label>
+    <select name="subject_id" id="subject_id" required>
+      <option value="">Select a person…</option>
+      {{range .Subjects}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label for="template_id">Template</label>
+    <select name="template_id" id="template_id">
+      {{range .Templates}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label for="deadline">Deadline <span class="hint">optional</span></label>
+    <input type="date" name="deadline" id="deadline">
+  </div>
+  <div class="field">
+    <label>Reviewers <span class="hint">who will give feedback</span></label>
+    <div style="max-height:260px;overflow:auto;border:1px solid var(--border-color);border-radius:var(--radius);padding:0.6rem">
+      {{range .Users}}
+      <label class="checkbox-row"><input type="checkbox" name="reviewer_ids" value="{{.ID}}"> {{.Name}} <small>{{.Email}}</small></label>
+      {{end}}
+    </div>
+  </div>
+  <div style="display:flex;gap:0.5rem">
+    <button class="btn" type="submit">Create round</button>
+    <a class="btn btn--ghost" href="/rounds">Cancel</a>
+  </div>
+</form>
+{{end}}

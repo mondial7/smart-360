@@ -1,0 +1,27 @@
+{{define "round_card"}}
+<div class="card" id="round-{{.Round.ID}}">
+  <div style="display:flex;justify-content:space-between;align-items:start;gap:0.5rem">
+    <div>
+      <h3 style="margin-bottom:0.25rem">{{if .SubjectName}}{{.SubjectName}}{{else}}Feedback round{{end}}</h3>
+      <small>{{.ReviewerCount}} reviewer{{if ne .ReviewerCount 1}}s{{end}}
+        {{if .Round.Deadline}}· due {{date .Round.Deadline}}{{end}}</small>
+    </div>
+    <span class="badge badge--{{statusTone (printf "%s" .Round.Status)}}">{{.Round.Status}}</span>
+  </div>
+  <div style="margin-top:0.85rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+    {{if and (eq (printf "%s" .Round.Status) "active") (not .SubmittedByMe)}}
+      <a class="btn btn--sm" href="/rounds/{{.Round.ID}}/submit">
+        {{if .IsSubject}}Self-assess{{else}}Give feedback{{end}}</a>
+    {{else if .SubmittedByMe}}
+      <span class="badge badge--ok">Submitted</span>
+      {{if eq (printf "%s" .Round.Status) "active"}}
+        <a class="btn btn--ghost btn--sm" href="/rounds/{{.Round.ID}}/submission">Edit</a>
+      {{end}}
+    {{end}}
+    <a class="btn btn--ghost btn--sm" href="/rounds/{{.Round.ID}}">Details</a>
+    {{if and .HasConsolidation (eq (printf "%s" .Round.Status) "shared") .IsSubject}}
+      <a class="btn btn--ghost btn--sm" href="/rounds/{{.Round.ID}}/consolidation">View feedback</a>
+    {{end}}
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,32 @@
+{{define "my_feedback_content"}}
+<div class="page-head"><div><h1>My feedback</h1>
+  <p class="muted-text">Consolidations shared with you.</p></div></div>
+
+{{if .Consolidations}}
+{{if .Radar}}
+<div class="card card--pad-lg" style="margin-bottom:1rem">
+  <h3>Most recent round at a glance</h3>
+  {{ radarSVG .Radar 260.0 0.0 }}
+</div>
+{{end}}
+
+<div class="stack">
+  {{range .Consolidations}}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem">
+      <div>
+        <h3 style="margin-bottom:0.25rem">Round · {{date .SharedAt}}</h3>
+        <p style="margin:0">{{.ExecutiveSummary}}</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0">
+        <a class="btn btn--sm" href="/rounds/{{.RoundID}}/consolidation">Open</a>
+        <a class="btn btn--ghost btn--sm" href="/consolidations/{{.RoundID}}/pdf" hx-boost="false">PDF</a>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{else}}
+<div class="card"><p class="muted-text" style="margin:0">No feedback has been shared with you yet.</p></div>
+{{end}}
+{{end}}

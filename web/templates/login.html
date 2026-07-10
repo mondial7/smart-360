@@ -1,0 +1,18 @@
+{{define "login_content"}}
+<div class="login">
+  <div class="card card--pad-lg login__card">
+    <h1>Smart 360</h1>
+    <p class="muted-text">Sign in to give and receive 360&deg; feedback.</p>
+    <a class="btn" href="/auth/google" hx-boost="false">Continue with Google</a>
+    {{if .DevMode}}
+    <form method="get" action="/auth/dev-login" hx-boost="false" style="margin-top:1.25rem">
+      <div class="field" style="text-align:left">
+        <label for="devemail">Dev login <span class="hint">(DEV_MODE only)</span></label>
+        <input type="email" id="devemail" name="email" placeholder="dev@example.com">
+      </div>
+      <button class="btn btn--ghost" type="submit">Dev sign in</button>
+    </form>
+    {{end}}
+  </div>
+</div>
+{{end}}

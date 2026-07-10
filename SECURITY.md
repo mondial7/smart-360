@@ -1,187 +1,157 @@
 # Security & Privacy
 
-Smart 360 collects sensitive workplace feedback, so the way we handle
-that data — and how we use AI on top of it — is a first-class concern.
-This document is the single source of truth for:
+Smart 360 collects sensitive workplace feedback, so the way we handle that data —
+and how we use AI on top of it — is a first-class concern. This document is the
+single source of truth for:
 
 - [Reporting a vulnerability](#reporting-a-vulnerability)
+- [Authentication & sessions](#authentication--sessions)
 - [Anonymity & privacy by design](#anonymity--privacy-by-design)
 - [How Google Gemini is used](#how-google-gemini-is-used)
 - [Operational hardening checklist](#operational-hardening-checklist)
-- [Known security work in progress](#known-security-work-in-progress)
 
 ---
 
 ## Reporting a vulnerability
 
-If you've found something exploitable, **please do not open a public
-GitHub issue**. Use the GitHub
+If you've found something exploitable, **please do not open a public GitHub
+issue**. Use the GitHub
 [private vulnerability reporting](https://github.com/mondial7/smart-360/security/advisories/new)
-form for this repo — it routes the report straight to the maintainers
-and keeps the details private until a fix ships.
+form for this repo — it routes the report straight to the maintainers and keeps
+the details private until a fix ships.
 
-What helps a triage move quickly:
+What helps triage move quickly:
 
-- Affected commit / version (e.g. `v1.0.0`, or `main` at SHA `…`).
+- Affected commit / branch (e.g. `main` at SHA `…`).
 - Reproduction steps — a minimal `curl` or screen recording is gold.
 - Impact you observed and what you think the worst case is.
 
-We aim to acknowledge within **3 business days** and to publish a fix
-(or a documented workaround) within **30 days** for high-severity
-findings. Lower-severity issues are scheduled like any other backlog
-item and tracked in [open issues](https://github.com/mondial7/smart-360/issues)
-labelled `security`.
+---
+
+## Authentication & sessions
+
+- Login is **Google OAuth 2.0**, scoped to `profile` + `email` only (no drive,
+  calendar, or contacts). A login-CSRF state cookie protects the OAuth redirect.
+- On success the server creates a **server-side session** (a row in the
+  `sessions` table) and sets an **HttpOnly, Secure, SameSite=Lax** cookie holding
+  an opaque, HMAC-signed session ID. Tokens are never exposed to JavaScript and
+  never travel in a URL. Sessions are revocable and expire server-side.
+- Every state-changing request (POST/PUT/DELETE) is **CSRF-protected** with a
+  per-session token (`X-CSRF-Token` header for htmx, hidden `csrf_token` field
+  for forms).
+- `dev-login` (which bypasses OAuth) is only mounted when `DEV_MODE=true` and is
+  the single most important thing to keep disabled in production.
+
+See [ADR-0004](docs/adr/0004-session-cookie-auth.md) for the rationale.
 
 ---
 
 ## Anonymity & privacy by design
 
-The product promise is "reviewers can be honest because their identity
-never reaches the subject." That promise is enforced in code, not only
-by policy.
+The product promise is "reviewers can be honest because their identity never
+reaches the subject." That promise is enforced in code, not only by policy.
 
 ### What gets stored
 
-| Collection | Contains | Identifies a reviewer? |
-|------------|----------|------------------------|
-| `users` | Google profile (name, email, photo), role, timestamps | Yes — but only for the logged-in identity |
-| `feedback_rounds` | Subject ID, creator ID, deadline, status | No reviewer identity |
-| `submissions` | `round_id`, `reviewer_id`, free-text `responses` JSON | **Yes — see below** |
-| `consolidations` | AI-generated summary + admin notes | No |
-| `audit_logs` | Actor ID, action, round ID, before/after values | Actor only (status transitions, not reviewers) |
+| Table | Contains | Identifies a reviewer? |
+|-------|----------|------------------------|
+| `users` | Google profile (name, email, photo), role, timestamps | Only the logged-in identity |
+| `sessions` | Session ID, user ID, expiry | No feedback content |
+| `feedback_rounds` / `round_reviewers` | Subject, creator, template, status; reviewer assignments | Assignment only, no content |
+| `submissions` | `round_id`, `reviewer_id`, `responses`/`ratings` (jsonb), `private_notes` | **Yes — see below** |
+| `consolidations` | AI/aggregate summary, admin notes, manager-only channel | No reviewer identity |
+| `moderation_logs` | Per-submission scrub audit (reasons, fields scrubbed) | No content, no reviewer name |
+| `audit_logs` | Actor, action, round, before/after values | Actor only (status transitions, not reviewers) |
 
-`submissions.reviewer_id` exists so the app can enforce "one submission
-per reviewer per round" and surface the reviewer's own draft back to
-them. It is **never** returned to the round subject and is gated even
-from admins behind explicit handler-level checks — eight separate
-leak paths were closed pre-1.0 (see commit
-[`c9097b9`](https://github.com/mondial7/smart-360/commit/c9097b9)).
+`submissions.reviewer_id` exists to enforce "one submission per reviewer per
+round" and to show reviewers their own draft. It is **never** surfaced to the
+round subject; handler-level checks gate every read path.
 
 ### What each role can see
 
-| Role | Their own submissions | Others' submissions | Consolidated feedback | Reviewer identities |
-|------|----------------------|---------------------|-----------------------|---------------------|
-| **Admin** | Yes | Yes (raw, for audit) — gated by handler check | Yes for all rounds | Yes (a deliberate trade-off for moderation) |
-| **Team Admin** | Yes | Within own team only | Within own team only | Yes within own team |
-| **Member (reviewer)** | Yes (own only) | No | Only consolidations shared with them as a subject | No, ever |
-| **Member (subject)** | n/a | No | Yes, after admin shares | No, ever |
+| Role | Own submissions | Others' submissions | Consolidated feedback | Manager-only channel |
+|------|-----------------|---------------------|-----------------------|----------------------|
+| **Admin** | Yes | Yes (for audit) | All rounds | Yes |
+| **Team Admin** | Yes | Rounds they created | Rounds they created | Rounds they created |
+| **Member (reviewer)** | Yes | No | Only shared with them as subject | No |
+| **Member (subject)** | n/a | No | Yes, after sharing | **Never** |
 
-The "subject never sees reviewer identities" guarantee is what keeps the
-360° process honest. Every code path that could leak it is covered by a
-test in `backend/handlers/*_test.go`.
+Two invariants are enforced in `internal/handlers` and covered by tests: the
+**manager-only channel is stripped from anything the subject sees** (in-app and
+PDF), and reviewer identities are never returned to the subject.
 
 ### Data minimisation
 
-- Google OAuth scopes are limited to `profile` + `email`. No drive, no
-  calendar, no contacts.
-- The PDF export omits raw submissions and any reviewer identifiers — it
-  only contains the consolidated summary.
-- Audit logs intentionally do **not** record submission contents; only
-  status transitions.
+- The PDF export contains only the consolidated summary — no raw submissions, no
+  reviewer identifiers (and no manager-only section in the subject's copy).
+- Audit logs record status transitions, not submission contents.
 
 ---
 
 ## How Google Gemini is used
 
-AI is **opt-in per round** and triggered by an admin after the round
-closes. There is no automatic / background processing.
+AI is **triggered by an admin** after a round closes — there is no automatic /
+background processing. Two passes run (see [ADR-0006](docs/adr/0006-sse-for-consolidation.md)),
+both built in `internal/ai`:
+
+1. **Moderation scrub** (`moderation.go`) — each submission is sent individually
+   and Gemini returns a cleaned version with identity-targeted / personality-
+   attack / off-topic content removed. Recorded in `moderation_logs`.
+2. **Synthesis** (`synthesis.go`) — the scrubbed submissions are combined into
+   the consolidation.
 
 ### What is sent to Gemini
 
-The Gemini prompt is built in `backend/handlers/consolidation.go`
-(`generateGeminiConsolidation`). For each submission in the round, we
-send only the four free-text answers, labelled by question letter:
+Per submission: the free-text question answers, competency rating justifications,
+the reviewer's **relationship and interaction-frequency labels** (needed so the
+model can weight signal), and any private manager-only note. What is **not**
+sent:
 
-```
-Feedback from reviewer:
-Strengths: <text>
-Areas for improvement: <text>
-Observed behaviors: <text>
-Growth advice: <text>
-```
+- The subject's or reviewer's name, email, photo, or any user ID.
+- The round ID, team name, or organization name.
+- Any audit-log or timestamp metadata.
 
-What is **not** sent:
+Submissions are presented as unordered blocks; the response is constrained to a
+typed JSON schema so the model cannot reflect metadata into a structured field.
 
-- ❌ The subject's name, email, photo, or any user ID.
-- ❌ The reviewer's name, email, photo, or any user ID.
-- ❌ The round ID, the team name, or the organization name.
-- ❌ Any reviewer-discriminating ordering ("Reviewer 1", "Reviewer 2", …).
-- ❌ Any audit-log or submission-timestamp metadata.
+### Key protection
 
-Each submission is concatenated with a blank line between them — Gemini
-sees N unordered chunks of free text and a generic prompt asking for a
-JSON-structured consolidation. The response is constrained to a typed
-JSON schema (`model.ResponseSchema`) so the model cannot reflect
-metadata back into a structured field.
-
-### What is stored from Gemini's response
-
-Only the five JSON fields documented in the prompt — executive summary,
-strengths, areas for improvement, actionable insights, and the four
-per-question summaries. The raw HTTP response is not persisted.
+The Gemini SDK embeds the API key in request URLs, which appear in its error
+strings. `ai.sanitiseErr` scrubs `key=…` to `key=REDACTED` before any error is
+logged or persisted to `moderation_logs`, so the live key can't leak through the
+audit trail.
 
 ### When Gemini is bypassed
 
-If `GEMINI_API_KEY` is unset, the same endpoint returns a non-AI
-fallback consolidation (a concatenation of the raw answers). This is
-useful for development / offline use but also means the only third
-party that ever sees feedback content is the Gemini API when the
-operator chooses to enable it.
+If `GEMINI_API_KEY` is unset, moderation is a no-op and synthesis falls back to a
+non-AI combine of the raw answers. No feedback content leaves the process unless
+the operator enables Gemini.
 
 ### Third-party terms
 
-Once data is sent to Gemini, Google's API terms and privacy policy
-apply. Operators who self-host should review them and decide whether
-they want to enable Gemini at all:
+Once data is sent to Gemini, Google's API terms and privacy policy apply:
 
 - [Google AI Studio terms](https://ai.google.dev/gemini-api/terms)
 - [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy)
 - [Generative AI prohibited use policy](https://policies.google.com/terms/generative-ai/use-policy)
 
-As of the [`gemini-flash-latest`](https://ai.google.dev/gemini-api/docs/models)
-model used here, the free tier explicitly excludes API content from
-training; paid tiers default to the same exclusion. **Verify this is
-still true at the time you deploy.**
+As of the `gemini-flash-latest` model used here, the free tier excludes API
+content from training; **verify this is still true at the time you deploy.**
 
 ---
 
 ## Operational hardening checklist
 
-Things the application can't enforce on your behalf — the
-[Production deployment guide](docs/deployment-production.md) walks
-through each in detail.
+Things the application can't enforce on your behalf:
 
-- [ ] Generate a strong `JWT_SECRET` (`openssl rand -base64 32`) and
-      rotate it on any suspected compromise.
-- [ ] Change the default `MONGO_ROOT_PASSWORD` before exposing the stack.
-- [ ] Terminate TLS at a reverse proxy (Caddy / nginx + Let's Encrypt).
-      OAuth requires HTTPS in production.
-- [ ] Throttle abusive traffic at the reverse proxy (`rate_limit`
-      directive in Caddy, `limit_req` in nginx) until the built-in
-      rate limiter ships ([#26](https://github.com/mondial7/smart-360/issues/26)).
-- [ ] Schedule a nightly `mongodump` to off-host storage
-      ([#35](https://github.com/mondial7/smart-360/issues/35) will
-      automate this).
-- [ ] Never enable `DEV_MODE=true` in production — it unlocks the
-      `dev-login` endpoint and seed data.
-
----
-
-## Known security work in progress
-
-A pre-1.0 audit produced eight access-control / auth findings — all
-closed before release in commit
-[`c9097b9`](https://github.com/mondial7/smart-360/commit/c9097b9).
-New work is tracked as GitHub issues. Currently open:
-
-- [#22](https://github.com/mondial7/smart-360/issues/22) — Stop delivering JWT via URL query parameter on OAuth callback.
-- [#23](https://github.com/mondial7/smart-360/issues/23) — Audit-log every AI consolidation edit.
-- [#24](https://github.com/mondial7/smart-360/issues/24) — Reduce PII exposure in `/api/users` for non-admin callers.
-- [#25](https://github.com/mondial7/smart-360/issues/25) — Guardrail admin role escalation/demotion (avoid bricked install).
-- [#26](https://github.com/mondial7/smart-360/issues/26) — Rate-limit auth + submission endpoints.
-- [#27](https://github.com/mondial7/smart-360/issues/27) — First-user-becomes-admin race condition on empty DB.
-- [#32](https://github.com/mondial7/smart-360/issues/32) — Broader hardening: CSRF, CSP, input validation, secrets management.
-- [#20](https://github.com/mondial7/smart-360/issues/20) — Vite ecosystem upgrade + transitive dependabot alerts.
-
-If something belongs on this list but isn't here yet, the private
-reporting form linked above is the right path.
+- [ ] Generate a strong `SESSION_SECRET` (`openssl rand -hex 32`) and rotate it on
+      any suspected compromise.
+- [ ] Use a strong Postgres password and restrict network access to the database.
+- [ ] Terminate TLS at a reverse proxy (Caddy / nginx + Let's Encrypt). OAuth
+      requires HTTPS in production; set `APP_URL` / `GOOGLE_REDIRECT_URL` to the
+      public HTTPS URLs.
+- [ ] Throttle abusive traffic at the reverse proxy (`rate_limit` in Caddy,
+      `limit_req` in nginx).
+- [ ] Schedule an off-host `pg_dump` backup.
+- [ ] **Never** set `DEV_MODE=true` in production — it unlocks `dev-login` and
+      relaxes the Secure cookie flag.

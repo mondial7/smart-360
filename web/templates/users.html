@@ -1,0 +1,29 @@
+{{define "users_content"}}
+<div class="page-head"><div><h1>Users</h1>
+  <p class="muted-text">Assign roles. Admins manage everything; team admins manage rounds and their team.</p></div></div>
+<div class="card">
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th style="width:1%"></th></tr></thead>
+    <tbody>
+      {{$me := .MeID}}
+      {{range .Users}}
+      <tr>
+        <td>{{.Name}}{{if eq .ID $me}} <span class="badge badge--info">you</span>{{end}}</td>
+        <td><small>{{.Email}}</small></td>
+        <td>
+          <form method="post" action="/users/{{.ID}}/role" style="display:flex;gap:0.4rem;align-items:center">
+            <select name="role">
+              <option value="admin" {{if eq (printf "%s" .Role) "admin"}}selected{{end}}>Admin</option>
+              <option value="team_admin" {{if eq (printf "%s" .Role) "team_admin"}}selected{{end}}>Team admin</option>
+              <option value="member" {{if eq (printf "%s" .Role) "member"}}selected{{end}}>Member</option>
+            </select>
+            <button class="btn btn--sm" type="submit">Save</button>
+          </form>
+        </td>
+        <td></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

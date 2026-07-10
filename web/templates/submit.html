@@ -1,0 +1,76 @@
+{{define "submit_content"}}
+<div class="page-head">
+  <div>
+    <h1>{{if .IsSelf}}Self-assessment{{else}}Feedback for {{.SubjectName}}{{end}}</h1>
+    <p class="muted-text">Be specific and behavioural. Ground each point in something observable.</p>
+  </div>
+</div>
+
+{{if .Error}}<div class="form-error">{{.Error}}</div>{{end}}
+
+<form method="post" action="{{if .Existing}}/rounds/{{.Round.ID}}/submission{{else}}/rounds/{{.Round.ID}}/submit{{end}}" class="card card--pad-lg" style="max-width:720px">
+
+  {{$v := .Values}}{{$self := .IsSelf}}
+  {{if .Template}}
+    {{range .Template.Questions}}
+    <div class="field">
+      <label for="q-{{.Key}}">{{if $self}}{{.SelfText}}{{else}}{{.PeerText}}{{end}}</label>
+      <textarea id="q-{{.Key}}" name="response_{{.Key}}">{{index $v .Key}}</textarea>
+    </div>
+    {{end}}
+  {{end}}
+
+  {{if and .Template .Template.Competencies}}
+  <h3 style="margin-top:1.5rem">Competency ratings <span class="hint">1 = needs focus · 5 = a clear strength</span></h3>
+  {{$ratings := .Ratings}}
+  {{range .Template.Competencies}}
+  <div class="field">
+    <label>{{.Name}} <span class="hint">{{.Description}}</span></label>
+    <div style="display:flex;gap:0.75rem;align-items:start">
+      <select name="score_{{.Key}}" style="max-width:90px">
+        <option value="">–</option>
+        {{$cur := (index $ratings .Key).Score}}
+        {{range $n := (list 1 2 3 4 5)}}<option value="{{$n}}" {{if eq $cur $n}}selected{{end}}>{{$n}}</option>{{end}}
+      </select>
+      <input type="text" name="justification_{{.Key}}" placeholder="One-line justification" value="{{(index $ratings .Key).Justification}}">
+    </div>
+  </div>
+  {{end}}
+  {{end}}
+
+  {{if not .IsSelf}}
+  <h3 style="margin-top:1.5rem">Context</h3>
+  <div class="field">
+    <label for="relationship">Your relationship to {{.SubjectName}}</label>
+    {{$rel := ""}}{{if .Existing}}{{$rel = printf "%s" .Existing.Relationship}}{{end}}
+    <select name="relationship" id="relationship">
+      <option value="">Select…</option>
+      <option value="manager" {{if eq $rel "manager"}}selected{{end}}>Their manager</option>
+      <option value="report" {{if eq $rel "report"}}selected{{end}}>Their direct report</option>
+      <option value="peer" {{if eq $rel "peer"}}selected{{end}}>Peer / teammate</option>
+      <option value="cross_functional" {{if eq $rel "cross_functional"}}selected{{end}}>Cross-functional collaborator</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="interaction_frequency">How often did you work together?</label>
+    {{$freq := ""}}{{if .Existing}}{{$freq = printf "%s" .Existing.InteractionFrequency}}{{end}}
+    <select name="interaction_frequency" id="interaction_frequency">
+      <option value="">Select…</option>
+      <option value="daily" {{if eq $freq "daily"}}selected{{end}}>Daily</option>
+      <option value="weekly" {{if eq $freq "weekly"}}selected{{end}}>Weekly</option>
+      <option value="monthly" {{if eq $freq "monthly"}}selected{{end}}>Monthly</option>
+      <option value="rarely" {{if eq $freq "rarely"}}selected{{end}}>Rarely</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="private_notes">Manager-only note <span class="hint">optional · the subject never sees this</span></label>
+    <textarea id="private_notes" name="private_notes">{{if .Existing}}{{.Existing.PrivateNotes}}{{end}}</textarea>
+  </div>
+  {{end}}
+
+  <div style="display:flex;gap:0.5rem">
+    <button class="btn" type="submit">{{if .Existing}}Save changes{{else}}Submit feedback{{end}}</button>
+    <a class="btn btn--ghost" href="/rounds/{{.Round.ID}}">Cancel</a>
+  </div>
+</form>
+{{end}}

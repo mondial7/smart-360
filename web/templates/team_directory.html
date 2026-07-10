@@ -1,0 +1,19 @@
+{{define "team_directory_content"}}
+<div class="page-head"><div><h1>Team</h1><p class="muted-text">Everyone in the company.</p></div></div>
+<div class="card">
+  <table>
+    <thead><tr><th>Name</th>{{if .ShowEmail}}<th>Email</th>{{end}}<th>Role</th><th>Team</th></tr></thead>
+    <tbody>
+      {{$showEmail := .ShowEmail}}
+      {{range .Rows}}
+      <tr>
+        <td>{{.User.Name}}</td>
+        {{if $showEmail}}<td><small>{{.User.Email}}</small></td>{{end}}
+        <td><span class="badge">{{.User.Role}}</span></td>
+        <td>{{.Team}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

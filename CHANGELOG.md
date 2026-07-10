@@ -6,6 +6,31 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed — full rewrite to a server-rendered Go stack
+
+Smart 360 is now a **single server-rendered Go application** (`html/template` +
+htmx + SSE) backed by **PostgreSQL**, replacing the Go/Gin JSON API + Vue 3 SPA +
+MongoDB split. Product behaviour and feature set are preserved.
+
+- **UI**: Vue/Vite/Pinia/TypeScript SPA → Go `html/template` + htmx, with charts
+  drawn as server-rendered SVG (no JS chart library) and consolidation progress
+  streamed over Server-Sent Events.
+- **Database**: MongoDB → PostgreSQL via pgx with hand-written SQL. Embedded
+  arrays are normalized into `team_members` / `round_reviewers` join tables;
+  legacy JSON-string consolidation fields become typed `jsonb`.
+- **Auth**: JWT-in-`localStorage` → server-side sessions in an HttpOnly, signed
+  cookie, with CSRF protection on all unsafe requests. The OAuth token no longer
+  travels in a URL.
+- **Deploy**: one embedded binary (templates + assets via `//go:embed`);
+  `docker-compose.yml` now runs Postgres + the app.
+- **Docs**: added an [Architecture Decision Record log](docs/adr/README.md)
+  (ADR-0001 through ADR-0007) capturing the rewrite decisions.
+
+The reusable Go layers — Gemini moderation + synthesis, the fpdf renderer, and
+the competency aggregation math — were carried over intact.
+
+### Prior unreleased work (pre-rewrite)
+
 Major reshape of the 360 round itself — questions, persona, and
 consolidation output are now growth-framed and substantially richer.
 Everything below ships behind the existing `GEMINI_API_KEY` requirement
