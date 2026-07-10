@@ -19,24 +19,27 @@ deep-dive for humans and AI assistants).
 
 ## Development setup
 
-Full quick-start lives in [`CLAUDE.md` → Quick Start](CLAUDE.md#quick-start-development).
-TL;DR:
+Full quick-start lives in [`CLAUDE.md` → Quick start](CLAUDE.md#quick-start-development).
+The app is a single server-rendered Go binary (chi + `html/template` + htmx),
+backed by PostgreSQL. There is no separate frontend build. TL;DR:
 
 ```bash
 git clone https://github.com/mondial7/smart-360.git
 cd smart-360
-cp .env.example .env       # fill in JWT_SECRET, GOOGLE_*, GEMINI_API_KEY
-make dev-mongo             # start MongoDB
-cd backend && ./reseed-dev.sh
-cd backend && go run main.go             # :8080
-cd frontend && npm install && npm run dev # :5173
+docker compose up -d postgres   # start Postgres (or: make docker-up)
+cp .env.example .env            # DEV_MODE=true is fine for local
+go run ./cmd/server             # migrates + seeds + serves :8080
 ```
 
-To run the whole pyramid the way CI does it:
+Sign in via the dev-login on the login page (`DEV_MODE=true`). The first user
+to sign in becomes admin.
+
+To run the checks the way CI does:
 
 ```bash
-cd backend && go vet ./... && go test ./...
-cd frontend && npm ci && npm run build
+go vet ./...
+gofmt -l cmd internal web       # must print nothing
+go test ./...                   # full pyramid (gateway tests need Docker)
 ```
 
 ## Repository conventions
@@ -56,42 +59,38 @@ commit co-author.**
 ### Code style
 
 - **Go** — `gofmt`, `go vet`. Keep handlers thin and push business
-  logic into helpers / repositories. Convert hex IDs to
-  `primitive.ObjectID` at the boundary; don't pass strings deep into
-  the stack. Always check errors and return early with a generic
-  client message; log the detail.
-- **TypeScript / Vue** — Composition API with `<script setup
-  lang="ts">`. Type everything; **don't** introduce `any` to silence
-  the compiler. Phosphor icons (`@phosphor-icons/vue`), scoped SASS
-  with CSS variables, named imports sorted by source.
-- **Charts** — pure SVG (see `RadarChart.vue`). Don't add a chart
-  library unless requirements force it.
+  logic into `internal/ai`, `internal/pdf`, or helpers. IDs are UUID
+  strings; queries are parameterized SQL in `internal/repo`. Always
+  check errors and return early with a generic client message; log the
+  detail. The `ai` and `pdf` packages stay free of HTTP/DB.
+- **UI** — server-rendered `html/template` + [htmx](https://htmx.org) +
+  SSE. Content templates define `{{define "<name>_content"}}` and render
+  inside `base.html`. **Don't** reintroduce a JS framework.
+- **Charts** — server-rendered SVG (`internal/view/charts.go`). Don't
+  add a client-side chart library.
+- **Decisions** — record any significant architecture choice as a new
+  ADR in [`docs/adr/`](docs/adr/README.md).
 
 ### Tests
 
-The backend follows a three-layer test pyramid:
+One command — `go test ./...` — runs the three-layer pyramid:
 
-1. **Unit** — pure handler / helper logic, no I/O.
-2. **In-memory integration** — handler-level tests using
-   `repositories/fake_*` fakes.
-3. **Gateway / port** — repository tests hitting a real MongoDB via
-   `testutil/mongodb.go` (uses `memongo`).
+1. **Unit** — pure logic in `ai` / `view` / `auth` / `config`.
+2. **In-memory integration** — handlers against the `repo` fakes via a
+   real `httptest` server (`internal/handlers/*_test.go`). No database.
+3. **Gateway** — pgx repositories against a real PostgreSQL via
+   `testcontainers-go` (`internal/repo/gateway_*_test.go`).
 
-`go test ./...` runs all three. `go test -short ./...` skips the
-gateway layer.
-
-The frontend has Vitest + `@vue/test-utils` component and store tests
-(`*.spec.ts` next to the code). Run them with `npm test`. There's no
-browser/E2E layer and none is planned — the Vitest suite is the
-frontend test strategy. Add specs next to any code you change.
+`go test -short ./...` skips the container-backed gateway layer (no
+Docker needed). There is intentionally no browser/E2E layer.
 
 ## Pull request process
 
 1. Fork the repo and create a feature branch
    (`feat/short-description`, `fix/...`, `docs/...`).
 2. Make focused commits following the convention above.
-3. Run the test pyramid + `npm run build` locally. CI runs the same
-   things on every PR.
+3. Run `gofmt`, `go vet ./...`, and `go test ./...` locally. CI runs
+   the same things (plus a govulncheck-clean dependency tree) on every PR.
 4. Open the PR. The template will prompt you for a summary, linked
    issue, and test plan — please fill them in.
 5. A maintainer reviews. Address feedback in additional commits
