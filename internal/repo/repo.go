@@ -18,6 +18,7 @@ type UserRepository interface {
 	MarkOnboarded(ctx context.Context, id string) error
 	SetTeam(ctx context.Context, userID string, teamID *string) error
 	FindAll(ctx context.Context) ([]models.User, error)
+	FindPaged(ctx context.Context, limit, offset int) ([]models.User, error)
 }
 
 type TeamRepository interface {
@@ -40,6 +41,7 @@ type RoundRepository interface {
 	FindByCreatedByID(ctx context.Context, creatorID string) ([]models.FeedbackRound, error)
 	FindByReviewerID(ctx context.Context, reviewerID string) ([]models.FeedbackRound, error)
 	FindAll(ctx context.Context) ([]models.FeedbackRound, error)
+	FindPaged(ctx context.Context, limit, offset int) ([]models.FeedbackRound, error)
 	AddReviewer(ctx context.Context, roundID string, reviewer models.RoundReviewer) error
 	RemoveReviewer(ctx context.Context, roundID, reviewerID string) error
 	GetReviewers(ctx context.Context, roundID string) ([]models.RoundReviewer, error)
@@ -74,6 +76,7 @@ type ConsolidationRepository interface {
 type AuditRepository interface {
 	Create(ctx context.Context, entry *models.AuditLog) error
 	FindAll(ctx context.Context, limit int) ([]models.AuditLog, error)
+	FindPaged(ctx context.Context, limit, offset int) ([]models.AuditLog, error)
 	FindByRoundID(ctx context.Context, roundID string) ([]models.AuditLog, error)
 }
 

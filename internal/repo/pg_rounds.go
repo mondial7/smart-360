@@ -81,7 +81,12 @@ func (r *pgRounds) FindByReviewerID(ctx context.Context, reviewerID string) ([]m
 }
 
 func (r *pgRounds) FindAll(ctx context.Context) ([]models.FeedbackRound, error) {
-	return r.queryRounds(ctx, `SELECT `+roundColumns+` FROM feedback_rounds ORDER BY created_at DESC`)
+	return r.queryRounds(ctx, `SELECT `+roundColumns+` FROM feedback_rounds ORDER BY created_at DESC, id DESC`)
+}
+
+func (r *pgRounds) FindPaged(ctx context.Context, limit, offset int) ([]models.FeedbackRound, error) {
+	return r.queryRounds(ctx,
+		`SELECT `+roundColumns+` FROM feedback_rounds ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2`, limit, offset)
 }
 
 func (r *pgRounds) Create(ctx context.Context, round *models.FeedbackRound) error {

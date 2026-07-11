@@ -154,6 +154,23 @@ func (f *FakeUsers) FindAll(_ context.Context) ([]models.User, error) {
 	return out, nil
 }
 
+func (f *FakeUsers) FindPaged(ctx context.Context, limit, offset int) ([]models.User, error) {
+	all, _ := f.FindAll(ctx)
+	return pageSlice(all, limit, offset), nil
+}
+
+// pageSlice returns up to limit items starting at offset (bounds-safe).
+func pageSlice[T any](items []T, limit, offset int) []T {
+	if offset >= len(items) {
+		return nil
+	}
+	end := offset + limit
+	if end > len(items) {
+		end = len(items)
+	}
+	return items[offset:end]
+}
+
 // ---- Teams ----
 
 type FakeTeams struct {
@@ -323,6 +340,13 @@ func (f *FakeRounds) FindByReviewerID(_ context.Context, reviewerID string) ([]m
 
 func (f *FakeRounds) FindAll(_ context.Context) ([]models.FeedbackRound, error) {
 	return f.filter(func(models.FeedbackRound) bool { return true }), nil
+}
+
+func (f *FakeRounds) FindPaged(_ context.Context, limit, offset int) ([]models.FeedbackRound, error) {
+	all := f.filter(func(models.FeedbackRound) bool { return true })
+	// FindAll orders by ID; the pg impl orders by created_at DESC. Fakes only
+	// need stable, bounded output for handler tests, so ID order is fine here.
+	return pageSlice(all, limit, offset), nil
 }
 
 func (f *FakeRounds) Create(_ context.Context, r *models.FeedbackRound) error {
@@ -664,6 +688,12 @@ func (f *FakeAudit) FindAll(_ context.Context, limit int) ([]models.AuditLog, er
 		out = out[:limit]
 	}
 	return out, nil
+}
+
+func (f *FakeAudit) FindPaged(_ context.Context, limit, offset int) ([]models.AuditLog, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return pageSlice(reversedAudit(f.logs), limit, offset), nil
 }
 
 func (f *FakeAudit) FindByRoundID(_ context.Context, roundID string) ([]models.AuditLog, error) {

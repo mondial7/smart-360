@@ -38,7 +38,12 @@ func (r *pgAudit) FindAll(ctx context.Context, limit int) ([]models.AuditLog, er
 		limit = 200
 	}
 	return r.queryAudit(ctx,
-		`SELECT `+auditColumns+` FROM audit_logs ORDER BY created_at DESC LIMIT $1`, limit)
+		`SELECT `+auditColumns+` FROM audit_logs ORDER BY created_at DESC, id DESC LIMIT $1`, limit)
+}
+
+func (r *pgAudit) FindPaged(ctx context.Context, limit, offset int) ([]models.AuditLog, error) {
+	return r.queryAudit(ctx,
+		`SELECT `+auditColumns+` FROM audit_logs ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2`, limit, offset)
 }
 
 func (r *pgAudit) FindByRoundID(ctx context.Context, roundID string) ([]models.AuditLog, error) {

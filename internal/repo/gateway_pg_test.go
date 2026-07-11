@@ -212,6 +212,52 @@ func TestConsolidations_JSONBRoundtripAndSharedLookup(t *testing.T) {
 	}
 }
 
+func TestRounds_PaginationCoversEveryRowOnce(t *testing.T) {
+	r := gateway(t)
+	ctx := context.Background()
+	subjectID := makeUser(t, r, "subject")
+
+	// Insert 5 rounds that all share the same created_at, so ordering by
+	// created_at alone would be ambiguous — the id tiebreaker must make paging
+	// deterministic (no skips, no duplicates across page boundaries).
+	for i := 0; i < 5; i++ {
+		if _, err := testPool.Exec(ctx, `
+			INSERT INTO feedback_rounds (subject_id, created_by_id, status, created_at, updated_at)
+			VALUES ($1, $1, 'draft', '2026-01-01 00:00:00+00', '2026-01-01 00:00:00+00')`, subjectID); err != nil {
+			t.Fatalf("insert round %d: %v", i, err)
+		}
+	}
+
+	// Page through with a small page size and collect every id.
+	seen := map[string]int{}
+	total := 0
+	for offset := 0; ; offset += 2 {
+		page, err := r.Rounds.FindPaged(ctx, 2, offset)
+		if err != nil {
+			t.Fatalf("find paged (offset %d): %v", offset, err)
+		}
+		if len(page) == 0 {
+			break
+		}
+		for _, rd := range page {
+			seen[rd.ID]++
+			total++
+		}
+	}
+
+	if total != 5 {
+		t.Fatalf("expected to page over exactly 5 rows, got %d", total)
+	}
+	if len(seen) != 5 {
+		t.Fatalf("expected 5 distinct rows, got %d (a duplicate crossed a page boundary)", len(seen))
+	}
+	for id, n := range seen {
+		if n != 1 {
+			t.Fatalf("row %s appeared %d times across pages", id, n)
+		}
+	}
+}
+
 func TestTemplates_UpsertBySlug(t *testing.T) {
 	r := gateway(t)
 	ctx := context.Background()

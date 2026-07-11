@@ -40,6 +40,7 @@ func NewRenderer(fsys fs.FS) (*Renderer, error) {
 		"partial":   r.partial,
 		"radarSVG":  RadarSVG,
 		"donutSVG":  DonutSVG,
+		"lineSVG":   LineSVG,
 		"radarAxis": func(label string, value float64) RadarAxis { return RadarAxis{Label: label, Value: value} },
 		"donutSlice": func(label string, value int, color string) DonutSlice {
 			return DonutSlice{Label: label, Value: value, Color: color}

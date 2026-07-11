@@ -61,7 +61,16 @@ func (r *pgUsers) SetTeam(ctx context.Context, userID string, teamID *string) er
 }
 
 func (r *pgUsers) FindAll(ctx context.Context) ([]models.User, error) {
-	rows, err := r.q.Query(ctx, `SELECT `+userColumns+` FROM users ORDER BY name, email`)
+	return r.queryUsers(ctx, `SELECT `+userColumns+` FROM users ORDER BY name, email`)
+}
+
+func (r *pgUsers) FindPaged(ctx context.Context, limit, offset int) ([]models.User, error) {
+	return r.queryUsers(ctx,
+		`SELECT `+userColumns+` FROM users ORDER BY name, email LIMIT $1 OFFSET $2`, limit, offset)
+}
+
+func (r *pgUsers) queryUsers(ctx context.Context, sql string, args ...any) ([]models.User, error) {
+	rows, err := r.q.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}

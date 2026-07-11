@@ -4,6 +4,7 @@ import (
 	"context"
 	"html"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,56 @@ import (
 // htmlEscape escapes text for safe interpolation into server-built HTML strings
 // (e.g. SSE event payloads that don't go through html/template).
 func htmlEscape(s string) string { return html.EscapeString(s) }
+
+// pageSize is the number of rows per page on paginated lists.
+const pageSize = 25
+
+// pageNav is the view-model for the pagination controls.
+type pageNav struct {
+	Page    int
+	HasPrev bool
+	HasNext bool
+	PrevURL string
+	NextURL string
+}
+
+// pageParam reads the 1-based ?page query parameter (min 1).
+func pageParam(r *http.Request) int {
+	p, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if p < 1 {
+		return 1
+	}
+	return p
+}
+
+// buildPageNav builds Prev/Next controls, preserving any other query params
+// (e.g. the audit action filter). hasNext is determined by fetching pageSize+1
+// rows and checking for the extra one.
+func buildPageNav(r *http.Request, page int, hasNext bool) pageNav {
+	nav := pageNav{Page: page, HasPrev: page > 1, HasNext: hasNext}
+	if nav.HasPrev {
+		nav.PrevURL = pageURL(r, page-1)
+	}
+	if nav.HasNext {
+		nav.NextURL = pageURL(r, page+1)
+	}
+	return nav
+}
+
+func pageURL(r *http.Request, page int) string {
+	q := r.URL.Query()
+	q.Set("page", strconv.Itoa(page))
+	return r.URL.Path + "?" + q.Encode()
+}
+
+// paginate trims a slice fetched with one extra row (pageSize+1) to the page
+// size and reports whether a next page exists.
+func paginate[T any](rows []T) (page []T, hasNext bool) {
+	if len(rows) > pageSize {
+		return rows[:pageSize], true
+	}
+	return rows, false
+}
 
 // redirect navigates the browser: htmx requests get an HX-Redirect header (so
 // the client does a full navigation), everyone else a 303. The target is forced

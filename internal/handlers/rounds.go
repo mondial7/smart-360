@@ -73,8 +73,17 @@ func (h *Handlers) RoundsList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var rounds []models.FeedbackRound
+	var nav pageNav // zero value renders no controls (both HasPrev/HasNext false)
 	if u.Role == models.RoleAdmin {
-		rounds, err = h.Repos.Rounds.FindAll(ctx)
+		page := pageParam(r)
+		paged, perr := h.Repos.Rounds.FindPaged(ctx, pageSize+1, (page-1)*pageSize)
+		if perr != nil {
+			serverError(w, perr)
+			return
+		}
+		var hasNext bool
+		rounds, hasNext = paginate(paged)
+		nav = buildPageNav(r, page, hasNext)
 	} else {
 		rounds, err = h.roundsForMe(ctx, u.ID)
 	}
@@ -88,7 +97,7 @@ func (h *Handlers) RoundsList(w http.ResponseWriter, r *http.Request) {
 		cards = append(cards, h.toCard(ctx, rd, u.ID, users))
 	}
 
-	data := map[string]any{"Cards": cards, "CanCreate": u.Role == models.RoleAdmin || u.Role == models.RoleTeamAdmin}
+	data := map[string]any{"Cards": cards, "Nav": nav, "CanCreate": u.Role == models.RoleAdmin || u.Role == models.RoleTeamAdmin}
 	h.View.Page(w, http.StatusOK, h.page(r, "Rounds", "rounds", "rounds_content", data))
 }
 
