@@ -4,6 +4,7 @@ import (
 	"context"
 	"html"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mondial7/smart-360/internal/models"
@@ -14,14 +15,25 @@ import (
 func htmlEscape(s string) string { return html.EscapeString(s) }
 
 // redirect navigates the browser: htmx requests get an HX-Redirect header (so
-// the client does a full navigation), everyone else a 303.
+// the client does a full navigation), everyone else a 303. The target is forced
+// to a same-origin absolute path so it can never become an open redirect.
 func redirect(w http.ResponseWriter, r *http.Request, url string) {
+	url = safeLocalPath(url)
 	if r.Header.Get("HX-Request") != "" {
 		w.Header().Set("HX-Redirect", url)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	http.Redirect(w, r, url, http.StatusSeeOther)
+	http.Redirect(w, r, url, http.StatusSeeOther) // #nosec G710 -- url is forced to a same-origin path by safeLocalPath above
+}
+
+// safeLocalPath returns p only if it is a same-origin absolute path; anything
+// else (empty, scheme-relative "//host", or an absolute URL) collapses to "/".
+func safeLocalPath(p string) string {
+	if p == "" || p[0] != '/' || strings.HasPrefix(p, "//") {
+		return "/"
+	}
+	return p
 }
 
 // parseDate parses an <input type=date> value ("2006-01-02") into a time, or

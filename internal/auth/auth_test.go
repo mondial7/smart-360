@@ -35,6 +35,34 @@ func issueCookie(t *testing.T, s *Service, userID string) *http.Cookie {
 	return nil
 }
 
+func TestAdminEmailBootstrap(t *testing.T) {
+	ctx := context.Background()
+	cfg := &config.Config{SessionSecret: "s", DevMode: true, AdminEmail: "Owner@Example.com"}
+	repos := repo.NewFakes()
+	s := New(cfg, repos)
+
+	// New owner (case-insensitive match) is provisioned as admin.
+	owner, err := s.upsertUser(ctx, "owner@example.com", "Owner", "")
+	if err != nil || owner.Role != models.RoleAdmin {
+		t.Fatalf("expected owner to be admin, got role=%q err=%v", owner.Role, err)
+	}
+	// Anyone else is a member.
+	other, _ := s.upsertUser(ctx, "someone@example.com", "Someone", "")
+	if other.Role != models.RoleMember {
+		t.Fatalf("expected member, got %q", other.Role)
+	}
+
+	// Self-healing: an owner account that predates ADMIN_EMAIL (or was demoted)
+	// is promoted back to admin on next login.
+	demoted := &models.User{Email: "owner2@example.com", Role: models.RoleMember}
+	_ = repos.Users.Create(ctx, demoted)
+	cfg.AdminEmail = "owner2@example.com"
+	got, err := s.upsertUser(ctx, "owner2@example.com", "Owner Two", "")
+	if err != nil || got.Role != models.RoleAdmin {
+		t.Fatalf("expected self-healing promotion to admin, got role=%q err=%v", got.Role, err)
+	}
+}
+
 func TestSessionRoundTrip(t *testing.T) {
 	s, repos := newTestService(t)
 	u := &models.User{Email: "a@example.com", Name: "Ann", Role: models.RoleAdmin}

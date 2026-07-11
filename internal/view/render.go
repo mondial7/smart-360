@@ -22,13 +22,14 @@ type Renderer struct {
 // PageData is the envelope passed to the base layout. Content names the content
 // template to inject; Data is the page-specific payload handed to it.
 type PageData struct {
-	Title   string
-	Active  string // nav key to highlight
-	User    *models.User
-	CSRF    string
-	Flash   string
-	Content string
-	Data    any
+	Title          string
+	Active         string // nav key to highlight
+	User           *models.User
+	CSRF           string
+	Flash          string
+	Content        string
+	Data           any
+	ShowOnboarding bool // render the first-login tour overlay
 }
 
 // NewRenderer parses templates from the given FS (expects templates/*.html and
@@ -102,7 +103,7 @@ func (r *Renderer) partial(name string, data any) (template.HTML, error) {
 	if err := r.root.ExecuteTemplate(&buf, name, data); err != nil {
 		return "", err
 	}
-	return template.HTML(buf.String()), nil //nolint:gosec // content templates are trusted, data is auto-escaped
+	return template.HTML(buf.String()), nil // #nosec G203 -- content templates are trusted, data is auto-escaped
 }
 
 // ---- template funcs ----

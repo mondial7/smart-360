@@ -1,0 +1,54 @@
+{{define "onboarding"}}
+<div id="onboarding" class="onboarding" role="dialog" aria-modal="true" aria-label="Welcome tour">
+  <div class="onboarding__card">
+    <div class="onboarding__slides">
+      <section class="onboarding__slide is-active" data-slide="0">
+        <div class="onboarding__emoji" aria-hidden="true">👋</div>
+        <h2>Welcome{{if .User}}, {{.User.Name}}{{end}}</h2>
+        <p>Smart 360 turns honest, anonymous peer feedback into clear, growth-focused
+           insight. Here's the 30-second tour.</p>
+      </section>
+      <section class="onboarding__slide" data-slide="1">
+        <div class="onboarding__emoji" aria-hidden="true">✍️</div>
+        <h2>Give feedback</h2>
+        <p>When you're asked to review someone, you'll answer a few structured
+           prompts and rate a handful of competencies. Your identity is never
+           shown to the person receiving the feedback.</p>
+      </section>
+      <section class="onboarding__slide" data-slide="2">
+        <div class="onboarding__emoji" aria-hidden="true">✨</div>
+        <h2>Rounds &amp; AI consolidation</h2>
+        <p>Team leads and admins run feedback rounds. When a round closes, the
+           feedback is moderated and synthesized into strengths, growth areas, and
+           next steps — you can watch it happen live.</p>
+      </section>
+      <section class="onboarding__slide" data-slide="3">
+        <div class="onboarding__emoji" aria-hidden="true">📈</div>
+        <h2>Your growth</h2>
+        <p>Read the consolidations shared with you under <strong>My Feedback</strong>,
+           and download a clean PDF to bring to your 1:1s.</p>
+      </section>
+      <section class="onboarding__slide" data-slide="4">
+        <div class="onboarding__emoji" aria-hidden="true">🎉</div>
+        <h2>You're all set!</h2>
+        <p>Great feedback is a gift. Thanks for helping the people around you grow —
+           and enjoy the insight coming your way.</p>
+      </section>
+    </div>
+
+    <div class="onboarding__nav">
+      <button type="button" class="btn btn--ghost btn--sm" data-tour="skip"
+              hx-post="/onboarding/complete" hx-target="#onboarding" hx-swap="outerHTML">Skip</button>
+      <div class="onboarding__dots" data-tour="dots">
+        <span class="is-active"></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="onboarding__actions">
+        <button type="button" class="btn btn--ghost" data-tour="prev" hidden>Back</button>
+        <button type="button" class="btn" data-tour="next">Next</button>
+        <button type="button" class="btn" data-tour="finish" hidden
+                hx-post="/onboarding/complete" hx-target="#onboarding" hx-swap="outerHTML">Get started</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

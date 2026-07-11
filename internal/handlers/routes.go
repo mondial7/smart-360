@@ -10,6 +10,9 @@ import (
 // the RequireAuth + ProtectCSRF group in the router. submitLimit is a per-IP
 // rate-limit middleware applied to the feedback-submission endpoints.
 func (h *Handlers) MountAppRoutes(r chi.Router, submitLimit func(http.Handler) http.Handler) {
+	// Onboarding
+	r.Post("/onboarding/complete", h.CompleteOnboarding)
+
 	// Rounds
 	r.Get("/rounds", h.RoundsList)
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Get("/rounds/new", h.NewRoundForm)
@@ -58,4 +61,8 @@ func (h *Handlers) MountAppRoutes(r chi.Router, submitLimit func(http.Handler) h
 	// Analytics + audit (admin)
 	r.With(h.Auth.RequireAdmin).Get("/analytics", h.Analytics)
 	r.With(h.Auth.RequireAdmin).Get("/audit-logs", h.AuditLogs)
+
+	// Live application logs (admin)
+	r.With(h.Auth.RequireAdmin).Get("/admin/logs", h.LogsPage)
+	r.With(h.Auth.RequireAdmin).Get("/admin/logs/stream", h.LogsStream)
 }

@@ -22,6 +22,7 @@ func newRouter(cfg *config.Config, authSvc *auth.Service, h *handlers.Handlers) 
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(securityHeaders)
 
 	// Per-IP rate limits (in-memory). These are a backstop against brute force
 	// and abuse; a production deployment behind a proxy should still throttle
@@ -61,4 +62,31 @@ func newRouter(cfg *config.Config, authSvc *auth.Service, h *handlers.Handlers) 
 	})
 
 	return r
+}
+
+// contentSecurityPolicy is intentionally strict: all scripts are self-hosted
+// (htmx, sse, app.js), so no 'unsafe-inline' for scripts. Inline style="…"
+// attributes in templates require 'unsafe-inline' for styles only. SSE is
+// same-origin (connect-src 'self').
+const contentSecurityPolicy = "default-src 'self'; " +
+	"script-src 'self'; " +
+	"style-src 'self' 'unsafe-inline'; " +
+	"img-src 'self' data: https:; " +
+	"connect-src 'self'; " +
+	"font-src 'self'; " +
+	"form-action 'self'; " +
+	"base-uri 'self'; " +
+	"frame-ancestors 'none'"
+
+// securityHeaders sets defensive response headers on every response.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Security-Policy", contentSecurityPolicy)
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h.Set("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+		next.ServeHTTP(w, r)
+	})
 }

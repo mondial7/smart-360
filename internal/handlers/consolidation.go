@@ -175,8 +175,9 @@ func (h *Handlers) ConsolidationStream(w http.ResponseWriter, r *http.Request) {
 		}
 		h.audit(ctx, auditParams{Action: models.AuditConsolidationCreated, Actor: u, RoundID: id,
 			Description: "Generated consolidation"})
+		// No inline script (CSP script-src 'self'): app.js navigates on [data-redirect].
 		msgs <- sseMsg{"done", fmt.Sprintf(
-			`<div class="card"><strong>Consolidation ready.</strong> <a class="btn btn--sm" href="/rounds/%s/consolidation">View feedback</a><script>window.location.href="/rounds/%s/consolidation";</script></div>`,
+			`<div class="card" data-redirect="/rounds/%s/consolidation"><strong>Consolidation ready.</strong> <a class="btn btn--sm" href="/rounds/%s/consolidation">View feedback</a></div>`,
 			id, id)}
 	}()
 

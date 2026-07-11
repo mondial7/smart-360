@@ -15,12 +15,27 @@ import (
 )
 
 // Filename builds the download filename, e.g. "smart360-jane-doe-2026-07-08.pdf".
+// The subject name is slugified to a strict [a-z0-9-] set so it can never inject
+// into the Content-Disposition header (CR/LF, quotes, etc. are dropped).
 func Filename(subjectName, dateStr string) string {
-	slug := strings.ToLower(strings.ReplaceAll(subjectName, " ", "-"))
+	slug := slugify(subjectName)
 	if slug == "" {
 		slug = "feedback"
 	}
 	return fmt.Sprintf("smart360-%s-%s.pdf", slug, dateStr)
+}
+
+func slugify(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == ' ' || r == '-' || r == '_':
+			b.WriteByte('-')
+		}
+	}
+	return strings.Trim(b.String(), "-")
 }
 
 // Render produces the consolidation PDF bytes for a subject and round.

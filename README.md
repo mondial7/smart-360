@@ -101,7 +101,7 @@ non-AI combine that stitches the raw answers together honestly.
 
 | Role | Can do |
 |------|--------|
-| **Admin** | Everything — manage users + teams, create any round, view all rounds, generate and share any consolidation. First user to sign in is auto-promoted. |
+| **Admin** | Everything — manage users + teams, create any round, view all rounds, generate and share any consolidation. Bootstrapped via `ADMIN_EMAIL`. |
 | **Team Admin** | Manage their team's members; create and manage rounds. |
 | **Member** | Submit feedback when assigned as reviewer, read consolidations shared with them (in-app + PDF). |
 
@@ -134,7 +134,7 @@ go run ./cmd/server                # migrates + seeds + serves :8080
 
 Open <http://localhost:8080>. With `DEV_MODE=true` you can sign in from the login
 page's dev-login (or `GET /auth/dev-login?email=you@example.com`) without Google
-credentials. **The first user to sign in becomes admin.**
+credentials. **Set `ADMIN_EMAIL` to your email** — that account is the admin.
 
 ### Full stack in Docker
 
@@ -159,6 +159,8 @@ runs). See [`.env.example`](.env.example) for the annotated list.
 | `APP_URL` | No | `http://localhost:8080` | External base URL. |
 | `DATABASE_URL` | Yes | local compose DSN | Postgres connection string. |
 | `SESSION_SECRET` | **Yes** (prod) | dev fallback if `DEV_MODE` | Signs session cookies. Generate with `openssl rand -hex 32`. |
+| `ADMIN_EMAIL` | Recommended | — | The user who signs in with this email is the global admin (deterministic bootstrap). |
+| `LOG_FORMAT` | No | `text` | `text` or `json` (structured logs for a log shipper). |
 | `GOOGLE_CLIENT_ID` | For Google login | — | OAuth client ID. |
 | `GOOGLE_CLIENT_SECRET` | For Google login | — | OAuth client secret. |
 | `GOOGLE_REDIRECT_URL` | No | `http://localhost:8080/auth/callback` | Must match the Google Cloud Console redirect URI. |

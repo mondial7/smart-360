@@ -27,7 +27,7 @@ func (s *Service) issueSession(ctx context.Context, w http.ResponseWriter, userI
 	if err := s.repos.Sessions.Create(ctx, session); err != nil {
 		return err
 	}
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; relaxed only when DEV_MODE (dev over plain http)
 		Name:     sessionCookieName,
 		Value:    s.signSessionID(session.ID),
 		Path:     "/",
@@ -45,7 +45,7 @@ func (s *Service) clearSession(ctx context.Context, w http.ResponseWriter, r *ht
 	if id, ok := s.readSessionID(r); ok {
 		_ = s.repos.Sessions.Delete(ctx, id)
 	}
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; relaxed only when DEV_MODE (dev over plain http)
 		Name:     sessionCookieName,
 		Value:    "",
 		Path:     "/",

@@ -1,0 +1,20 @@
+{{define "logs_content"}}
+<div class="page-head">
+  <div>
+    <h1>Logs</h1>
+    <p class="muted-text">Live application log stream. Format: <code>{{.LogFormat}}</code>
+      (set <code>LOG_FORMAT=json</code> for a log shipper).</p>
+  </div>
+</div>
+
+<div class="card">
+  <p class="muted-text" style="margin-top:0">
+    Streaming live over SSE. To ship logs elsewhere, run with <code>LOG_FORMAT=json</code>
+    and point your collector at the process's stdout, or tail the stream at
+    <code>/admin/logs/stream</code> (session-authenticated).
+  </p>
+  <div hx-ext="sse" sse-connect="/admin/logs/stream?t={{.Token}}">
+    <pre class="log-view" sse-swap="line" hx-swap="beforeend scroll:bottom"></pre>
+  </div>
+</div>
+{{end}}

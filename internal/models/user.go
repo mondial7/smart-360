@@ -21,15 +21,16 @@ func (r UserRole) IsValid() bool {
 }
 
 type User struct {
-	ID        string     `json:"id"`
-	Email     string     `json:"email"`
-	Name      string     `json:"name"`
-	PhotoURL  string     `json:"photoUrl"`
-	Role      UserRole   `json:"role"`
-	TeamID    *string    `json:"teamId,omitempty"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
-	LastLogin *time.Time `json:"lastLogin,omitempty"`
+	ID          string     `json:"id"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	PhotoURL    string     `json:"photoUrl"`
+	Role        UserRole   `json:"role"`
+	TeamID      *string    `json:"teamId,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+	LastLogin   *time.Time `json:"lastLogin,omitempty"`
+	OnboardedAt *time.Time `json:"onboardedAt,omitempty"`
 }
 
 func (u User) IsAdmin() bool     { return u.Role == RoleAdmin }

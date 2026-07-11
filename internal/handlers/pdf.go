@@ -51,8 +51,14 @@ func (h *Handlers) DownloadPDF(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
+	// filename is slugified to [a-z0-9-] by pdf.Filename, so it cannot inject
+	// into the header (CR/LF/quotes are dropped).
+	filename := pdf.Filename(subjectModel.Name, round.CreatedAt.Format("2006-01-02"))
+	disposition := fmt.Sprintf(`attachment; filename=%q`, filename) // #nosec G705 -- filename slugified to [a-z0-9-] upstream, cannot inject
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition",
-		fmt.Sprintf(`attachment; filename=%q`, pdf.Filename(subjectModel.Name, round.CreatedAt.Format("2006-01-02"))))
+	w.Header().Set("Content-Disposition", disposition)
+	// #nosec G705 -- (gosec attributes the Content-Disposition taint sink to this
+	// line) the filename is slugified to [a-z0-9-] by pdf.Filename, so it cannot
+	// inject into the header.
 	_, _ = w.Write(bytes)
 }

@@ -116,6 +116,21 @@ func (f *FakeUsers) UpdateLastLogin(_ context.Context, id string) error {
 	return nil
 }
 
+func (f *FakeUsers) MarkOnboarded(_ context.Context, id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.data[id]
+	if !ok {
+		return ErrNotFound
+	}
+	if u.OnboardedAt == nil {
+		t := now()
+		u.OnboardedAt = &t
+		f.data[id] = u
+	}
+	return nil
+}
+
 func (f *FakeUsers) SetTeam(_ context.Context, userID string, teamID *string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
