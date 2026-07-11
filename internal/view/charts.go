@@ -166,6 +166,92 @@ func DonutSVG(slices []DonutSlice, size, thickness float64, centerLabel string) 
 	return template.HTML(b.String()) // #nosec G203 -- markup built from escaped labels + numeric geometry
 }
 
+// LineSeries is one line on a LineSVG chart. Points aligns with the chart's
+// x labels; a nil point is a gap (that round had no value for this series).
+type LineSeries struct {
+	Label  string
+	Color  string
+	Points []*float64
+}
+
+// LineSVG renders a multi-series line chart (e.g. competency scores over rounds)
+// as SVG. yMin/yMax fix the value axis (e.g. 1..5); x positions are evenly
+// spread across the labels. It is a pure server-side generator — no JS.
+func LineSVG(xLabels []string, series []LineSeries, width, height, yMin, yMax float64) template.HTML {
+	if len(xLabels) == 0 || yMax <= yMin {
+		return ""
+	}
+	if width <= 0 {
+		width = 640
+	}
+	if height <= 0 {
+		height = 260
+	}
+	const padL, padR, padT, padB = 34.0, 14.0, 14.0, 30.0
+	plotW := width - padL - padR
+	plotH := height - padT - padB
+	n := len(xLabels)
+
+	xAt := func(i int) float64 {
+		if n == 1 {
+			return padL + plotW/2
+		}
+		return padL + plotW*float64(i)/float64(n-1)
+	}
+	yAt := func(v float64) float64 {
+		return padT + (1-(v-yMin)/(yMax-yMin))*plotH
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, `<svg viewBox="0 0 %s %s" width="%s" height="%s" role="img" aria-label="Scores over time" class="linechart">`,
+		num(width), num(height), num(width), num(height))
+
+	// Horizontal gridlines + y labels at each integer step.
+	b.WriteString(`<g class="linechart__grid">`)
+	for v := yMin; v <= yMax+0.001; v++ {
+		y := yAt(v)
+		fmt.Fprintf(&b, `<line x1="%s" y1="%s" x2="%s" y2="%s" class="linechart__gridline" />`,
+			num(padL), num(y), num(width-padR), num(y))
+		fmt.Fprintf(&b, `<text x="%s" y="%s" text-anchor="end" dominant-baseline="middle" class="linechart__ylabel">%s</text>`,
+			num(padL-5), num(y), num(v))
+	}
+	b.WriteString(`</g>`)
+
+	// X labels.
+	b.WriteString(`<g class="linechart__xlabels">`)
+	for i, lbl := range xLabels {
+		fmt.Fprintf(&b, `<text x="%s" y="%s" text-anchor="middle" class="linechart__xlabel">%s</text>`,
+			num(xAt(i)), num(height-padB+16), template.HTMLEscapeString(lbl))
+	}
+	b.WriteString(`</g>`)
+
+	// Series: a polyline through present points + a dot per present point.
+	for _, s := range series {
+		var pts []string
+		for i, p := range s.Points {
+			if p == nil {
+				continue
+			}
+			pts = append(pts, num(xAt(i))+","+num(yAt(*p)))
+		}
+		if len(pts) == 0 {
+			continue
+		}
+		color := template.HTMLEscapeString(s.Color)
+		fmt.Fprintf(&b, `<polyline points="%s" fill="none" stroke="%s" stroke-width="2" class="linechart__line" />`,
+			strings.Join(pts, " "), color)
+		for i, p := range s.Points {
+			if p == nil {
+				continue
+			}
+			fmt.Fprintf(&b, `<circle cx="%s" cy="%s" r="3" fill="%s" />`, num(xAt(i)), num(yAt(*p)), color)
+		}
+	}
+
+	b.WriteString(`</svg>`)
+	return template.HTML(b.String()) // #nosec G203 -- markup built from escaped labels + numeric geometry
+}
+
 // num formats a float for SVG coordinates: up to 2 decimals, trailing zeros
 // trimmed, so "120" stays "120" and "63.64" stays compact.
 func num(f float64) string {

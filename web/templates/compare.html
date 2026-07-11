@@ -1,0 +1,53 @@
+{{define "compare_content"}}
+<div class="page-head">
+  <div><h1>Your growth over time</h1>
+    <p class="muted-text">How your competency scores from peers have moved across rounds.</p></div>
+  <a class="btn btn--ghost" href="/my-feedback">Back to my feedback</a>
+</div>
+
+{{if not .Enough}}
+<div class="card"><p class="muted-text" style="margin:0">
+  You need at least two shared feedback rounds to see a comparison. Check back after your next round.</p></div>
+{{else}}
+
+<div class="card card--pad-lg">
+  <h3>Competency scores (peer average, 1–5)</h3>
+  {{ lineSVG .XLabels .Series 660.0 280.0 1.0 5.0 }}
+  <ul class="legend" style="margin-top:0.75rem">
+    {{range .Series}}
+    <li style="display:contents">
+      <span class="legend__chip" style="background:{{.Color}}"></span>
+      <span>{{.Label}}</span><span></span>
+    </li>
+    {{end}}
+  </ul>
+</div>
+
+<h2>Round-by-round</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Competency</th>{{range .XLabels}}<th>{{.}}</th>{{end}}</tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td>{{.Name}}</td>
+        {{range .Scores}}<td>{{.}}</td>{{end}}
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+
+<h2>Summary timeline</h2>
+<div class="stack">
+  {{range .Timeline}}
+  <div class="card">
+    <h3 style="margin-bottom:0.25rem">{{.Date}}</h3>
+    <p style="margin:0">{{.Summary}}</p>
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}

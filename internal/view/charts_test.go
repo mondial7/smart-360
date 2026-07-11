@@ -69,6 +69,37 @@ func TestDonutSVG_AllZero(t *testing.T) {
 	}
 }
 
+func TestLineSVG(t *testing.T) {
+	p := func(v float64) *float64 { return &v }
+	svg := string(LineSVG(
+		[]string{"Jan", "Mar", "Jun"},
+		[]LineSeries{
+			{Label: "Execution", Color: "#4f46e5", Points: []*float64{p(3), p(3.5), p(4)}},
+			{Label: "Collab", Color: "#16a34a", Points: []*float64{p(4), nil, p(4.5)}}, // gap in the middle
+		},
+		640, 260, 1, 5,
+	))
+	if !strings.HasPrefix(svg, "<svg") || !strings.HasSuffix(svg, "</svg>") {
+		t.Fatalf("expected complete svg")
+	}
+	if strings.Count(svg, "linechart__line") != 2 {
+		t.Fatalf("expected 2 series lines")
+	}
+	// Execution has 3 dots, Collab has 2 (nil skipped) → 5 total.
+	if got := strings.Count(svg, "<circle"); got != 5 {
+		t.Fatalf("expected 5 points (gap skipped), got %d", got)
+	}
+	if !strings.Contains(svg, ">Jun</text>") {
+		t.Fatalf("expected x label Jun")
+	}
+}
+
+func TestLineSVG_Empty(t *testing.T) {
+	if LineSVG(nil, nil, 640, 260, 1, 5) != "" {
+		t.Fatal("expected empty output for no labels")
+	}
+}
+
 func TestNum(t *testing.T) {
 	cases := map[float64]string{120: "120", 63.636: "63.64", 0: "0", 12.5: "12.5"}
 	for in, want := range cases {

@@ -40,6 +40,7 @@ func (h *Handlers) MountAppRoutes(r chi.Router, submitLimit func(http.Handler) h
 
 	// My feedback
 	r.Get("/my-feedback", h.MyFeedback)
+	r.Get("/my-feedback/compare", h.CompareRounds)
 
 	// Team directory
 	r.Get("/team", h.TeamDirectory)

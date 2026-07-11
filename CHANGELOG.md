@@ -6,6 +6,22 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-11
+
+### Added
+
+- **Cross-round comparison** (#29) — a subject can now see their competency
+  scores from peers trending across their shared rounds: a multi-series line
+  chart (server-rendered SVG), a round-by-round table, and a summary timeline.
+  Linked from **My Feedback** once two or more rounds have been shared.
+
+### Changed
+
+- **Pagination** (#33) — the Rounds (admin), Audit log, and Users lists are now
+  paginated (25/page) with Prev/Next controls. Paged queries carry a unique
+  `id` tiebreaker so page boundaries are deterministic even when timestamps
+  collide.
+
 ## [1.0.0] - 2026-07-11
 
 First tagged release. Delivers the app as a single server-rendered Go binary

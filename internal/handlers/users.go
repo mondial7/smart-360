@@ -12,12 +12,14 @@ import (
 func (h *Handlers) UsersList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	u := h.user(r)
-	users, err := h.Repos.Users.FindAll(ctx)
+	page := pageParam(r)
+	rows, err := h.Repos.Users.FindPaged(ctx, pageSize+1, (page-1)*pageSize)
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	data := map[string]any{"Users": users, "MeID": u.ID}
+	users, hasNext := paginate(rows)
+	data := map[string]any{"Users": users, "MeID": u.ID, "Nav": buildPageNav(r, page, hasNext)}
 	h.View.Page(w, http.StatusOK, h.page(r, "Users", "users", "users_content", data))
 }
 

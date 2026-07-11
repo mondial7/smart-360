@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -157,6 +158,32 @@ func TestRoundOwnerSeesRawSubmissionsButReviewerDoesNot(t *testing.T) {
 	}
 	if strings.Contains(body, "confidential note for the manager") || strings.Contains(body, "Feedback submissions") {
 		t.Fatal("a non-owner must not see raw submissions or private notes")
+	}
+}
+
+func TestUsersListPaginates(t *testing.T) {
+	srv, client, repos := newTestServer(t)
+	ctx := t.Context()
+	_, _ = get(t, client, srv.URL+"/auth/dev-login?email=admin@example.com")
+
+	// Create enough users to span two pages (pageSize is 25).
+	for i := 0; i < 30; i++ {
+		_ = repos.Users.Create(ctx, &models.User{Email: fmt.Sprintf("u%02d@example.com", i), Name: fmt.Sprintf("User %02d", i)})
+	}
+
+	// Page 1 offers a Next link; no Prev.
+	_, body := get(t, client, srv.URL+"/users")
+	if !strings.Contains(body, "page=2") {
+		t.Fatal("page 1 should link to page 2 (Next)")
+	}
+	if strings.Contains(body, "page=0") {
+		t.Fatal("page 1 should not offer a Prev link")
+	}
+
+	// Page 2 offers a Prev link back to page 1.
+	_, body = get(t, client, srv.URL+"/users?page=2")
+	if !strings.Contains(body, "page=1") {
+		t.Fatal("page 2 should link back to page 1 (Prev)")
 	}
 }
 
