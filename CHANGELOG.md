@@ -6,6 +6,13 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-11
+
+First tagged release. Delivers the app as a single server-rendered Go binary
+backed by PostgreSQL. (The project was previously used only locally on a
+Go/Gin + Vue + MongoDB stack, which was never published; this is the first
+public release.)
+
 ### Changed — full rewrite to a server-rendered Go stack
 
 Smart 360 is now a **single server-rendered Go application** (`html/template` +
