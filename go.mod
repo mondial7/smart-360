@@ -6,6 +6,7 @@ toolchain go1.26.5
 
 require (
 	github.com/go-chi/chi/v5 v5.3.1
+	github.com/go-chi/httprate v0.16.0
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/google/generative-ai-go v0.20.1
 	github.com/jackc/pgx/v5 v5.10.0
@@ -38,7 +39,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-chi/httprate v0.16.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
