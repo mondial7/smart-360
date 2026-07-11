@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -62,6 +64,82 @@ func get(t *testing.T, c *http.Client, url string) (int, string) {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	return resp.StatusCode, string(body)
+}
+
+// csrfToken pulls the per-session CSRF token from a rendered page's meta tag.
+func csrfToken(t *testing.T, c *http.Client, base string) string {
+	t.Helper()
+	_, body := get(t, c, base+"/my-feedback")
+	m := regexp.MustCompile(`name="csrf-token" content="([^"]*)"`).FindStringSubmatch(body)
+	if m == nil {
+		t.Fatal("no csrf-token meta on page")
+	}
+	return m[1]
+}
+
+// postForm submits a form with the CSRF token in the header (as htmx does).
+func postForm(t *testing.T, c *http.Client, base, path, token string, form url.Values) (int, string) {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodPost, base+path, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-CSRF-Token", token)
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatalf("POST %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, string(body)
+}
+
+func TestSelfNominationOwnedByManagerNotSubject(t *testing.T) {
+	srv, admin, repos := newTestServer(t)
+	ctx := t.Context()
+	// admin@example.com matches ADMIN_EMAIL → the eligible owner.
+	_, _ = get(t, admin, srv.URL+"/auth/dev-login?email=admin@example.com")
+	adminUser, _ := repos.Users.FindByEmail(ctx, "admin@example.com")
+
+	// A member requests feedback on themselves.
+	jar, _ := cookiejar.New(nil)
+	member := &http.Client{Jar: jar}
+	member.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	_, _ = get(t, member, srv.URL+"/auth/dev-login?email=mia@example.com")
+	memberUser, _ := repos.Users.FindByEmail(ctx, "mia@example.com")
+	token := csrfToken(t, member, srv.URL)
+
+	code, _ := postForm(t, member, srv.URL, "/request-feedback", token, url.Values{"reviewer_ids": {adminUser.ID}})
+	if code != http.StatusSeeOther {
+		t.Fatalf("expected 303 after request, got %d", code)
+	}
+
+	rounds, _ := repos.Rounds.FindBySubjectID(ctx, memberUser.ID)
+	if len(rounds) != 1 {
+		t.Fatalf("expected exactly one requested round, got %d", len(rounds))
+	}
+	rd := rounds[0]
+	if rd.SubjectID != memberUser.ID {
+		t.Fatalf("subject should be the member")
+	}
+	// The invariant: the owner (creator, who gets raw-submission access) is NOT
+	// the subject — otherwise the member could de-anonymize their reviewers.
+	if rd.CreatedByID == memberUser.ID {
+		t.Fatal("SECURITY: self-nominated round must not be owned by its subject")
+	}
+	if rd.CreatedByID != adminUser.ID {
+		t.Fatalf("expected the admin to own the round, got %q", rd.CreatedByID)
+	}
+	if rd.Status != models.RoundDraft {
+		t.Fatalf("expected draft (awaiting owner approval), got %q", rd.Status)
+	}
+
+	// A second request is blocked while one is pending.
+	code, _ = postForm(t, member, srv.URL, "/request-feedback", token, url.Values{"reviewer_ids": {adminUser.ID}})
+	if code != http.StatusSeeOther {
+		t.Fatalf("expected redirect on duplicate request, got %d", code)
+	}
+	if again, _ := repos.Rounds.FindBySubjectID(ctx, memberUser.ID); len(again) != 1 {
+		t.Fatalf("duplicate request should not create a second round; got %d", len(again))
+	}
 }
 
 func TestUnauthenticatedRedirectsToLogin(t *testing.T) {

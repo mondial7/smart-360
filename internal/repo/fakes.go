@@ -65,6 +65,18 @@ func (f *FakeUsers) FindByID(_ context.Context, id string) (*models.User, error)
 	return nil, ErrNotFound
 }
 
+func (f *FakeUsers) FindByIDs(_ context.Context, ids []string) ([]models.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []models.User
+	for _, id := range ids {
+		if u, ok := f.data[id]; ok {
+			out = append(out, u)
+		}
+	}
+	return out, nil
+}
+
 func (f *FakeUsers) FindByEmail(_ context.Context, email string) (*models.User, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

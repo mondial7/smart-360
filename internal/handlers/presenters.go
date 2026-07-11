@@ -24,20 +24,31 @@ func (h *Handlers) roundsForMe(ctx context.Context, userID string) ([]models.Fee
 	if err != nil {
 		return nil, err
 	}
+	asOwner, err := h.Repos.Rounds.FindByCreatedByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 	asSubject, err := h.Repos.Rounds.FindBySubjectID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	seen := make(map[string]bool, len(asReviewer))
-	out := make([]models.FeedbackRound, 0, len(asReviewer)+len(asSubject))
-	for _, r := range asReviewer {
-		if !seen[r.ID] {
-			seen[r.ID] = true
-			out = append(out, r)
+	seen := make(map[string]bool, len(asReviewer)+len(asOwner))
+	out := make([]models.FeedbackRound, 0, len(asReviewer)+len(asOwner)+len(asSubject))
+	add := func(rounds []models.FeedbackRound) {
+		for _, r := range rounds {
+			if !seen[r.ID] {
+				seen[r.ID] = true
+				out = append(out, r)
+			}
 		}
 	}
+	// Rounds I review, plus every round I own (a team admin manages their own
+	// rounds, including ones members self-nominated to them).
+	add(asReviewer)
+	add(asOwner)
+	// As the subject, I only participate while the round is collecting feedback
+	// (self-assessment); I never gain owner access to my own rounds.
 	for _, r := range asSubject {
-		// The subject participates only while the round is collecting feedback.
 		if r.Status == models.RoundActive && !seen[r.ID] {
 			seen[r.ID] = true
 			out = append(out, r)
@@ -68,6 +79,31 @@ func (h *Handlers) toCard(ctx context.Context, round models.FeedbackRound, curre
 // allUsersIndex loads every user into an ID→user map for name resolution.
 func (h *Handlers) allUsersIndex(ctx context.Context) (map[string]models.User, error) {
 	users, err := h.Repos.Users.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return userMap(users), nil
+}
+
+// usersForRounds resolves just the users a set of rounds reference (subject +
+// creator) in a single batch query, rather than loading the whole user table.
+func (h *Handlers) usersForRounds(ctx context.Context, rounds []models.FeedbackRound) (map[string]models.User, error) {
+	seen := make(map[string]struct{}, len(rounds)*2)
+	ids := make([]string, 0, len(rounds)*2)
+	add := func(id string) {
+		if id == "" {
+			return
+		}
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+	}
+	for _, rd := range rounds {
+		add(rd.SubjectID)
+		add(rd.CreatedByID)
+	}
+	users, err := h.Repos.Users.FindByIDs(ctx, ids)
 	if err != nil {
 		return nil, err
 	}

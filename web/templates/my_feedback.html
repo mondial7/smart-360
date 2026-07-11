@@ -1,7 +1,10 @@
 {{define "my_feedback_content"}}
 <div class="page-head">
   <div><h1>My feedback</h1><p class="muted-text">Consolidations shared with you.</p></div>
-  {{if .CanCompare}}<a class="btn" href="/my-feedback/compare">See your growth over time</a>{{end}}
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+    <a class="btn btn--ghost" href="/request-feedback">Request feedback</a>
+    {{if .CanCompare}}<a class="btn" href="/my-feedback/compare">See your growth over time</a>{{end}}
+  </div>
 </div>
 
 {{if .Consolidations}}

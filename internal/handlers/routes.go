@@ -13,6 +13,10 @@ func (h *Handlers) MountAppRoutes(r chi.Router, submitLimit func(http.Handler) h
 	// Onboarding
 	r.Post("/onboarding/complete", h.CompleteOnboarding)
 
+	// Self-nomination: any member can request a feedback round on themselves.
+	r.Get("/request-feedback", h.RequestFeedbackForm)
+	r.Post("/request-feedback", h.CreateFeedbackRequest)
+
 	// Rounds
 	r.Get("/rounds", h.RoundsList)
 	r.With(h.Auth.RequireTeamAdminOrAdmin).Get("/rounds/new", h.NewRoundForm)
