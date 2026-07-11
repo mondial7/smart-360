@@ -66,14 +66,9 @@ func (h *Handlers) RoundsList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	u := h.user(r)
 
-	users, err := h.allUsersIndex(ctx)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-
 	var rounds []models.FeedbackRound
 	var nav pageNav // zero value renders no controls (both HasPrev/HasNext false)
+	var err error
 	if u.Role == models.RoleAdmin {
 		page := pageParam(r)
 		paged, perr := h.Repos.Rounds.FindPaged(ctx, pageSize+1, (page-1)*pageSize)
@@ -87,6 +82,14 @@ func (h *Handlers) RoundsList(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rounds, err = h.roundsForMe(ctx, u.ID)
 	}
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+
+	// Resolve only the users referenced by this page (subject + creator), not
+	// the whole table — keeps the per-page cost bounded as the org grows.
+	users, err := h.usersForRounds(ctx, rounds)
 	if err != nil {
 		serverError(w, err)
 		return

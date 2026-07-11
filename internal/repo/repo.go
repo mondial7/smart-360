@@ -11,6 +11,7 @@ import (
 
 type UserRepository interface {
 	FindByID(ctx context.Context, id string) (*models.User, error)
+	FindByIDs(ctx context.Context, ids []string) ([]models.User, error)
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
 	Create(ctx context.Context, user *models.User) error
 	UpdateRole(ctx context.Context, id string, role models.UserRole) error

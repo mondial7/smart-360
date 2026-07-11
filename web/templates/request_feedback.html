@@ -1,0 +1,35 @@
+{{define "request_feedback_content"}}
+<div class="page-head">
+  <div><h1>Request feedback</h1>
+    <p class="muted-text">Ask for a 360 round on yourself. A manager reviews and starts it;
+      your reviewers stay anonymous to you.</p></div>
+  <a class="btn btn--ghost" href="/my-feedback">Cancel</a>
+</div>
+
+<form method="post" action="/request-feedback" class="card card--pad-lg" style="max-width:640px">
+  <div class="field">
+    <label>Who would you like feedback from? <span class="hint">pick your reviewers</span></label>
+    {{if .Reviewers}}
+    <div style="max-height:260px;overflow:auto;border:1px solid var(--border-color);border-radius:var(--radius);padding:0.6rem">
+      {{range .Reviewers}}
+      <label class="checkbox-row"><input type="checkbox" name="reviewer_ids" value="{{.ID}}"> {{.Name}} <small>{{.Email}}</small></label>
+      {{end}}
+    </div>
+    {{else}}<p class="muted-text" style="margin:0">No one else is set up yet — ask an admin.</p>{{end}}
+  </div>
+  <div class="field">
+    <label for="template_id">Template</label>
+    <select name="template_id" id="template_id">
+      {{range .Templates}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label for="deadline">Suggested deadline <span class="hint">optional</span></label>
+    <input type="date" name="deadline" id="deadline">
+  </div>
+  <div style="display:flex;gap:0.5rem">
+    <button class="btn" type="submit">Send request</button>
+    <a class="btn btn--ghost" href="/my-feedback">Cancel</a>
+  </div>
+</form>
+{{end}}

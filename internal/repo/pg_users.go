@@ -27,6 +27,14 @@ func (r *pgUsers) FindByEmail(ctx context.Context, email string) (*models.User, 
 	return scanUser(r.q.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE email = $1`, email))
 }
 
+// FindByIDs fetches the users for the given ids in one query (order unspecified).
+func (r *pgUsers) FindByIDs(ctx context.Context, ids []string) ([]models.User, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return r.queryUsers(ctx, `SELECT `+userColumns+` FROM users WHERE id = ANY($1::uuid[])`, ids)
+}
+
 func (r *pgUsers) Create(ctx context.Context, u *models.User) error {
 	if u.Role == "" {
 		u.Role = models.RoleMember

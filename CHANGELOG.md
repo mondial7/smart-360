@@ -6,6 +6,23 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-11
+
+### Added
+
+- **Self-nomination** (#41) — a member can request a 360 round on themselves
+  from **My Feedback → Request feedback**: they pick their reviewers, and the
+  round is created as a draft **owned by a manager (their team admin, else a
+  global admin) — never the subject**, so the requester can never de-anonymize
+  their reviewers. One open request at a time. The owner reviews and starts it.
+
+### Changed
+
+- Non-admin **Rounds** now also lists the rounds you own, so a team admin sees
+  and can manage the rounds they created (including self-nominated ones).
+- Performance (#33 follow-up): paginated round lists resolve only the users on
+  the current page via a batch lookup, instead of loading the whole user table.
+
 ## [1.1.0] - 2026-07-11
 
 ### Added

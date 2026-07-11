@@ -42,7 +42,14 @@ func (h *Handlers) MyFeedback(w http.ResponseWriter, r *http.Request) {
 		"Radar":          radar,
 		"CanCompare":     len(cons) >= 2,
 	}
-	h.View.Page(w, http.StatusOK, h.page(r, "My feedback", "my-feedback", "my_feedback_content", data))
+	pd := h.page(r, "My feedback", "my-feedback", "my_feedback_content", data)
+	switch {
+	case r.URL.Query().Get("requested") == "1":
+		pd.Flash = "Your feedback request was sent — a manager will review and start it."
+	case r.URL.Query().Get("pending") == "1":
+		pd.Flash = "You already have a feedback request awaiting a manager's approval."
+	}
+	h.View.Page(w, http.StatusOK, pd)
 }
 
 func deltaLen(d *models.SelfVsOthersDelta) int {

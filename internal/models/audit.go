@@ -7,6 +7,7 @@ type AuditAction string
 const (
 	// Round lifecycle
 	AuditRoundCreated         AuditAction = "round.created"
+	AuditRoundRequested       AuditAction = "round.requested"
 	AuditRoundStatusChanged   AuditAction = "round.status_changed"
 	AuditRoundSubjectChanged  AuditAction = "round.subject_changed"
 	AuditRoundDeadlineChanged AuditAction = "round.deadline_changed"

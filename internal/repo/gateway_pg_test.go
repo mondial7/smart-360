@@ -37,6 +37,31 @@ func TestUsers_CreateAndLookup(t *testing.T) {
 	}
 }
 
+func TestUsers_FindByIDs(t *testing.T) {
+	r := gateway(t)
+	ctx := context.Background()
+	a := makeUser(t, r, "a")
+	b := makeUser(t, r, "b")
+	_ = makeUser(t, r, "c") // not requested
+
+	got, err := r.Users.FindByIDs(ctx, []string{a, b, "" + a}) // dup a is fine
+	if err != nil {
+		t.Fatalf("find by ids: %v", err)
+	}
+	ids := map[string]bool{}
+	for _, u := range got {
+		ids[u.ID] = true
+	}
+	if !ids[a] || !ids[b] || len(ids) != 2 {
+		t.Fatalf("expected exactly {a,b}, got %v", ids)
+	}
+
+	// Empty input is a no-op (no query).
+	if out, err := r.Users.FindByIDs(ctx, nil); err != nil || len(out) != 0 {
+		t.Fatalf("expected empty result for nil ids, got %v (err %v)", out, err)
+	}
+}
+
 func TestTeams_MembershipJoinTable(t *testing.T) {
 	r := gateway(t)
 	ctx := context.Background()
