@@ -15,6 +15,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	UpdateRole(ctx context.Context, id string, role models.UserRole) error
 	UpdateLastLogin(ctx context.Context, id string) error
+	MarkOnboarded(ctx context.Context, id string) error
 	SetTeam(ctx context.Context, userID string, teamID *string) error
 	FindAll(ctx context.Context) ([]models.User, error)
 }

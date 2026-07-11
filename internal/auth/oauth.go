@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mondial7/smart-360/internal/models"
@@ -31,7 +32,7 @@ func (s *Service) StartGoogleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to initialize login", http.StatusInternalServerError)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; relaxed only when DEV_MODE (dev over plain http)
 		Name:     oauthStateCookie,
 		Value:    state,
 		Path:     "/",
@@ -51,7 +52,7 @@ func (s *Service) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// Validate and always clear the state cookie.
 	state := r.URL.Query().Get("state")
 	stateCookie, cookieErr := r.Cookie(oauthStateCookie)
-	http.SetCookie(w, &http.Cookie{Name: oauthStateCookie, Value: "", Path: "/", MaxAge: -1,
+	http.SetCookie(w, &http.Cookie{Name: oauthStateCookie, Value: "", Path: "/", MaxAge: -1, // #nosec G124 -- clearing cookie; Secure relaxed only when DEV_MODE
 		HttpOnly: true, Secure: s.secureCookies(), SameSite: http.SameSiteLaxMode})
 	if cookieErr != nil || state == "" ||
 		subtle.ConstantTimeCompare([]byte(state), []byte(stateCookie.Value)) != 1 {
@@ -113,19 +114,15 @@ func (s *Service) DevLogin(w http.ResponseWriter, r *http.Request) {
 		email = "dev@example.com"
 	}
 
-	user, err := s.repos.Users.FindByEmail(ctx, email)
-	if errors.Is(err, repo.ErrNotFound) {
-		name := "Dev User"
-		if email == "dev@example.com" {
-			name = "Dev Admin"
-		}
-		user, err = s.provisionUser(ctx, email, name, "")
+	name := "Dev User"
+	if email == "dev@example.com" {
+		name = "Dev Admin"
 	}
+	user, err := s.upsertUser(ctx, email, name, "")
 	if err != nil {
 		http.Error(w, "Dev login failed", http.StatusInternalServerError)
 		return
 	}
-	_ = s.repos.Users.UpdateLastLogin(ctx, user.ID)
 	if err := s.issueSession(ctx, w, user.ID); err != nil {
 		http.Error(w, "Failed to start session", http.StatusInternalServerError)
 		return
@@ -139,12 +136,20 @@ func (s *Service) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
-// upsertUser finds a user by email or creates one, then updates last_login.
+// upsertUser finds a user by email or creates one, keeps the configured owner
+// promoted to admin (self-healing), then updates last_login.
 func (s *Service) upsertUser(ctx context.Context, email, name, photo string) (*models.User, error) {
 	user, err := s.repos.Users.FindByEmail(ctx, email)
 	switch {
 	case err == nil:
-		// keep existing role; refresh display fields is out of scope here
+		// Bootstrap owner stays admin even if created before ADMIN_EMAIL was set
+		// (or was demoted). This is the only automatic promotion.
+		if s.isAdminEmail(email) && user.Role != models.RoleAdmin {
+			if err := s.repos.Users.UpdateRole(ctx, user.ID, models.RoleAdmin); err != nil {
+				return nil, err
+			}
+			user.Role = models.RoleAdmin
+		}
 	case errors.Is(err, repo.ErrNotFound):
 		user, err = s.provisionUser(ctx, email, name, photo)
 		if err != nil {
@@ -157,11 +162,11 @@ func (s *Service) upsertUser(ctx context.Context, email, name, photo string) (*m
 	return user, nil
 }
 
-// provisionUser creates a new user. The very first user in the system becomes
-// the global admin; everyone else starts as a member.
+// provisionUser creates a new user. Role is deterministic: the configured
+// ADMIN_EMAIL becomes admin, everyone else a member. No first-user race.
 func (s *Service) provisionUser(ctx context.Context, email, name, photo string) (*models.User, error) {
 	role := models.RoleMember
-	if existing, err := s.repos.Users.FindAll(ctx); err == nil && len(existing) == 0 {
+	if s.isAdminEmail(email) {
 		role = models.RoleAdmin
 	}
 	now := time.Now()
@@ -170,6 +175,11 @@ func (s *Service) provisionUser(ctx context.Context, email, name, photo string) 
 		return nil, err
 	}
 	return user, nil
+}
+
+// isAdminEmail reports whether email is the configured bootstrap owner.
+func (s *Service) isAdminEmail(email string) bool {
+	return s.cfg.AdminEmail != "" && strings.EqualFold(strings.TrimSpace(email), s.cfg.AdminEmail)
 }
 
 func randomToken() (string, error) {

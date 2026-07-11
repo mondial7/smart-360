@@ -13,6 +13,15 @@ func (h *Handlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 	h.View.Page(w, http.StatusOK, h.page(r, "Sign in", "", "login_content", data))
 }
 
+// CompleteOnboarding marks the first-login tour as seen and returns an empty
+// body so htmx removes the overlay (hx-swap="outerHTML").
+func (h *Handlers) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
+	if u := h.user(r); u != nil {
+		_ = h.Repos.Users.MarkOnboarded(r.Context(), u.ID)
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 // Dashboard renders the role-aware landing page.
 func (h *Handlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

@@ -9,6 +9,7 @@ import (
 
 	"github.com/mondial7/smart-360/internal/auth"
 	"github.com/mondial7/smart-360/internal/config"
+	"github.com/mondial7/smart-360/internal/logstream"
 	"github.com/mondial7/smart-360/internal/models"
 	"github.com/mondial7/smart-360/internal/repo"
 	"github.com/mondial7/smart-360/internal/view"
@@ -20,11 +21,12 @@ type Handlers struct {
 	Auth  *auth.Service
 	View  *view.Renderer
 	Cfg   *config.Config
+	Logs  *logstream.Hub
 }
 
 // New constructs a Handlers.
-func New(repos repo.Repositories, authSvc *auth.Service, renderer *view.Renderer, cfg *config.Config) *Handlers {
-	return &Handlers{Repos: repos, Auth: authSvc, View: renderer, Cfg: cfg}
+func New(repos repo.Repositories, authSvc *auth.Service, renderer *view.Renderer, cfg *config.Config, logs *logstream.Hub) *Handlers {
+	return &Handlers{Repos: repos, Auth: authSvc, View: renderer, Cfg: cfg, Logs: logs}
 }
 
 // page builds the base-layout envelope, pulling the current user and CSRF token
@@ -32,12 +34,13 @@ func New(repos repo.Repositories, authSvc *auth.Service, renderer *view.Renderer
 func (h *Handlers) page(r *http.Request, title, active, content string, data any) view.PageData {
 	u, _ := auth.UserFrom(r.Context())
 	return view.PageData{
-		Title:   title,
-		Active:  active,
-		User:    u,
-		CSRF:    h.Auth.CSRFToken(r),
-		Content: content,
-		Data:    data,
+		Title:          title,
+		Active:         active,
+		User:           u,
+		CSRF:           h.Auth.CSRFToken(r),
+		Content:        content,
+		Data:           data,
+		ShowOnboarding: u != nil && u.OnboardedAt == nil,
 	}
 }
 

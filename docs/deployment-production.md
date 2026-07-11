@@ -85,7 +85,14 @@ DATABASE_URL=postgres://smart360:<password>@localhost:5432/smart360?sslmode=disa
 
 SESSION_SECRET=<run: openssl rand -hex 32>
 
+# The account that signs in with this email becomes the admin. Set it before
+# first sign-in.
+ADMIN_EMAIL=you@example.com
+
 APP_URL=https://feedback.example.com
+
+# Structured logs for a shipper (optional): text | json
+LOG_FORMAT=json
 
 GOOGLE_CLIENT_ID=<from Google Cloud Console>
 GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
@@ -197,7 +204,9 @@ page.
 sudo systemctl restart smart360
 ```
 
-Sign in. The first user to authenticate is promoted to **Administrator**.
+Sign in with the address you set as `ADMIN_EMAIL` — that account is the
+**Administrator**. Everyone else is a member until you promote them from the
+Users page.
 
 ---
 

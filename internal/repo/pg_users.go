@@ -8,12 +8,12 @@ import (
 
 type pgUsers struct{ q querier }
 
-const userColumns = `id, email, name, photo_url, role, team_id, created_at, updated_at, last_login`
+const userColumns = `id, email, name, photo_url, role, team_id, created_at, updated_at, last_login, onboarded_at`
 
 func scanUser(row rowScanner) (*models.User, error) {
 	var u models.User
 	if err := row.Scan(&u.ID, &u.Email, &u.Name, &u.PhotoURL, &u.Role, &u.TeamID,
-		&u.CreatedAt, &u.UpdatedAt, &u.LastLogin); err != nil {
+		&u.CreatedAt, &u.UpdatedAt, &u.LastLogin, &u.OnboardedAt); err != nil {
 		return nil, normalizeErr(err)
 	}
 	return &u, nil
@@ -46,6 +46,12 @@ func (r *pgUsers) UpdateRole(ctx context.Context, id string, role models.UserRol
 
 func (r *pgUsers) UpdateLastLogin(ctx context.Context, id string) error {
 	_, err := r.q.Exec(ctx, `UPDATE users SET last_login = now(), updated_at = now() WHERE id = $1`, id)
+	return err
+}
+
+func (r *pgUsers) MarkOnboarded(ctx context.Context, id string) error {
+	_, err := r.q.Exec(ctx,
+		`UPDATE users SET onboarded_at = now(), updated_at = now() WHERE id = $1 AND onboarded_at IS NULL`, id)
 	return err
 }
 

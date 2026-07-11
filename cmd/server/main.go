@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +19,7 @@ import (
 	"github.com/mondial7/smart-360/internal/config"
 	"github.com/mondial7/smart-360/internal/db"
 	"github.com/mondial7/smart-360/internal/handlers"
+	"github.com/mondial7/smart-360/internal/logstream"
 	"github.com/mondial7/smart-360/internal/repo"
 	"github.com/mondial7/smart-360/internal/view"
 	"github.com/mondial7/smart-360/web"
@@ -48,6 +51,19 @@ func run() error {
 		return err
 	}
 
+	// Logging: slog (text or JSON) tee'd to stderr and the in-memory log hub
+	// that backs the admin Logs page. The standard logger is redirected to the
+	// same writer so chi's request logs and any log.Print calls are captured too.
+	logs := logstream.New(500)
+	logOut := io.MultiWriter(os.Stderr, logs)
+	slog.SetDefault(slog.New(logHandler(cfg.LogFormat, logOut)))
+	log.SetFlags(0)
+	log.SetOutput(logOut)
+
+	if cfg.AdminEmail == "" {
+		slog.Warn("ADMIN_EMAIL is not set — no admin will be auto-assigned; set it to bootstrap the owner")
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -60,7 +76,7 @@ func run() error {
 	if err := db.Migrate(ctx, pool); err != nil {
 		return err
 	}
-	log.Println("migrations applied")
+	slog.Info("migrations applied")
 
 	if err := db.Seed(ctx, pool, cfg.DevMode); err != nil {
 		return err
@@ -72,7 +88,7 @@ func run() error {
 		return err
 	}
 	authSvc := auth.New(cfg, repos)
-	h := handlers.New(repos, authSvc, renderer, cfg)
+	h := handlers.New(repos, authSvc, renderer, cfg, logs)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -81,17 +97,26 @@ func run() error {
 	}
 
 	go func() {
-		log.Printf("listening on :%s (dev_mode=%v)", cfg.Port, cfg.DevMode)
+		slog.Info("listening", "addr", ":"+cfg.Port, "dev_mode", cfg.DevMode)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("server error: %v", err)
+			slog.Error("server error", "err", err)
 			stop()
 		}
 	}()
 
 	<-ctx.Done()
-	log.Println("shutting down")
+	slog.Info("shutting down")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
+}
+
+// logHandler builds an slog handler for the configured format.
+func logHandler(format string, w io.Writer) slog.Handler {
+	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
+	if format == "json" {
+		return slog.NewJSONHandler(w, opts)
+	}
+	return slog.NewTextHandler(w, opts)
 }

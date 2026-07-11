@@ -38,11 +38,29 @@ What helps triage move quickly:
   never travel in a URL. Sessions are revocable and expire server-side.
 - Every state-changing request (POST/PUT/DELETE) is **CSRF-protected** with a
   per-session token (`X-CSRF-Token` header for htmx, hidden `csrf_token` field
-  for forms).
+  for forms). The one state-changing GET (the consolidation/log SSE streams) is
+  guarded by a separate session-derived stream token.
+- **Admin bootstrap** is deterministic: the user whose email matches
+  `ADMIN_EMAIL` is (and stays) the global admin. There is no "first user wins"
+  race. All other role changes go through the admin Users page, which refuses to
+  demote the last admin.
 - `dev-login` (which bypasses OAuth) is only mounted when `DEV_MODE=true` and is
   the single most important thing to keep disabled in production.
 
 See [ADR-0004](docs/adr/0004-session-cookie-auth.md) for the rationale.
+
+## Transport & browser hardening
+
+- **Security headers** on every response: a strict `Content-Security-Policy`
+  (`script-src 'self'` — all JS is self-hosted, no inline scripts),
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive
+  `Permissions-Policy`.
+- **Rate limiting** (per-IP, in-memory): tight on auth endpoints, a cap on
+  feedback submissions, and a backstop on all authenticated routes. A reverse
+  proxy should still throttle in front for production.
+- Static analysis: `govulncheck` and `gosec` run clean (reviewed false positives
+  are annotated with `#nosec` + justification).
 
 ---
 
@@ -150,8 +168,9 @@ Things the application can't enforce on your behalf:
 - [ ] Terminate TLS at a reverse proxy (Caddy / nginx + Let's Encrypt). OAuth
       requires HTTPS in production; set `APP_URL` / `GOOGLE_REDIRECT_URL` to the
       public HTTPS URLs.
-- [ ] Throttle abusive traffic at the reverse proxy (`rate_limit` in Caddy,
-      `limit_req` in nginx).
+- [ ] Set `ADMIN_EMAIL` to the owner's address before first sign-in.
+- [ ] The app rate-limits per IP already; for extra depth, also throttle at the
+      reverse proxy (`rate_limit` in Caddy, `limit_req` in nginx).
 - [ ] Schedule an off-host `pg_dump` backup.
 - [ ] **Never** set `DEV_MODE=true` in production — it unlocks `dev-login` and
       relaxes the Secure cookie flag.

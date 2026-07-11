@@ -105,7 +105,7 @@ func RadarSVG(axes []RadarAxis, size, max float64) template.HTML {
 	}
 	b.WriteString(`</g></svg>`)
 
-	return template.HTML(b.String()) //nolint:gosec // markup built from escaped labels + numeric geometry
+	return template.HTML(b.String()) // #nosec G203 -- markup built from escaped labels + numeric geometry
 }
 
 // DonutSlice is one wedge of the donut chart.
@@ -163,7 +163,7 @@ func DonutSVG(slices []DonutSlice, size, thickness float64, centerLabel string) 
 		num(center), num(center+14), template.HTMLEscapeString(centerLabel))
 	b.WriteString(`</svg>`)
 
-	return template.HTML(b.String()) //nolint:gosec // markup built from escaped labels + numeric geometry
+	return template.HTML(b.String()) // #nosec G203 -- markup built from escaped labels + numeric geometry
 }
 
 // num formats a float for SVG coordinates: up to 2 decimals, trailing zeros

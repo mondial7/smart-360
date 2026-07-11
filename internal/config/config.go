@@ -20,9 +20,18 @@ type Config struct {
 	// AppURL is the externally reachable base URL (used for OAuth redirects).
 	AppURL string
 
+	// AdminEmail bootstraps the owner: the user who signs in with this email is
+	// (and stays) a global admin. Deterministic and race-free, replacing the old
+	// "first user to sign in becomes admin" heuristic. When empty, no admin is
+	// auto-assigned.
+	AdminEmail string
+
 	// GeminiAPIKey enables the Gemini moderation + synthesis passes.
 	// When empty, consolidation falls back to non-AI aggregation.
 	GeminiAPIKey string
+
+	// LogFormat selects the log handler: "text" (default) or "json".
+	LogFormat string
 
 	// Google OAuth credentials.
 	GoogleClientID     string
@@ -46,7 +55,9 @@ func Load() (*Config, error) {
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://smart360:smart360@localhost:5432/smart360?sslmode=disable"),
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
 		AppURL:             getEnv("APP_URL", "http://localhost:8080"),
+		AdminEmail:         strings.TrimSpace(os.Getenv("ADMIN_EMAIL")),
 		GeminiAPIKey:       os.Getenv("GEMINI_API_KEY"),
+		LogFormat:          getEnv("LOG_FORMAT", "text"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/callback"),
@@ -68,7 +79,7 @@ func Load() (*Config, error) {
 // environment, skipping blanks, comments, and keys already set. It is a minimal
 // convenience loader for local development, not a full dotenv implementation.
 func loadDotEnv(path string) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is the constant ".env" from Load, never user input
 	if err != nil {
 		return // no .env is fine
 	}

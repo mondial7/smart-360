@@ -171,8 +171,8 @@ go run ./cmd/server                # migrates + seeds + serves :8080
 ```
 
 Open <http://localhost:8080>. With `DEV_MODE=true`, sign in via the dev-login on
-the login page (or `GET /auth/dev-login?email=you@example.com`). The **first user
-to sign in becomes admin**; everyone else starts as a member.
+the login page (or `GET /auth/dev-login?email=you@example.com`). The user whose
+email matches **`ADMIN_EMAIL`** is the admin; everyone else starts as a member.
 
 ---
 
@@ -184,8 +184,10 @@ to sign in becomes admin**; everyone else starts as a member.
 | `APP_URL` | `http://localhost:8080` | external base URL |
 | `DATABASE_URL` | local compose DSN | Postgres connection string |
 | `SESSION_SECRET` | dev fallback if `DEV_MODE` | required in prod; signs cookies |
+| `ADMIN_EMAIL` | empty | the user with this email is (and stays) the global admin; deterministic bootstrap |
 | `GOOGLE_CLIENT_ID` / `_SECRET` / `_REDIRECT_URL` | — | OAuth |
 | `GEMINI_API_KEY` | empty | empty → moderation no-op + non-AI fallback |
+| `LOG_FORMAT` | `text` | `text` or `json` (structured logs for shippers) |
 | `DEV_MODE` | `false` | enables `/auth/dev-login`, relaxes `Secure`, dev fallbacks. **Never true in prod.** |
 
 ---

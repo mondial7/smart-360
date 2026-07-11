@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -22,7 +22,7 @@ func Seed(ctx context.Context, pool *pgxpool.Pool, devMode bool) error {
 			return fmt.Errorf("seed template %q: %w", t.Slug, err)
 		}
 	}
-	log.Printf("seeded %d round template(s)", len(defaultTemplates))
+	slog.Info("seeded round templates", "count", len(defaultTemplates))
 	return nil
 }
 

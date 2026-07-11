@@ -13,6 +13,7 @@ import (
 	"github.com/mondial7/smart-360/internal/auth"
 	"github.com/mondial7/smart-360/internal/config"
 	"github.com/mondial7/smart-360/internal/handlers"
+	"github.com/mondial7/smart-360/internal/logstream"
 	"github.com/mondial7/smart-360/internal/models"
 	"github.com/mondial7/smart-360/internal/repo"
 	"github.com/mondial7/smart-360/internal/view"
@@ -23,14 +24,14 @@ import (
 // these tests exercise routing + middleware + templates without a database.
 func newTestServer(t *testing.T) (*httptest.Server, *http.Client, repo.Repositories) {
 	t.Helper()
-	cfg := &config.Config{DevMode: true, SessionSecret: "test-secret"}
+	cfg := &config.Config{DevMode: true, SessionSecret: "test-secret", AdminEmail: "admin@example.com"}
 	repos := repo.NewFakes()
 	renderer, err := view.NewRenderer(web.TemplatesFS)
 	if err != nil {
 		t.Fatalf("renderer: %v", err)
 	}
 	authSvc := auth.New(cfg, repos)
-	h := handlers.New(repos, authSvc, renderer, cfg)
+	h := handlers.New(repos, authSvc, renderer, cfg, logstream.New(50))
 
 	r := chi.NewRouter()
 	r.Get("/login", h.LoginPage)
@@ -83,7 +84,7 @@ func TestUnauthenticatedRedirectsToLogin(t *testing.T) {
 func TestDevLoginThenDashboard(t *testing.T) {
 	srv, client, repos := newTestServer(t)
 
-	// dev-login provisions the first user as admin and sets the session cookie.
+	// dev-login provisions the ADMIN_EMAIL user as admin and sets the session cookie.
 	if code, _ := get(t, client, srv.URL+"/auth/dev-login?email=admin@example.com"); code != http.StatusOK {
 		t.Fatalf("dev-login final status %d", code)
 	}
@@ -159,6 +160,30 @@ func TestRoundOwnerSeesRawSubmissionsButReviewerDoesNot(t *testing.T) {
 	}
 }
 
+func TestOnboardingShownUntilCompleted(t *testing.T) {
+	srv, client, repos := newTestServer(t)
+	ctx := t.Context()
+	if code, _ := get(t, client, srv.URL+"/auth/dev-login?email=newbie@example.com"); code != http.StatusOK {
+		t.Fatalf("dev-login: %d", code)
+	}
+	user, _ := repos.Users.FindByEmail(ctx, "newbie@example.com")
+
+	// First login: the tour overlay is present.
+	_, body := get(t, client, srv.URL+"/")
+	if !strings.Contains(body, `id="onboarding"`) {
+		t.Fatal("expected onboarding overlay on first login")
+	}
+
+	// After completing (marked seen), it no longer renders.
+	if err := repos.Users.MarkOnboarded(ctx, user.ID); err != nil {
+		t.Fatalf("mark onboarded: %v", err)
+	}
+	_, body = get(t, client, srv.URL+"/")
+	if strings.Contains(body, `id="onboarding"`) {
+		t.Fatal("onboarding overlay should not render after completion")
+	}
+}
+
 func TestConsolidationStreamRequiresToken(t *testing.T) {
 	srv, client, repos := newTestServer(t)
 	ctx := t.Context()
@@ -181,7 +206,7 @@ func TestConsolidationStreamRequiresToken(t *testing.T) {
 
 func TestNonAdminCannotAccessTeams(t *testing.T) {
 	srv, client, repos := newTestServer(t)
-	// First user (admin) provisioned separately so the second is a member.
+	// admin@example.com matches ADMIN_EMAIL → admin; member@example.com → member.
 	_, _ = get(t, client, srv.URL+"/auth/dev-login?email=admin@example.com")
 
 	jar2, _ := cookiejar.New(nil)

@@ -30,6 +30,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-smart360}:${POSTGRES_PASSWORD:-smart360}@postgres:5432/${POSTGRES_DB:-smart360}?sslmode=disable
       SESSION_SECRET: ${SESSION_SECRET}
       APP_URL: ${APP_URL:-http://localhost:8080}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}

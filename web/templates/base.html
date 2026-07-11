@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/css/app.css">
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/sse.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
 </head>
 <body hx-boost="true" hx-headers='{"X-CSRF-Token": "{{.CSRF}}"}'>
   {{if .User}}
@@ -25,6 +26,7 @@
       <a href="/users" class="nav__link {{if eq $a "users"}}is-active{{end}}">Users</a>
       <a href="/analytics" class="nav__link {{if eq $a "analytics"}}is-active{{end}}">Analytics</a>
       <a href="/audit-logs" class="nav__link {{if eq $a "audit"}}is-active{{end}}">Audit</a>
+      <a href="/admin/logs" class="nav__link {{if eq $a "logs"}}is-active{{end}}">Logs</a>
       {{end}}
     </nav>
     <div class="nav__user">
@@ -38,6 +40,8 @@
     {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
     {{ partial .Content .Data }}
   </main>
+
+  {{if .ShowOnboarding}}{{template "onboarding" .}}{{end}}
 </body>
 </html>
 {{- end}}

@@ -65,7 +65,7 @@ func (h *Handlers) SubmitForm(w http.ResponseWriter, r *http.Request) {
 	}
 	// Already submitted → send to the edit view.
 	if n, _ := h.Repos.Submissions.CountByRoundAndReviewer(ctx, id, u.ID); n > 0 {
-		http.Redirect(w, r, "/rounds/"+id+"/submission", http.StatusSeeOther)
+		http.Redirect(w, r, safeLocalPath("/rounds/"+id+"/submission"), http.StatusSeeOther) // #nosec G710 -- safeLocalPath guarantees a same-origin path
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *Handlers) EditSubmissionForm(w http.ResponseWriter, r *http.Request) {
 	}
 	existing, err := h.Repos.Submissions.FindByRoundAndReviewer(ctx, id, u.ID)
 	if errors.Is(err, repo.ErrNotFound) {
-		http.Redirect(w, r, "/rounds/"+id+"/submit", http.StatusSeeOther)
+		http.Redirect(w, r, safeLocalPath("/rounds/"+id+"/submit"), http.StatusSeeOther) // #nosec G710 -- safeLocalPath guarantees a same-origin path
 		return
 	}
 	if err != nil {
