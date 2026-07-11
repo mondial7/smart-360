@@ -6,6 +6,13 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Backups & disaster recovery** (#35) — `scripts/backup.sh` (timestamped,
+  compressed `pg_dump` with retention) and `scripts/restore.sh`, a `make backup`
+  target, and a DR section in the deployment guide (cron example, Docker variant,
+  restore drill). All state is in Postgres, so a DB dump is a full backup.
+
 ## [1.2.0] - 2026-07-11
 
 ### Added

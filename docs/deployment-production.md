@@ -280,6 +280,44 @@ AI data flow, and the full hardening checklist. Not covered here:
 
 ---
 
+## Backups & disaster recovery
+
+All state lives in PostgreSQL — the app itself is stateless (templates and assets
+are baked into the binary). So a database backup is a full backup.
+
+The repo ships two helpers that wrap `pg_dump`/`pg_restore`:
+
+```bash
+# Back up to ./backups (compressed custom-format dump), pruning dumps > 14 days.
+DATABASE_URL=postgres://smart360:<pass>@localhost:5432/smart360 ./scripts/backup.sh
+
+# Restore a dump into a target database (drops & recreates objects).
+DATABASE_URL=postgres://smart360:<pass>@localhost:5432/smart360 \
+  ./scripts/restore.sh backups/smart360-YYYYMMDDTHHMMSSZ.dump
+```
+
+Schedule the backup nightly and **ship the dumps off-host** — they contain all
+feedback data. A cron example:
+
+```cron
+# /etc/cron.d/smart360-backup  (runs 02:30 daily as the smart360 user)
+30 2 * * * smart360 DATABASE_URL='postgres://smart360:<pass>@localhost:5432/smart360' BACKUP_DIR=/var/backups/smart360 RETENTION_DAYS=14 /usr/local/lib/smart360/backup.sh >> /var/log/smart360-backup.log 2>&1
+```
+
+Docker Compose users can run the same dump against the `postgres` service:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  pg_dump --format=custom --no-owner --no-privileges -U smart360 smart360 \
+  > "smart360-$(date -u +%Y%m%dT%H%M%SZ).dump"
+```
+
+Recovery drill: after restoring into a fresh database and pointing `DATABASE_URL`
+at it, start the app — it re-applies any pending migrations on boot. **Test a
+restore periodically**; an untested backup is a guess, not a recovery plan.
+
+---
+
 ## Operational notes
 
 ### Updating to a new version
