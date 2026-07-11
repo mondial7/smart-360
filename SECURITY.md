@@ -171,6 +171,7 @@ Things the application can't enforce on your behalf:
 - [ ] Set `ADMIN_EMAIL` to the owner's address before first sign-in.
 - [ ] The app rate-limits per IP already; for extra depth, also throttle at the
       reverse proxy (`rate_limit` in Caddy, `limit_req` in nginx).
-- [ ] Schedule an off-host `pg_dump` backup.
+- [ ] Schedule an off-host backup with `scripts/backup.sh` (see the deployment
+      guide's "Backups & disaster recovery") and test a restore periodically.
 - [ ] **Never** set `DEV_MODE=true` in production — it unlocks `dev-login` and
       relaxes the Secure cookie flag.

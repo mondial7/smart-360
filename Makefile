@@ -26,6 +26,7 @@ help:
 	@echo "  vet fmt     go vet / gofmt"
 	@echo "  dist        Cross-compile bare release binaries into $(DIST_DIR)/"
 	@echo "  release     Cross-compile + tar.gz + SHA256SUMS (VERSION=vX.Y.Z)"
+	@echo "  backup      Dump the database via scripts/backup.sh (needs DATABASE_URL)"
 	@echo "  docker-up   Start the Postgres dependency via docker compose"
 	@echo "  clean       Remove build artifacts"
 
@@ -81,6 +82,9 @@ release: clean
 	done
 	@cd $(DIST_DIR) && shasum -a 256 *.tar.gz > $(BINARY)-$(VERSION)-SHA256SUMS.txt
 	@echo "==> Wrote $(DIST_DIR)/$(BINARY)-$(VERSION)-SHA256SUMS.txt"
+
+backup:
+	./scripts/backup.sh
 
 docker-up:
 	docker compose up -d postgres
