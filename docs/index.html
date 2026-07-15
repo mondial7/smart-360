@@ -20,7 +20,18 @@
         <span class="brand-mark" aria-hidden="true">360°</span>
         <span class="brand-name">Smart&nbsp;360</span>
       </a>
-      <ul class="nav-links">
+      <button
+        class="nav-toggle"
+        type="button"
+        aria-label="Toggle navigation menu"
+        aria-controls="nav-links"
+        aria-expanded="false"
+      >
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+      </button>
+      <ul class="nav-links" id="nav-links">
         <li><a href="#features">Features</a></li>
         <li><a href="#how">How it works</a></li>
         <li><a href="#install">Install</a></li>
@@ -243,5 +254,31 @@ go run ./cmd/server</code></pre>
       MIT licensed.
     </p>
   </footer>
+
+  <script>
+    (function () {
+      var nav = document.querySelector('.site-nav');
+      var toggle = document.querySelector('.nav-toggle');
+      var links = document.getElementById('nav-links');
+      if (!nav || !toggle || !links) return;
+
+      function setOpen(open) {
+        nav.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', String(open));
+      }
+
+      toggle.addEventListener('click', function () {
+        setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+      });
+
+      // Close the menu after tapping a link or pressing Escape.
+      links.addEventListener('click', function (e) {
+        if (e.target.closest('a')) setOpen(false);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') setOpen(false);
+      });
+    })();
+  </script>
 </body>
 </html>
